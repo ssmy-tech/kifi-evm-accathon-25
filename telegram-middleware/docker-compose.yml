@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  telegram-middleware:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - TELEGRAM_API_ID=your_api_id_here
+      - TELEGRAM_API_HASH=your_api_hash_here
+    restart: unless-stopped
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./sessions:/app/sessions 
