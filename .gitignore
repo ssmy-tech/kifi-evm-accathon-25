@@ -7,8 +7,7 @@ package-lock.json
 yarn.lock
 
 # Telegram sessions (keep folder, ignore contents)
-sessions/*
-!sessions/.gitkeep
+*/sessions/*
 
 # Environment variables
 .env
