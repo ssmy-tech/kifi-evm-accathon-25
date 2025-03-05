@@ -1,0 +1,312 @@
+.overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.75);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1000;
+	animation: fadeIn 0.3s ease-out;
+}
+
+.modal {
+	background: white;
+	border-radius: 12px;
+	padding: clamp(1rem, 3vw, 2rem);
+	position: relative;
+	width: min(90%, 900px);
+	max-height: 90vh;
+	overflow-y: auto;
+	animation: scaleIn 0.3s ease-out;
+	transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+	will-change: transform, height, width, opacity;
+	transform-origin: center;
+}
+
+.content {
+	margin-top: 1rem;
+	transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+	will-change: transform, opacity;
+}
+
+.step {
+	text-align: center;
+	padding: clamp(1rem, 2vw, 1.5rem);
+	animation: slideIn 0.3s ease-out;
+	transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+	will-change: transform, opacity;
+}
+
+.step h2 {
+	margin-bottom: 20px;
+	font-size: clamp(1.5rem, 4vw, 2.25rem);
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.step p {
+	margin-bottom: 20px;
+	color: #666;
+	font-size: clamp(1rem, 2.5vw, 1.6rem);
+	line-height: 1.5;
+}
+
+.nextButton {
+	background-color: #0070f3;
+	color: white;
+	border: none;
+	padding: clamp(0.75rem, 2vw, 1rem) clamp(1.5rem, 3vw, 2rem);
+	border-radius: 8px;
+	font-size: clamp(1rem, 2.5vw, 1.4rem);
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.nextButton:hover {
+	background-color: #0060df;
+}
+
+.preferencesForm {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1.25rem, 3vw, 2rem);
+	margin-bottom: clamp(1.75rem, 5vw, 2.5rem);
+	text-align: left;
+	width: 100%;
+	max-width: 700px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.formItem {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.formItem label {
+	font-weight: 600;
+	font-size: clamp(1rem, 2vw, 1.2rem);
+	color: #333;
+	margin-bottom: 0.25rem;
+}
+
+.formItem input[type="number"] {
+	margin-top: 0;
+	padding: clamp(0.75rem, 1.5vw, 1rem);
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	font-size: clamp(1rem, 2vw, 1.2rem);
+	width: 100%;
+}
+
+.formItem input[type="number"]:focus {
+	outline: none;
+	border-color: #0070f3;
+	box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.2);
+}
+
+.checkboxGroup {
+	margin-top: 0.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(0.5rem, 1vw, 0.75rem);
+}
+
+.checkboxItem {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.checkboxItem input[type="checkbox"] {
+	width: clamp(1.25rem, 2vw, 1.5rem);
+	height: clamp(1.25rem, 2vw, 1.5rem);
+	accent-color: #0070f3;
+}
+
+.checkboxItem label {
+	font-weight: 400;
+	font-size: clamp(1rem, 2.2vw, 1.2rem);
+	line-height: 1.4;
+}
+
+.formItemDescription {
+	font-size: clamp(0.75rem, 1.1vw, 0.875rem);
+	color: #666;
+	line-height: 1.4;
+	margin-bottom: 0.75rem;
+	font-weight: 400;
+	text-align: left;
+}
+
+.invalidInput {
+	border-color: #ff4d4f !important;
+	background-color: rgba(255, 77, 79, 0.05);
+}
+
+.invalidCheckboxGroup {
+	padding: 0.5rem;
+	border-radius: 8px;
+	background-color: rgba(255, 77, 79, 0.05);
+	border: 1px solid #ff4d4f;
+}
+
+.validationMessage {
+	color: #ff4d4f;
+	font-size: clamp(0.75rem, 1.1vw, 0.875rem);
+	margin-top: 1rem;
+	font-weight: 500;
+}
+
+@media (max-width: 1200px) {
+	.modal {
+		width: min(85%, 800px);
+	}
+}
+
+@media (max-width: 768px) {
+	.modal {
+		width: 90%;
+		max-height: 80vh;
+		padding: clamp(1rem, 4vw, 1.5rem);
+	}
+}
+
+@media (max-width: 480px) {
+	.modal {
+		width: 95%;
+		padding: 1rem;
+	}
+
+	.step h2 {
+		font-size: 1.2rem;
+	}
+
+	.closeButton {
+		top: 0.75rem;
+		right: 0.75rem;
+	}
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes scaleIn {
+	from {
+		transform: scale(0.95);
+		opacity: 0;
+	}
+	to {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes slideIn {
+	from {
+		transform: translateY(10px);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+/* Telegram connection styles */
+.telegramConnect {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-bottom: 1rem;
+	width: 100%;
+	max-width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.telegramIcon {
+	margin-bottom: 1.5rem;
+	animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+	0% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.05);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+.telegramDescription {
+	font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+	color: #333;
+	margin-bottom: 1.25rem;
+	font-weight: 500;
+	text-align: center;
+}
+
+.telegramBenefits {
+	list-style-type: none;
+	padding: 0;
+	margin: 0 0 2.5rem 0;
+	width: 100%;
+	text-align: left;
+}
+
+.telegramBenefits li {
+	padding: 0.85rem 1.25rem;
+	margin-bottom: 0.75rem;
+	background-color: #f5f9ff;
+	border-radius: 8px;
+	font-size: clamp(1rem, 2.3vw, 1.3rem);
+	display: flex;
+	align-items: center;
+}
+
+.telegramBenefits li:before {
+	content: "✓";
+	color: #0070f3;
+	font-weight: bold;
+	margin-right: 0.85rem;
+	font-size: 1.2em;
+}
+
+.telegramButtons {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	width: 100%;
+	align-items: center;
+}
+
+.skipButton {
+	background: none;
+	border: none;
+	color: #666;
+	font-size: clamp(1.1rem, 2.2vw, 1.4rem);
+	cursor: pointer;
+	padding: 0.75rem;
+	transition: color 0.2s;
+	margin-top: 0.75rem;
+}
+
+.skipButton:hover {
+	color: #333;
+	text-decoration: underline;
+}

@@ -1,6 +1,6 @@
 :root {
-	/* Light theme variables */
 	--background: #ffffff;
+	--background-alt: #f9f9f9;
 	--foreground: #171717;
 	--forest: #445f44;
 	--tint: #9cd39c;
@@ -15,12 +15,12 @@
 	--success: #4caf50;
 	--error: #f44336;
 
-	/* Layout variables */
 	--navbar-height: 40px;
 }
 
 [data-theme="dark"] {
 	--background: #0a0a0a;
+	--background-alt: rgb(22, 22, 22);
 	--foreground: #ededed;
 
 	--text-primary: #ffffff;
@@ -32,7 +32,6 @@
 	--error: #ef5350;
 }
 
-/* Keep the media query for system preference, but make it lower priority */
 @media (prefers-color-scheme: dark) {
 	:root:not([data-theme="light"]) {
 		--background: #0a0a0a;

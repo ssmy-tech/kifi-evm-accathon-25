@@ -1,7 +1,7 @@
 import styles from "./page.module.css";
 import TokenFeed from "@/components/TokenFeed";
 
-// Sample token data (in a real app, this would come from an API)
+// Sample token data
 const sampleTokens = [
 	{
 		id: "1",
@@ -11,8 +11,8 @@ const sampleTokens = [
 		price: 65432.1,
 		change24h: 2.34,
 		imageUrl: "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
-		age: "14 years",
 		liquidity: 25_000_000_000,
+		volume: 32_500_000_000,
 		callers: [
 			{ id: "c1", profileImageUrl: "https://www.gravatar.com/avatar/205e460b479e2e5b48aec07710c08d50?s=200&d=identicon" },
 			{ id: "c2", profileImageUrl: "https://www.gravatar.com/avatar/3b3be63a4c2a439b013787725dfce802?s=200&d=identicon" },
@@ -23,6 +23,7 @@ const sampleTokens = [
 			{ id: "c7", profileImageUrl: "https://www.gravatar.com/avatar/7a4e3461b1c25e5000e2c9220e6a9913?s=200&d=identicon" },
 			{ id: "c8", profileImageUrl: "https://www.gravatar.com/avatar/6a6c19fea4a3676970167ce51f39e6ee?s=200&d=identicon" },
 		],
+		createdAt: "2009-01-03T18:15:05Z",
 	},
 	{
 		id: "2",
@@ -32,8 +33,8 @@ const sampleTokens = [
 		price: 3456.78,
 		change24h: -1.23,
 		imageUrl: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
-		age: "9 years",
 		liquidity: 12_500_000_000,
+		volume: 18_700_000_000,
 		callers: [
 			{ id: "c9", profileImageUrl: "https://www.gravatar.com/avatar/d4c74594d841139328695756648b6bd6?s=200&d=identicon" },
 			{ id: "c10", profileImageUrl: "https://www.gravatar.com/avatar/8eb1b522f60d11fa897de1dc6351b7e8?s=200&d=identicon" },
@@ -42,6 +43,7 @@ const sampleTokens = [
 			{ id: "c13", profileImageUrl: "https://www.gravatar.com/avatar/1aedb8d9dc4751e229a335e371db8058?s=200&d=identicon" },
 			{ id: "c14", profileImageUrl: "https://www.gravatar.com/avatar/7a4e3461b1c25e5000e2c9220e6a9913?s=200&d=identicon" },
 		],
+		createdAt: "2015-07-30T15:26:28Z",
 	},
 	{
 		id: "3",
@@ -51,8 +53,8 @@ const sampleTokens = [
 		price: 123.45,
 		change24h: 5.67,
 		imageUrl: "https://cryptologos.cc/logos/solana-sol-logo.png",
-		age: "4 years",
 		liquidity: 10_000_000_000,
+		volume: 12_300_000_000,
 		callers: [
 			{ id: "c15", profileImageUrl: "https://www.gravatar.com/avatar/a2d6b94b5de9113071931d5c43b2ea4d?s=200&d=identicon" },
 			{ id: "c16", profileImageUrl: "https://www.gravatar.com/avatar/5c42d3e28ad3d5b4ca3db3f5c3537d49?s=200&d=identicon" },
@@ -60,6 +62,7 @@ const sampleTokens = [
 			{ id: "c18", profileImageUrl: "https://www.gravatar.com/avatar/0c83f57c786a0b4a39efab23731c7ebc?s=200&d=identicon" },
 			{ id: "c19", profileImageUrl: "https://www.gravatar.com/avatar/f0e9e11e56c1cb6e6f13bc99d576b77a?s=200&d=identicon" },
 		],
+		createdAt: "2020-03-16T14:22:47Z",
 	},
 	{
 		id: "4",
@@ -69,9 +72,10 @@ const sampleTokens = [
 		price: 0.45,
 		change24h: -0.89,
 		imageUrl: "https://cryptologos.cc/logos/cardano-ada-logo.png",
-		age: "6 years",
 		liquidity: 5_000_000_000,
+		volume: 3_800_000_000,
 		callers: [],
+		createdAt: "2017-09-29T11:45:23Z",
 	},
 	{
 		id: "5",
@@ -81,14 +85,15 @@ const sampleTokens = [
 		price: 7.89,
 		change24h: 3.21,
 		imageUrl: "https://cryptologos.cc/logos/polkadot-new-dot-logo.png",
-		age: "4 years",
 		liquidity: 2_000_000_000,
+		volume: 2_500_000_000,
 		callers: [
 			{ id: "c20", profileImageUrl: "https://www.gravatar.com/avatar/9e1f8db0b3fda3445d7b9b9c4f2cb7f0?s=200&d=identicon" },
 			{ id: "c21", profileImageUrl: "https://www.gravatar.com/avatar/0c83f57c786a0b4a39efab23731c7ebc?s=200&d=identicon" },
 			{ id: "c22", profileImageUrl: "https://www.gravatar.com/avatar/6a6c19fea4a3676970167ce51f39e6ee?s=200&d=identicon" },
 			{ id: "c23", profileImageUrl: "https://www.gravatar.com/avatar/c9cddb28f2731055cbd88a1e7d4a8156?s=200&d=identicon" },
 		],
+		createdAt: "2020-05-26T09:33:51Z",
 	},
 	{
 		id: "6",
@@ -98,13 +103,14 @@ const sampleTokens = [
 		price: 35.67,
 		change24h: 4.56,
 		imageUrl: "https://cryptologos.cc/logos/avalanche-avax-logo.png",
-		age: "3 years",
 		liquidity: 3_000_000_000,
+		volume: 4_200_000_000,
 		callers: [
 			{ id: "c24", profileImageUrl: "https://www.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=200&d=identicon" },
 			{ id: "c25", profileImageUrl: "https://www.gravatar.com/avatar/5496f32b92e0f6933d1ed0f5971996ee?s=200&d=identicon" },
 			{ id: "c26", profileImageUrl: "https://www.gravatar.com/avatar/f0e9e11e56c1cb6e6f13bc99d576b77a?s=200&d=identicon" },
 		],
+		createdAt: "2020-09-21T16:38:12Z",
 	},
 	{
 		id: "7",
@@ -114,12 +120,13 @@ const sampleTokens = [
 		price: 14.32,
 		change24h: -2.15,
 		imageUrl: "https://cryptologos.cc/logos/chainlink-link-logo.png",
-		age: "5 years",
 		liquidity: 1_500_000_000,
+		volume: 1_900_000_000,
 		callers: [
 			{ id: "c27", profileImageUrl: "https://www.gravatar.com/avatar/d4c74594d841139328695756648b6bd6?s=200&d=identicon" },
 			{ id: "c28", profileImageUrl: "https://www.gravatar.com/avatar/8eb1b522f60d11fa897de1dc6351b7e8?s=200&d=identicon" },
 		],
+		createdAt: "2017-09-18T10:12:33Z",
 	},
 	{
 		id: "8",
@@ -129,9 +136,10 @@ const sampleTokens = [
 		price: 0.98,
 		change24h: 1.45,
 		imageUrl: "https://cryptologos.cc/logos/polygon-matic-logo.png",
-		age: "4 years",
 		liquidity: 2_000_000_000,
+		volume: 2_800_000_000,
 		callers: [{ id: "c29", profileImageUrl: "https://www.gravatar.com/avatar/6d8ebb117e8d83d74ea95fbdd0f87e13?s=200&d=identicon" }],
+		createdAt: "2019-04-22T08:45:19Z",
 	},
 	{
 		id: "9",
@@ -141,13 +149,14 @@ const sampleTokens = [
 		price: 7.21,
 		change24h: 0.78,
 		imageUrl: "https://cryptologos.cc/logos/uniswap-uni-logo.png",
-		age: "3 years",
 		liquidity: 1_000_000_000,
+		volume: 3_500_000_000,
 		callers: [
 			{ id: "c30", profileImageUrl: "https://www.gravatar.com/avatar/cb7a03c62e5a75f3af9a8c0c3e2179b3?s=200&d=identicon" },
 			{ id: "c31", profileImageUrl: "https://www.gravatar.com/avatar/1aedb8d9dc4751e229a335e371db8058?s=200&d=identicon" },
 			{ id: "c32", profileImageUrl: "https://www.gravatar.com/avatar/7a4e3461b1c25e5000e2c9220e6a9913?s=200&d=identicon" },
 		],
+		createdAt: "2020-09-17T13:24:56Z",
 	},
 	{
 		id: "10",
@@ -157,12 +166,13 @@ const sampleTokens = [
 		price: 0.105,
 		change24h: 3.45,
 		imageUrl: "https://cryptologos.cc/logos/dogecoin-doge-logo.png",
-		age: "10 years",
 		liquidity: 5_000_000_000,
+		volume: 7_200_000_000,
 		callers: [
 			{ id: "c33", profileImageUrl: "https://www.gravatar.com/avatar/a2d6b94b5de9113071931d5c43b2ea4d?s=200&d=identicon" },
 			{ id: "c34", profileImageUrl: "https://www.gravatar.com/avatar/5c42d3e28ad3d5b4ca3db3f5c3537d49?s=200&d=identicon" },
 		],
+		createdAt: "2013-12-06T22:31:48Z",
 	},
 ];
 

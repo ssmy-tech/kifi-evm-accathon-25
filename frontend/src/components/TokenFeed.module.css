@@ -10,7 +10,6 @@
 .header {
 	padding: 1rem;
 	background-color: var(--background);
-	border-bottom: 1px solid var(--border-color);
 	position: sticky;
 	top: 0;
 	z-index: 10;
@@ -22,8 +21,13 @@
 	padding: 0 1rem;
 }
 
+.tableContainer {
+	overflow-y: auto;
+	height: 100%;
+	width: 100%;
+}
+
 .tokenTable {
-	flex: 1;
 	width: 100%;
 	height: 100%;
 	border-collapse: separate;
@@ -33,25 +37,86 @@
 	table-layout: fixed;
 }
 
+.tableHeader {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	background-color: var(--background);
+}
+
 .headerCell {
-	padding: 32px 0px;
-	padding-left: 32px;
+	padding: 16px;
 	font-weight: 600;
 	font-size: 1.25rem;
 	color: var(--text-secondary, #a0a0a0);
-	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+	border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
 	position: sticky;
 	top: 0;
 	background-color: var(--background);
 	z-index: 10;
 	transition: box-shadow 0.3s ease;
+	text-align: left;
+	vertical-align: middle;
+	height: 72px;
 }
 
 .headerCell:first-child {
 	text-align: center;
-	padding: 32px 0;
-	width: 100px;
+	padding: 16px 0;
+	width: 80px;
 	font-weight: 600;
+}
+
+.sortableHeader {
+	cursor: pointer;
+	user-select: none;
+	position: relative;
+	transition: background-color 0.2s ease;
+}
+
+.sortableHeader:hover {
+	background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Column width classes */
+.narrowColumn {
+	width: 80px;
+	min-width: 80px;
+	max-width: 80px;
+	text-align: center;
+}
+
+.regularColumn {
+	width: 140px;
+	min-width: 140px;
+	max-width: 140px;
+	text-align: center;
+	padding: 0 12px;
+}
+
+.wideColumn {
+	width: 250px;
+	min-width: 250px;
+	max-width: 250px;
+}
+
+/* Column alignment classes */
+.leftAligned {
+	text-align: left;
+}
+
+.centerAligned {
+	text-align: center;
+}
+
+/* Column group styling */
+.metricsGroup {
+	position: relative;
+	background-color: rgba(0, 0, 0, 0.02);
+}
+
+.callersGroup {
+	padding-left: 24px;
 }
 
 .tokenRow {
@@ -60,37 +125,38 @@
 }
 
 .tokenRow:hover {
-	background-color: var(--hover-bg, rgba(255, 255, 255, 0.05));
+	background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
+}
+
+.cell {
+	padding: 16px;
+	border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+	font-size: 1.3rem;
+	font-weight: 500;
+	vertical-align: middle;
+	height: 80px;
 }
 
 .indexCell {
-	padding: 32px 0px;
-	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-	text-align: center;
-	width: 100px;
-	padding-left: 0;
-}
-
-.tokenCell,
-.priceCell,
-.changeCell,
-.marketCapCell,
-.ageCell,
-.callersCell {
-	padding: 32px 0px;
-	padding-left: 32px;
-	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+	background-color: var(--background);
+	position: sticky;
+	left: 0;
+	z-index: 1;
+	padding: 16px 0;
 }
 
 .tokenInfo {
 	display: flex;
 	align-items: center;
-	gap: 20px;
+	gap: 12px;
+	padding: 8px 0;
+	width: 100%;
+	overflow: hidden;
 }
 
 .imageContainer {
-	width: 52px;
-	height: 52px;
+	width: 42px;
+	height: 42px;
 	border-radius: 50%;
 	overflow: hidden;
 	display: flex;
@@ -98,6 +164,7 @@
 	align-items: center;
 	background-color: rgba(255, 255, 255, 0.1);
 	padding: 4px;
+	flex-shrink: 0;
 }
 
 .tokenImage {
@@ -109,62 +176,56 @@
 .nameContainer {
 	display: flex;
 	flex-direction: column;
+	justify-content: center;
+	overflow: hidden;
+	width: calc(100% - 54px);
 }
 
 .tokenName {
 	font-weight: 600;
 	color: var(--text-primary, #ffffff);
 	font-size: 1.35rem;
+	line-height: 1.4;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .tokenTicker {
 	font-size: 1.1rem;
 	color: var(--text-secondary, #a0a0a0);
 	text-transform: uppercase;
-}
-
-.positive {
-	color: var(--success, #4caf50);
-}
-
-.negative {
-	color: var(--error, #f44336);
-}
-
-.priceCell {
-	font-size: 1.3rem;
-	font-weight: 500;
-}
-
-.changeCell {
-	padding: 32px 0px !important;
-	padding-left: 32px !important;
-	font-size: 1.3rem;
-	font-weight: 500;
-}
-
-.marketCapCell {
-	font-size: 1.3rem;
-	font-weight: 500;
+	line-height: 1.4;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .callersContainer {
 	display: flex;
 	align-items: center;
+	height: 42px;
+}
+
+.callersHeader {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 .callerImageWrapper {
-	width: 52px;
-	height: 52px;
+	width: 42px;
+	height: 42px;
 	border-radius: 50%;
 	overflow: hidden;
-	border: 4px solid var(--tint, rgba(255, 255, 255, 0.2));
-	margin-right: -18px;
+	border: 3px solid var(--tint, rgba(255, 255, 255, 0.2));
+	margin-right: -15px;
 	position: relative;
 	display: flex;
 	justify-content: center;
 	align-items: center;
 	background-color: rgba(255, 255, 255, 0.05);
+	flex-shrink: 0;
 }
 
 .callerImage {
@@ -185,64 +246,44 @@
 	font-size: 1.3rem;
 }
 
-.callersHeader {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
 .telegramIcon {
 	margin-right: 2px;
 }
 
-.liquidityCell {
-	padding: 32px 0px;
-	padding-left: 32px;
-	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-	font-size: 1.3rem;
-	font-weight: 500;
+.positive {
+	color: var(--success, #4caf50);
 }
 
-.tokenDetails {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	margin-top: 4px;
+.negative {
+	color: var(--error, #f44336);
 }
 
-.tokenAge {
-	font-size: 0.9rem;
-	color: var(--text-secondary, #a0a0a0);
-	background-color: rgba(255, 255, 255, 0.05);
-	padding: 2px 8px;
-	border-radius: 12px;
-}
-
-.metricsHeader,
-.metricsCell {
-	background-color: rgba(255, 255, 255, 0.02);
-}
-
-.metricsHeader:first-of-type {
-	border-top-left-radius: 8px;
-}
-
-.metricsHeader:last-of-type {
-	border-top-right-radius: 8px;
-}
-
-/* Token group styling */
 .tokenGroupHeader,
 .tokenGroupCell {
 	background-color: rgba(255, 255, 255, 0.01);
 }
 
-.tokenGroupHeader:first-of-type {
-	border-top-left-radius: 8px;
+.metricsGroup {
+	background-color: rgba(255, 255, 255, 0.02);
 }
 
-.tokenGroupHeader:last-of-type {
-	border-top-right-radius: 8px;
+@media (max-width: 1200px) {
+	.regularColumn:nth-child(5),
+	.regularColumn:nth-child(6) {
+		display: none;
+	}
+}
+
+@media (max-width: 992px) {
+	.wideColumn {
+		width: 200px;
+		min-width: 200px;
+		max-width: 200px;
+	}
+
+	.regularColumn:nth-child(7) {
+		display: none;
+	}
 }
 
 @media (max-width: 768px) {
@@ -252,95 +293,17 @@
 
 	.headerCell,
 	.indexCell,
-	.tokenCell,
-	.priceCell,
-	.changeCell,
-	.marketCapCell,
-	.liquidityCell,
-	.ageCell {
+	.tableCell {
 		padding: 12px 8px;
 	}
 
-	.marketCapCell,
-	.liquidityCell {
+	.wideColumn {
+		width: 180px;
+		min-width: 180px;
+		max-width: 180px;
+	}
+
+	.regularColumn:nth-child(3) {
 		display: none;
 	}
-
-	.callersCell {
-		padding: 12px 8px;
-	}
-}
-
-.sortableHeader {
-	cursor: pointer;
-	user-select: none;
-	position: relative;
-	transition: background-color 0.2s ease;
-}
-
-.sortableHeader:hover {
-	background-color: rgba(255, 255, 255, 0.08);
-}
-
-/* Ensure the first header cell aligns with index cells */
-.tokenTable th:first-child,
-.tokenTable td:first-child {
-	text-align: center;
-	width: 100px;
-	position: sticky;
-	left: 0;
-	z-index: 11;
-}
-
-/* If first column is sticky, ensure it has a background */
-.tokenTable th:first-child {
-	background-color: var(--background);
-}
-.tokenTable td:first-child {
-	background-color: var(--background);
-}
-
-/* Create a scrollable body container */
-.tableContainer {
-	overflow-y: auto;
-	height: 100%;
-	width: 100%;
-}
-
-/* Add a selector for the age header cell to match width */
-.headerCell.ageHeader {
-	width: 100px;
-	text-align: left;
-	padding-left: 32px;
-}
-
-.narrowColumn {
-	width: 120px;
-	min-width: 120px;
-	max-width: 120px;
-}
-
-.expandColumn {
-	width: auto;
-	flex-grow: 1;
-}
-
-.ageCell {
-	text-align: center;
-	padding: 32px 0 !important;
-	margin: 0 32px !important;
-}
-
-.headerCell.narrowColumn {
-	text-align: center;
-	padding: 32px 0 !important;
-	margin: 0 32px !important;
-}
-
-.volumeCell {
-	padding: 32px 0px;
-	padding-left: 32px;
-	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-	font-size: 1.3rem;
-	font-weight: 500;
 }

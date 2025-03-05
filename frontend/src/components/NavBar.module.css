@@ -1,15 +1,17 @@
 .navbar {
 	display: flex;
-	width: 100%;
-	justify-content: space-between;
 	align-items: center;
-	padding: 1.1rem 1.3rem;
+	justify-content: space-between;
+	height: 80px;
+	padding: 0 20px;
+	position: relative;
+	width: 100%;
 	background-color: var(--forest);
 	position: fixed;
 	top: 0;
 	left: 0;
 	z-index: 1000;
-	box-sizing: border-box; /* Ensure padding is included in height */
+	box-sizing: border-box;
 }
 
 .logoContainer {
@@ -80,7 +82,7 @@
 .authContainer {
 	display: flex;
 	align-items: center;
-	gap: 1rem; /* Add gap between theme switcher and sign in button */
+	gap: 1rem;
 }
 
 .themeSwitcher {
@@ -101,7 +103,7 @@
 	background-color: rgba(255, 255, 255, 0.1);
 }
 
-.signInButton {
+.authButton {
 	background-color: var(--tint);
 	color: var(--forest);
 	border: none;
@@ -114,20 +116,19 @@
 	border: 3px solid transparent;
 }
 
-.signInButton:hover {
+.authButton:hover {
 	color: var(--tint);
 	background-color: transparent;
 	border: 3px solid var(--tint);
 	font-weight: 600;
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
 	.navbar {
 		flex-direction: column;
 		padding: 1rem;
-		height: auto; /* Allow height to adjust for mobile layout */
-		min-height: 4.5rem; /* Minimum height on mobile */
+		height: auto;
+		min-height: 4.5rem;
 	}
 
 	.navLinks {
@@ -135,4 +136,10 @@
 		transform: none;
 		margin: 1rem 0;
 	}
+}
+
+.profileSection {
+	display: flex;
+	align-items: center;
+	height: 100%;
 }
