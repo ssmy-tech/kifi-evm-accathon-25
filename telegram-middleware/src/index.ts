@@ -20,6 +20,8 @@ dotenv.config();
 // Type Declarations
 declare global {
   var codeCallback: ((code: string) => void) | undefined;
+  var passwordCallback: ((password: string) => void) | undefined;
+  var rateLimitInfo: { minutes: number } | null | undefined;
 }
 
 declare module 'express-serve-static-core' {
@@ -60,19 +62,10 @@ async function setupTelegramClient() {
   try {
     console.log('Initializing Telegram client...');
     
-    // Try to load existing session
-    const sessionPath = path.join(SESSION_DIR, `${config.telegramPhone.replace('+', '')}.session`);
-    let sessionString = '';
-    
-    if (fs.existsSync(sessionPath)) {
-      console.log('Found existing session, loading...');
-      sessionString = fs.readFileSync(sessionPath, 'utf8');
-      console.log('Session loaded from:', sessionPath);
-    } else {
-      console.log('No existing session found at:', sessionPath);
-    }
-    
+    // Use session string from environment if available
+    const sessionString = process.env.TELEGRAM_SESSION || '';
     const session = new StringSession(sessionString);
+    
     client = new TelegramClient(session, config.telegramApiId, config.telegramApiHash, {
       connectionRetries: 5,
     });
@@ -87,8 +80,11 @@ async function setupTelegramClient() {
         console.log('Successfully loaded existing session');
         return client;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log('Error connecting with existing session:', error);
+      if (error.code === 420) {
+        throw error; // Propagate rate limit error
+      }
     }
 
     console.log('Starting new authentication...');
@@ -100,16 +96,24 @@ async function setupTelegramClient() {
           global.codeCallback = resolve;
         });
       },
+      password: async () => {
+        console.log('2FA password required...');
+        return new Promise((resolve) => {
+          global.passwordCallback = resolve;
+        });
+      },
       onError: (err) => {
         console.error('Telegram client error:', err);
         throw err;
       },
     });
     
-    // Save the new session
+    // Get and print the new session string
     const newSessionString = client.session.save() as unknown as string;
-    fs.writeFileSync(sessionPath, newSessionString);
-    console.log('New session saved to:', sessionPath);
+    console.log('\n=== TELEGRAM SESSION STRING ===');
+    console.log(newSessionString);
+    console.log('=== END SESSION STRING ===\n');
+    console.log('Copy this session string and set it as TELEGRAM_SESSION in your environment variables');
 
     console.log('Telegram client initialized successfully!');
     return client;
@@ -118,7 +122,9 @@ async function setupTelegramClient() {
       const waitSeconds = error.seconds || 0;
       const waitMinutes = Math.ceil(waitSeconds / 60);
       console.error(`Telegram rate limit exceeded. Please wait ${waitMinutes} minutes before trying again.`);
-      return null;
+      // Store rate limit info in global state
+      global.rateLimitInfo = { minutes: waitMinutes };
+      throw error;
     }
     console.error('Failed to initialize Telegram client:', error);
     return null;
@@ -182,23 +188,94 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
 
 // Routes
 app.post('/auth/telegram/verify', async (req, res) => {
-  const { code } = req.body;
-
-  if (!code) {
-    return res.status(400).json({ success: false, error: 'Verification code is required' });
-  }
+  const { code, password } = req.body;
 
   try {
-    if (global.codeCallback) {
-      global.codeCallback(code);
+    // Handle 2FA password submission
+    if (password && global.passwordCallback) {
+      global.passwordCallback(password);
       const token = jwt.sign({ authorized: true }, config.jwtSecret, { expiresIn: '24h' });
+      
+      // Print session string after successful 2FA
+      if (client) {
+        const sessionString = client.session.save() as unknown as string;
+        console.log('\n=== TELEGRAM SESSION STRING ===');
+        console.log(sessionString);
+        console.log('=== END SESSION STRING ===\n');
+        console.log('Copy this session string and set it as TELEGRAM_SESSION in your environment variables');
+      }
+      
       res.redirect('/?success=Authentication successful');
-    } else {
-      res.redirect('/?error=No pending authentication');
+      return;
     }
-  } catch (error) {
+
+    // Handle verification code submission
+    if (code && global.codeCallback) {
+      global.codeCallback(code);
+      res.redirect('/?success=Code accepted. Please enter 2FA password if prompted.');
+      return;
+    }
+
+    res.redirect('/?error=No pending authentication');
+  } catch (error: any) {
     console.error('Verification error:', error);
+    if (error.code === 420) { // FloodWaitError
+      const waitSeconds = error.seconds || 0;
+      const waitMinutes = Math.ceil(waitSeconds / 60);
+      res.redirect(`/?error=Telegram rate limit exceeded&rateLimitMinutes=${waitMinutes}`);
+      return;
+    }
     res.redirect(`/?error=${encodeURIComponent('Verification failed')}`);
+  }
+});
+
+app.post('/auth/telegram/restart', async (req, res) => {
+  try {
+    // Check if client exists and is authorized
+    if (client) {
+      const isAuthorized = await client.isUserAuthorized();
+      if (isAuthorized && !global.rateLimitInfo) {
+        res.redirect('/?error=Cannot restart when already authenticated');
+        return;
+      }
+    }
+
+    // Reset the client
+    if (client) {
+      try {
+        await client.disconnect();
+      } catch (error) {
+        console.error('Error disconnecting client:', error);
+      }
+    }
+    client = null;
+    global.codeCallback = undefined;
+    global.passwordCallback = undefined;
+    global.rateLimitInfo = null;
+
+    // Start new client setup
+    try {
+      const telegramClient = await setupTelegramClient();
+      if (telegramClient) {
+        console.log('Telegram client restarted successfully!');
+        client = telegramClient;
+        res.redirect('/?success=Authentication restarted');
+      } else {
+        res.redirect('/?error=Failed to initialize Telegram client');
+      }
+    } catch (error: any) {
+      console.error('Error restarting Telegram client:', error);
+      if (error.code === 420) {
+        const waitSeconds = error.seconds || 0;
+        const waitMinutes = Math.ceil(waitSeconds / 60);
+        res.redirect(`/?error=Telegram rate limit exceeded&rateLimitMinutes=${waitMinutes}`);
+      } else {
+        res.redirect('/?error=Failed to restart authentication');
+      }
+    }
+  } catch (error: any) {
+    console.error('Error in restart endpoint:', error);
+    res.redirect('/?error=Failed to process restart request');
   }
 });
 
@@ -235,8 +312,17 @@ app.get('/api/telegram/chats', authenticateToken, async (req, res) => {
       success: true, 
       data: chats 
     } as Types.ApiResponse<Types.Chat[]>);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching chats:', error);
+    if (error.code === 420) { // FloodWaitError
+      const waitSeconds = error.seconds || 0;
+      const waitMinutes = Math.ceil(waitSeconds / 60);
+      return res.status(429).json({ 
+        success: false, 
+        error: `Telegram rate limit exceeded. Please wait ${waitMinutes} minutes before trying again.`,
+        retryAfter: waitSeconds
+      } as Types.ApiResponse);
+    }
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch chats' 
@@ -281,8 +367,17 @@ app.get('/api/telegram/messages', authenticateToken, async (req, res) => {
       success: true, 
       data: formattedMessages 
     } as Types.ApiResponse<Types.Message[]>);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching messages:', error);
+    if (error.code === 420) { // FloodWaitError
+      const waitSeconds = error.seconds || 0;
+      const waitMinutes = Math.ceil(waitSeconds / 60);
+      return res.status(429).json({ 
+        success: false, 
+        error: `Telegram rate limit exceeded. Please wait ${waitMinutes} minutes before trying again.`,
+        retryAfter: waitSeconds
+      } as Types.ApiResponse);
+    }
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch messages' 
@@ -316,8 +411,17 @@ app.get('/api/telegram/photo/:chatId', authenticateToken, async (req, res) => {
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
     res.send(buffer);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching photo:', error);
+    if (error.code === 420) { // FloodWaitError
+      const waitSeconds = error.seconds || 0;
+      const waitMinutes = Math.ceil(waitSeconds / 60);
+      return res.status(429).json({ 
+        success: false, 
+        error: `Telegram rate limit exceeded. Please wait ${waitMinutes} minutes before trying again.`,
+        retryAfter: waitSeconds
+      } as Types.ApiResponse);
+    }
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch photo' 
@@ -361,15 +465,27 @@ app.get('/', async (req, res) => {
   const maskedPhone = '*'.repeat(phoneNumber.length - 2) + phoneNumber.slice(-2);
   const error = req.query.error as string;
   const success = req.query.success as string;
+  const rateLimitMinutes = req.query.rateLimitMinutes ? parseInt(req.query.rateLimitMinutes as string, 10) : undefined;
 
   let statusMessage;
   let showCodeForm = false;
+  let needs2FA = false;
 
-  if (!client) {
+  // If we have rate limit info from query params or global state, show it
+  if (rateLimitMinutes || global.rateLimitInfo) {
+    const rateLimitInfo = rateLimitMinutes ? { minutes: rateLimitMinutes } : global.rateLimitInfo;
     statusMessage = generateStatusMessage(
-      'Telegram client is not available. Please try again later.',
       undefined,
-      undefined
+      undefined,
+      undefined,
+      rateLimitInfo
+    );
+  } else if (!client) {
+    statusMessage = generateStatusMessage(
+      'Telegram client is not available.',
+      undefined,
+      undefined,
+      null
     );
   } else {
     try {
@@ -378,23 +494,38 @@ app.get('/', async (req, res) => {
         statusMessage = generateStatusMessage(
           undefined,
           'Telegram client is authenticated and ready to use.',
-          undefined
+          undefined,
+          null
         );
       } else {
-        statusMessage = generateStatusMessage(error, success, maskedPhone);
+        statusMessage = generateStatusMessage(error, success, maskedPhone, null);
         showCodeForm = true;
+        needs2FA = global.passwordCallback !== undefined;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking authorization:', error);
-      statusMessage = generateStatusMessage(
-        'Error checking authorization status.',
-        undefined,
-        undefined
-      );
+      if (error.code === 420) {
+        const waitSeconds = error.seconds || 0;
+        const waitMinutes = Math.ceil(waitSeconds / 60);
+        global.rateLimitInfo = { minutes: waitMinutes };
+        statusMessage = generateStatusMessage(
+          undefined,
+          undefined,
+          undefined,
+          global.rateLimitInfo
+        );
+      } else {
+        statusMessage = generateStatusMessage(
+          'Error checking authorization status.',
+          undefined,
+          undefined,
+          null
+        );
+      }
     }
   }
 
-  const codeForm = showCodeForm ? generateCodeForm(true) : '';
+  const codeForm = showCodeForm ? generateCodeForm(true, needs2FA) : '';
   const html = generateHtml(statusMessage, codeForm);
 
   res.send(html);
@@ -423,44 +554,58 @@ async function startServer() {
     console.log('Validating configuration...');
     validateConfig();
 
-    console.log('Setting up Telegram client...');
-    await setupTelegramClient();
-    
-    // Continue server startup even if Telegram client fails
+    // Start server first
     const port = process.env.PORT || 3000;
     const isProduction = process.env.NODE_ENV === 'production';
     
-    if (isProduction) {
-      try {
-        console.log('Starting in production mode...');
-        const privateKey = fs.readFileSync('ssl/private.key', 'utf8');
-        const certificate = fs.readFileSync('ssl/certificate.crt', 'utf8');
-        const credentials = { key: privateKey, cert: certificate };
-        
-        const httpsServer = https.createServer(credentials, app);
-        httpsServer.listen(port, () => {
-          console.log(`HTTPS Server running on port ${port}`);
-          console.log('Telegram sessions will be stored in:', SESSION_DIR);
-          if (!client) {
-            console.log('Warning: Telegram client is not available. Some features will be limited.');
-          }
-        });
-      } catch (error) {
-        console.error('Failed to start HTTPS server:', error);
-        throw new Error('HTTPS is required in production. Please ensure SSL certificates are properly configured.');
-      }
-    } else {
-      console.log('Starting in development mode...');
-      const httpServer = http.createServer(app);
-      httpServer.listen(port, () => {
-        console.log(`HTTP Server running on port ${port} (Development Mode)`);
-        console.log('Telegram sessions will be stored in:', SESSION_DIR);
-        console.log('Visit http://localhost:3000 to view the application');
-        if (!client) {
-          console.log('Warning: Telegram client is not available. Some features will be limited.');
+    const startWebServer = () => {
+      if (isProduction) {
+        try {
+          console.log('Starting in production mode...');
+          const privateKey = fs.readFileSync('ssl/private.key', 'utf8');
+          const certificate = fs.readFileSync('ssl/certificate.crt', 'utf8');
+          const credentials = { key: privateKey, cert: certificate };
+          
+          const httpsServer = https.createServer(credentials, app);
+          httpsServer.listen(port, () => {
+            console.log(`HTTPS Server running on port ${port}`);
+          });
+        } catch (error) {
+          console.error('Failed to start HTTPS server:', error);
+          throw new Error('HTTPS is required in production. Please ensure SSL certificates are properly configured.');
         }
-      });
-    }
+      } else {
+        console.log('Starting in development mode...');
+        const httpServer = http.createServer(app);
+        httpServer.listen(port, () => {
+          console.log(`HTTP Server running on port ${port} (Development Mode)`);
+          console.log('Visit http://localhost:3000 to view the application');
+        });
+      }
+    };
+
+    // Start web server immediately
+    startWebServer();
+
+    // Setup Telegram client asynchronously
+    console.log('Setting up Telegram client in background...');
+    setupTelegramClient().then(telegramClient => {
+      if (telegramClient) {
+        console.log('Telegram client initialized successfully!');
+        client = telegramClient;
+      } else {
+        console.log('Telegram client initialization pending. Please authenticate through the web interface.');
+      }
+    }).catch(error => {
+      console.error('Error setting up Telegram client:', error);
+      if (error.code === 420) {
+        const waitSeconds = error.seconds || 0;
+        const waitMinutes = Math.ceil(waitSeconds / 60);
+        console.error(`Telegram rate limit exceeded. Please wait ${waitMinutes} minutes before trying again.`);
+      }
+      console.log('Telegram features will be limited until client is authenticated.');
+    });
+
   } catch (error) {
     console.error('Server startup failed:', error);
     process.exit(1);

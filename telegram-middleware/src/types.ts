@@ -29,6 +29,7 @@ export namespace Types {
     success: boolean;
     data?: T;
     error?: string;
+    retryAfter?: number;  // Number of seconds to wait before retrying when rate limited
   }
 
   export interface TelegramCredentials {

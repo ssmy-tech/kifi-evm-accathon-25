@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: kifi-telegram-middleware
+    runtime: docker
+    image:
+      url: docker.io/tradekifi/telegram-middleware:latest
+    region: virginia
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: TELEGRAM_API_ID
+        sync: false
+      - key: TELEGRAM_API_HASH
+        sync: false
+      - key: TELEGRAM_PHONE
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: TELEGRAM_SESSION
+        sync: false
+    disk:
+      name: telegram-sessions
+      mountPath: /app/sessions
+      sizeGB: 1
+    autoDeploy: true 

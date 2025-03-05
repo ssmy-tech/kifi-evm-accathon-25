@@ -110,20 +110,59 @@ export const HTML_TEMPLATE = `
 </html>
 `;
 
-export function generateStatusMessage(error?: string, success?: string, maskedPhone?: string): string {
+export function generateStatusMessage(error?: string, success?: string, maskedPhone?: string, rateLimitInfo?: { minutes: number } | null): string {
+  let message = '';
+  
+  // Always show rate limit info if available
+  if (rateLimitInfo) {
+    message += `
+      <div class="status-message error">
+        Telegram rate limit exceeded. Please wait ${rateLimitInfo.minutes} minutes before trying again.
+      </div>
+      <div class="code-form">
+        <form action="/auth/telegram/restart" method="post">
+          <button type="submit" style="background-color: #dc3545;">Restart Authentication</button>
+        </form>
+      </div>
+    `;
+    return message;
+  }
+
   if (error) {
     return `<div class="status-message error">${error}</div>`;
   }
   if (success) {
     return `<div class="status-message success">${success}</div>`;
   }
-  return `<div class="status-message pending">
-    Verification code has been sent to your Telegram account (${maskedPhone})
-  </div>`;
+  if (maskedPhone) {
+    return `<div class="status-message pending">
+      Verification code has been sent to your Telegram account (${maskedPhone})
+    </div>`;
+  }
+  return '';
 }
 
-export function generateCodeForm(showForm: boolean): string {
+export function generateCodeForm(showForm: boolean, needs2FA: boolean = false): string {
   if (!showForm) return '';
+  
+  if (needs2FA) {
+    return `
+    <div class="code-form">
+      <h3>Enter 2FA Password</h3>
+      <form action="/auth/telegram/verify" method="post">
+        <input type="password" name="password" placeholder="Enter 2FA Password" required>
+        <br>
+        <button type="submit">Submit Password</button>
+      </form>
+      <div style="margin-top: 15px; border-top: 1px solid #dee2e6; padding-top: 15px;">
+        <form action="/auth/telegram/restart" method="post">
+          <button type="submit" style="background-color: #6c757d;">Restart Authentication</button>
+        </form>
+      </div>
+    </div>
+    `;
+  }
+
   return `
     <div class="code-form">
       <h3>Enter Verification Code</h3>
@@ -132,6 +171,11 @@ export function generateCodeForm(showForm: boolean): string {
         <br>
         <button type="submit">Submit Code</button>
       </form>
+      <div style="margin-top: 15px; border-top: 1px solid #dee2e6; padding-top: 15px;">
+        <form action="/auth/telegram/restart" method="post">
+          <button type="submit" style="background-color: #6c757d;">Restart Authentication</button>
+        </form>
+      </div>
     </div>
   `;
 }

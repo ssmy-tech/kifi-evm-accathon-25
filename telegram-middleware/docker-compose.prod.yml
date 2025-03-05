@@ -2,11 +2,11 @@ version: '3.8'
 
 services:
   telegram-middleware:
-    build: .
+    image: your-username/telegram-middleware:latest
     ports:
       - "${PORT:-3000}:3000"
     environment:
-      - NODE_ENV=${NODE_ENV:-production}
+      - NODE_ENV=production
       - PORT=${PORT:-3000}
       - TELEGRAM_API_ID
       - TELEGRAM_API_HASH
@@ -14,11 +14,15 @@ services:
       - JWT_SECRET
       - ALLOWED_ORIGINS
     volumes:
-      - ./sessions:/app/sessions
-      - ./ssl:/app/ssl
+      - telegram_sessions:/app/sessions
+      - telegram_ssl:/app/ssl
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
-      retries: 3 
+      retries: 3
+
+volumes:
+  telegram_sessions:
+  telegram_ssl: 
