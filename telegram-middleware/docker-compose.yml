@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  telegram-middleware:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3000}
+      - TELEGRAM_API_ID
+      - TELEGRAM_API_HASH
+      - TELEGRAM_PHONE
+      - JWT_SECRET
+      - ALLOWED_ORIGINS
+    volumes:
+      - ./sessions:/app/sessions
+      - ./ssl:/app/ssl
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3 
