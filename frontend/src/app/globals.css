@@ -1,0 +1,80 @@
+:root {
+	/* Light theme variables */
+	--background: #ffffff;
+	--foreground: #171717;
+	--forest: #445f44;
+	--tint: #9cd39c;
+	--cream: #faffd8;
+	--grey: #e9e9e9;
+
+	--text-primary: #171717;
+	--text-secondary: #666666;
+	--card-bg: rgba(255, 255, 255, 0.8);
+	--border-color: rgba(0, 0, 0, 0.1);
+	--hover-bg: rgba(0, 0, 0, 0.03);
+	--success: #4caf50;
+	--error: #f44336;
+
+	/* Layout variables */
+	--navbar-height: 40px;
+}
+
+[data-theme="dark"] {
+	--background: #0a0a0a;
+	--foreground: #ededed;
+
+	--text-primary: #ffffff;
+	--text-secondary: #a0a0a0;
+	--card-bg: rgba(30, 30, 30, 0.8);
+	--border-color: rgba(255, 255, 255, 0.1);
+	--hover-bg: rgba(255, 255, 255, 0.05);
+	--success: #66bb6a;
+	--error: #ef5350;
+}
+
+/* Keep the media query for system preference, but make it lower priority */
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--background: #0a0a0a;
+		--foreground: #ededed;
+
+		--text-primary: #ffffff;
+		--text-secondary: #a0a0a0;
+		--card-bg: rgba(30, 30, 30, 0.8);
+		--border-color: rgba(255, 255, 255, 0.1);
+		--hover-bg: rgba(255, 255, 255, 0.05);
+		--success: #66bb6a;
+		--error: #ef5350;
+	}
+}
+
+html,
+body {
+	max-width: 100vw;
+	padding-top: var(--navbar-height);
+}
+
+body {
+	color: var(--foreground);
+	background: var(--background);
+	font-family: Arial, Helvetica, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+* {
+	box-sizing: border-box;
+	padding: 0;
+	margin: 0;
+}
+
+a {
+	color: inherit;
+	text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+	html {
+		color-scheme: dark;
+	}
+}

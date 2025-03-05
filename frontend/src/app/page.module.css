@@ -1,0 +1,20 @@
+.page {
+	display: flex;
+	flex-direction: column;
+	height: calc(100vh - var(--navbar-height)); /* Use height instead of min-height */
+	width: 100%;
+	max-width: 100%;
+	font-family: var(--font-geist-sans);
+	box-sizing: border-box;
+	overflow: hidden; /* Prevent page scrolling */
+}
+
+@media (prefers-color-scheme: dark) {
+}
+
+@media (max-width: 768px) {
+	.page {
+		padding: 16px;
+		height: calc(100vh - var(--navbar-height)); /* Maintain this calculation on mobile */
+	}
+}

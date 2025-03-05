@@ -1,0 +1,321 @@
+.container {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: calc(100vh - var(--navbar-height));
+	overflow: hidden;
+	position: relative;
+}
+
+.header {
+	padding: 1rem;
+	background-color: var(--background);
+	border-bottom: 1px solid var(--border-color);
+	position: sticky;
+	top: 0;
+	z-index: 10;
+}
+
+.tokenList {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0 1rem;
+}
+
+.tokenTable {
+	flex: 1;
+	width: 100%;
+	height: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	text-align: left;
+	font-size: 1.1rem;
+	table-layout: fixed;
+}
+
+.headerCell {
+	padding: 32px 0px;
+	padding-left: 32px;
+	font-weight: 600;
+	font-size: 1.15rem;
+	color: var(--text-secondary, #a0a0a0);
+	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+	position: sticky;
+	top: 0;
+	background-color: var(--background);
+	z-index: 10;
+	transition: box-shadow 0.3s ease;
+}
+
+.headerCell:first-child {
+	text-align: center;
+	padding: 32px 0;
+	width: 100px;
+	font-weight: 600;
+}
+
+.tokenRow {
+	transition: background-color 0.2s ease;
+	height: 80px;
+}
+
+.tokenRow:hover {
+	background-color: var(--hover-bg, rgba(255, 255, 255, 0.05));
+}
+
+.indexCell {
+	padding: 32px 0px;
+	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+	text-align: center;
+	width: 100px;
+	padding-left: 0;
+}
+
+.tokenCell,
+.priceCell,
+.changeCell,
+.marketCapCell,
+.callersCell {
+	padding: 32px 0px;
+	padding-left: 32px;
+	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+}
+
+.tokenInfo {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+}
+
+.imageContainer {
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	overflow: hidden;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: rgba(255, 255, 255, 0.1);
+	padding: 4px;
+}
+
+.tokenImage {
+	object-fit: contain;
+	width: 85%;
+	height: 85%;
+}
+
+.nameContainer {
+	display: flex;
+	flex-direction: column;
+}
+
+.tokenName {
+	font-weight: 600;
+	color: var(--text-primary, #ffffff);
+	font-size: 1.25rem;
+}
+
+.tokenTicker {
+	font-size: 1rem;
+	color: var(--text-secondary, #a0a0a0);
+	text-transform: uppercase;
+}
+
+.positive {
+	color: var(--success, #4caf50);
+}
+
+.negative {
+	color: var(--error, #f44336);
+}
+
+.priceCell {
+	font-size: 1.2rem;
+	font-weight: 500;
+}
+
+.changeCell {
+	font-size: 1.2rem;
+	font-weight: 500;
+}
+
+.marketCapCell {
+	font-size: 1.2rem;
+	font-weight: 500;
+}
+
+.callersContainer {
+	display: flex;
+	align-items: center;
+}
+
+.callerImageWrapper {
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	overflow: hidden;
+	border: 4px solid var(--tint, rgba(255, 255, 255, 0.2));
+	margin-right: -18px;
+	position: relative;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: rgba(255, 255, 255, 0.05);
+}
+
+.callerImage {
+	object-fit: cover;
+	width: 100%;
+	height: 100%;
+}
+
+.extraCallersCount {
+	margin-left: 24px;
+	font-size: 1.2rem;
+	color: var(--text-secondary, #a0a0a0);
+	font-weight: 500;
+}
+
+.noCallers {
+	color: var(--text-secondary, #a0a0a0);
+	font-size: 1.2rem;
+}
+
+.ageCell {
+	padding: 32px 0px;
+	padding-left: 32px;
+	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+	font-size: 1rem;
+	font-weight: 500;
+	color: var(--text-secondary, #a0a0a0);
+	white-space: nowrap;
+	text-align: left;
+}
+
+.callersHeader {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.telegramIcon {
+	margin-right: 2px;
+}
+
+.liquidityCell {
+	padding: 32px 0px;
+	padding-left: 32px;
+	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+	font-size: 1.2rem;
+	font-weight: 500;
+}
+
+.tokenDetails {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 4px;
+}
+
+.tokenAge {
+	font-size: 0.9rem;
+	color: var(--text-secondary, #a0a0a0);
+	background-color: rgba(255, 255, 255, 0.05);
+	padding: 2px 8px;
+	border-radius: 12px;
+}
+
+.metricsHeader,
+.metricsCell {
+	background-color: rgba(255, 255, 255, 0.02);
+}
+
+.metricsHeader:first-of-type {
+	border-top-left-radius: 8px;
+}
+
+.metricsHeader:last-of-type {
+	border-top-right-radius: 8px;
+}
+
+/* Token group styling */
+.tokenGroupHeader,
+.tokenGroupCell {
+	background-color: rgba(255, 255, 255, 0.01);
+}
+
+.tokenGroupHeader:first-of-type {
+	border-top-left-radius: 8px;
+}
+
+.tokenGroupHeader:last-of-type {
+	border-top-right-radius: 8px;
+}
+
+/* Add a subtle separator between age and token */
+.tokenCell {
+	/* padding-left: 10px; */
+}
+
+@media (max-width: 768px) {
+	.container {
+		border-radius: 0;
+	}
+
+	.headerCell,
+	.indexCell,
+	.tokenCell,
+	.priceCell,
+	.changeCell,
+	.marketCapCell,
+	.liquidityCell,
+	.ageCell {
+		padding: 12px 8px;
+	}
+
+	.marketCapCell,
+	.liquidityCell {
+		display: none;
+	}
+
+	.callersCell {
+		padding: 12px 8px;
+	}
+}
+
+.sortableHeader {
+	cursor: pointer;
+	user-select: none;
+	position: relative;
+	transition: background-color 0.2s ease;
+}
+
+.sortableHeader:hover {
+	background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Ensure the first header cell aligns with index cells */
+.tokenTable th:first-child,
+.tokenTable td:first-child {
+	text-align: center;
+	width: 100px;
+	position: sticky;
+	left: 0;
+	z-index: 11;
+}
+
+/* If first column is sticky, ensure it has a background */
+.tokenTable th:first-child {
+	background-color: var(--background);
+}
+.tokenTable td:first-child {
+	background-color: var(--background);
+}
+
+/* Create a scrollable body container */
+.tableContainer {
+	overflow-y: auto;
+	height: 100%;
+	width: 100%;
+}
