@@ -69,10 +69,10 @@ const NavBar: React.FC = () => {
 			</div>
 
 			<div className={styles.authContainer}>
+				<button className={styles.signInButton}>Sign In</button>
 				<button className={styles.themeSwitcher} onClick={toggleTheme} aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}>
 					{isDarkMode ? <FaSun /> : <FaMoon />}
 				</button>
-				<button className={styles.signInButton}>Sign In</button>
 			</div>
 		</nav>
 	);

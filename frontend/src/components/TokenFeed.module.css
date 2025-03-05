@@ -29,7 +29,7 @@
 	border-collapse: separate;
 	border-spacing: 0;
 	text-align: left;
-	font-size: 1.1rem;
+	font-size: 1.2rem;
 	table-layout: fixed;
 }
 
@@ -37,7 +37,7 @@
 	padding: 32px 0px;
 	padding-left: 32px;
 	font-weight: 600;
-	font-size: 1.15rem;
+	font-size: 1.25rem;
 	color: var(--text-secondary, #a0a0a0);
 	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 	position: sticky;
@@ -75,6 +75,7 @@
 .priceCell,
 .changeCell,
 .marketCapCell,
+.ageCell,
 .callersCell {
 	padding: 32px 0px;
 	padding-left: 32px;
@@ -113,11 +114,11 @@
 .tokenName {
 	font-weight: 600;
 	color: var(--text-primary, #ffffff);
-	font-size: 1.25rem;
+	font-size: 1.35rem;
 }
 
 .tokenTicker {
-	font-size: 1rem;
+	font-size: 1.1rem;
 	color: var(--text-secondary, #a0a0a0);
 	text-transform: uppercase;
 }
@@ -131,17 +132,19 @@
 }
 
 .priceCell {
-	font-size: 1.2rem;
+	font-size: 1.3rem;
 	font-weight: 500;
 }
 
 .changeCell {
-	font-size: 1.2rem;
+	padding: 32px 0px !important;
+	padding-left: 32px !important;
+	font-size: 1.3rem;
 	font-weight: 500;
 }
 
 .marketCapCell {
-	font-size: 1.2rem;
+	font-size: 1.3rem;
 	font-weight: 500;
 }
 
@@ -172,25 +175,14 @@
 
 .extraCallersCount {
 	margin-left: 24px;
-	font-size: 1.2rem;
+	font-size: 1.3rem;
 	color: var(--text-secondary, #a0a0a0);
 	font-weight: 500;
 }
 
 .noCallers {
 	color: var(--text-secondary, #a0a0a0);
-	font-size: 1.2rem;
-}
-
-.ageCell {
-	padding: 32px 0px;
-	padding-left: 32px;
-	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-	font-size: 1rem;
-	font-weight: 500;
-	color: var(--text-secondary, #a0a0a0);
-	white-space: nowrap;
-	text-align: left;
+	font-size: 1.3rem;
 }
 
 .callersHeader {
@@ -207,7 +199,7 @@
 	padding: 32px 0px;
 	padding-left: 32px;
 	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-	font-size: 1.2rem;
+	font-size: 1.3rem;
 	font-weight: 500;
 }
 
@@ -251,11 +243,6 @@
 
 .tokenGroupHeader:last-of-type {
 	border-top-right-radius: 8px;
-}
-
-/* Add a subtle separator between age and token */
-.tokenCell {
-	/* padding-left: 10px; */
 }
 
 @media (max-width: 768px) {
@@ -318,4 +305,42 @@
 	overflow-y: auto;
 	height: 100%;
 	width: 100%;
+}
+
+/* Add a selector for the age header cell to match width */
+.headerCell.ageHeader {
+	width: 100px;
+	text-align: left;
+	padding-left: 32px;
+}
+
+.narrowColumn {
+	width: 120px;
+	min-width: 120px;
+	max-width: 120px;
+}
+
+.expandColumn {
+	width: auto;
+	flex-grow: 1;
+}
+
+.ageCell {
+	text-align: center;
+	padding: 32px 0 !important;
+	margin: 0 32px !important;
+}
+
+.headerCell.narrowColumn {
+	text-align: center;
+	padding: 32px 0 !important;
+	margin: 0 32px !important;
+}
+
+.volumeCell {
+	padding: 32px 0px;
+	padding-left: 32px;
+	border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+	font-size: 1.3rem;
+	font-weight: 500;
 }

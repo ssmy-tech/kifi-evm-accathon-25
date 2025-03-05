@@ -45,6 +45,19 @@ const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 		return `$${marketCap.toFixed(2)}`;
 	};
 
+	// Function to abbreviate age
+	const abbreviateAge = (age: string): string => {
+		const [value, unit] = age.split(" ");
+		if (unit === "years" || unit === "year") {
+			return `${value}y`;
+		} else if (unit === "months" || unit === "month") {
+			return `${value}m`;
+		} else if (unit === "days" || unit === "day") {
+			return `${value}d`;
+		}
+		return age;
+	};
+
 	// Function to handle header click for sorting
 	const handleSort = (field: SortField) => {
 		if (field === sortField) {
@@ -115,12 +128,12 @@ const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 				<table className={styles.tokenTable}>
 					<thead>
 						<tr className={styles.tableHeader}>
-							<th className={styles.headerCell}>Rank</th>
-							<th className={`${styles.headerCell} ${styles.tokenGroupHeader} ${styles.sortableHeader}`} onClick={() => handleSort("age")}>
-								Age {getSortIndicator("age")}
-							</th>
-							<th className={`${styles.headerCell} ${styles.tokenGroupHeader} ${styles.sortableHeader}`} onClick={() => handleSort("name")}>
+							<th className={`${styles.headerCell} ${styles.narrowColumn}`}>Rank</th>
+							<th className={`${styles.headerCell} ${styles.tokenGroupHeader} ${styles.expandColumn} ${styles.sortableHeader}`} onClick={() => handleSort("name")}>
 								Token {getSortIndicator("name")}
+							</th>
+							<th className={`${styles.headerCell} ${styles.narrowColumn} ${styles.sortableHeader}`} onClick={() => handleSort("age")}>
+								Age {getSortIndicator("age")}
 							</th>
 							<th className={`${styles.headerCell} ${styles.metricsHeader} ${styles.sortableHeader}`} onClick={() => handleSort("price")}>
 								Price {getSortIndicator("price")}
@@ -128,6 +141,7 @@ const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 							<th className={`${styles.headerCell} ${styles.metricsHeader} ${styles.sortableHeader}`} onClick={() => handleSort("liquidity")}>
 								Liquidity {getSortIndicator("liquidity")}
 							</th>
+							<th className={`${styles.headerCell} ${styles.metricsHeader} ${styles.sortableHeader}`}>Volume</th>
 							<th className={`${styles.headerCell} ${styles.metricsHeader} ${styles.sortableHeader}`} onClick={() => handleSort("marketCap")}>
 								Market Cap {getSortIndicator("marketCap")}
 							</th>
@@ -145,9 +159,8 @@ const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 					<tbody>
 						{sortedTokens.map((token, index) => (
 							<tr key={token.id} className={styles.tokenRow}>
-								<td className={styles.indexCell}>{index + 1}</td>
-								<td className={`${styles.ageCell} ${styles.tokenGroupCell}`}>{token.age}</td>
-								<td className={`${styles.tokenCell} ${styles.tokenGroupCell}`}>
+								<td className={`${styles.indexCell} ${styles.narrowColumn}`}>{index + 1}</td>
+								<td className={`${styles.tokenCell} ${styles.expandColumn}`}>
 									<div className={styles.tokenInfo}>
 										<div className={styles.imageContainer}>
 											<Image src={token.imageUrl} alt={token.name} width={52} height={52} className={styles.tokenImage} />
@@ -158,10 +171,12 @@ const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 										</div>
 									</div>
 								</td>
+								<td className={`${styles.ageCell} ${styles.narrowColumn}`}>{abbreviateAge(token.age)}</td>
 								<td className={`${styles.priceCell} ${styles.metricsCell}`}>${token.price.toFixed(2)}</td>
 								<td className={`${styles.liquidityCell} ${styles.metricsCell}`}>{formatMarketCap(token.liquidity || 0)}</td>
+								<td className={`${styles.volumeCell} ${styles.metricsCell}`}>-</td>
 								<td className={`${styles.marketCapCell} ${styles.metricsCell}`}>{formatMarketCap(token.marketCap)}</td>
-								<td className={`${styles.changeCell} ${token.change24h >= 0 ? styles.positive : styles.negative} ${styles.metricsCell}`}>
+								<td className={`${styles.changeCell} ${styles.metricsCell} ${token.change24h >= 0 ? styles.positive : styles.negative}`}>
 									{token.change24h >= 0 ? "+" : ""}
 									{token.change24h.toFixed(2)}%
 								</td>
