@@ -1,16 +1,22 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import styles from "./TokenFeed.module.css";
 import { FaTelegramPlane } from "react-icons/fa";
 import { formatDistanceToNow } from "date-fns";
-import { formatCurrency, formatPercentage } from "../utils/formatters";
+import { formatCurrency, formatPercentage, abbreviateAge } from "../utils/formatters";
 import { Token, TokenFeedProps, SortField, SortDirection } from "../types/token.types";
-
+import { TradingView } from "./TradingView";
+import CallerFeed from "./CallerFeed";
+import TwitterSentiment from "./TwitterSentiment";
+import TelegramSentiment from "./TelegramSentiment";
 const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 	const [sortField, setSortField] = useState<SortField>("callers");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 	const [sortedTokens, setSortedTokens] = useState<Token[]>(tokens);
+	const [expandedTokenId, setExpandedTokenId] = useState<string | null>(null);
+	const [closingTokenId, setClosingTokenId] = useState<string | null>(null);
+	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
 		const sortedTokens = [...tokens].sort((a, b) => {
@@ -60,49 +66,6 @@ const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 		setSortedTokens(sortedTokens);
 	}, [sortField, sortDirection, tokens]);
 
-	const formatMarketCap = (marketCap: number): string => {
-		if (marketCap >= 1_000_000_000) {
-			return `$${(marketCap / 1_000_000_000).toFixed(2)}B`;
-		} else if (marketCap >= 1_000_000) {
-			return `$${(marketCap / 1_000_000).toFixed(2)}M`;
-		} else if (marketCap >= 1_000) {
-			return `$${(marketCap / 1_000).toFixed(2)}K`;
-		}
-		return `$${marketCap.toFixed(2)}`;
-	};
-
-	const abbreviateAge = (createdAt: string): string => {
-		const now = new Date();
-		const created = new Date(createdAt);
-		const diffYears = now.getFullYear() - created.getFullYear();
-
-		if (diffYears > 0) {
-			return `${diffYears}y`;
-		}
-
-		const diffMonths = now.getMonth() - created.getMonth() + 12 * (now.getFullYear() - created.getFullYear());
-		if (diffMonths > 0) {
-			return `${diffMonths}m`;
-		}
-
-		const diffDays = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
-		if (diffDays > 0) {
-			return `${diffDays}d`;
-		}
-
-		const diffHours = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
-		if (diffHours > 0) {
-			return `${diffHours}h`;
-		}
-
-		const diffMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
-		if (diffMinutes > 0) {
-			return `${diffMinutes}m`;
-		}
-
-		return `${Math.floor((now.getTime() - created.getTime()) / 1000)}s`;
-	};
-
 	const handleSort = (field: SortField) => {
 		if (field === sortField) {
 			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -122,6 +85,41 @@ const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 		}
 		return null;
 	};
+
+	const handleRowClick = (tokenId: string) => {
+		if (expandedTokenId === tokenId) {
+			// Start closing animation
+			setClosingTokenId(tokenId);
+
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+
+			timeoutRef.current = setTimeout(() => {
+				setExpandedTokenId(null);
+				setClosingTokenId(null);
+			}, 200);
+		} else {
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+
+			if (closingTokenId) {
+				setClosingTokenId(null);
+			}
+
+			setExpandedTokenId(tokenId);
+		}
+	};
+
+	// Clean up timeout on unmount
+	useEffect(() => {
+		return () => {
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+		};
+	}, []);
 
 	return (
 		<div className={styles.container}>
@@ -161,45 +159,86 @@ const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 					</thead>
 					<tbody>
 						{sortedTokens.map((token, index) => (
-							<tr key={token.id} className={styles.tokenRow}>
-								<td className={`${styles.cell} ${styles.indexCell} ${styles.narrowColumn} ${styles.centerAligned}`}>{index + 1}</td>
-								<td className={`${styles.cell} ${styles.tokenCell} ${styles.wideColumn} ${styles.leftAligned}`}>
-									<div className={styles.tokenInfo}>
-										<div className={styles.imageContainer}>
-											<Image src={token.imageUrl} alt={token.name} width={42} height={42} className={styles.tokenImage} />
+							<React.Fragment key={token.id}>
+								<tr className={`${styles.tokenRow} ${expandedTokenId === token.id ? styles.expanded : ""}`} onClick={() => handleRowClick(token.id)}>
+									<td className={`${styles.cell} ${styles.indexCell} ${styles.narrowColumn} ${styles.centerAligned}`}>{index + 1}</td>
+									<td className={`${styles.cell} ${styles.tokenCell} ${styles.wideColumn} ${styles.leftAligned}`}>
+										<div className={styles.tokenInfo}>
+											<div className={styles.imageContainer}>
+												<Image src={token.imageUrl} alt={token.name} width={42} height={42} className={styles.tokenImage} />
+											</div>
+											<div className={styles.nameContainer}>
+												<div className={styles.tokenName}>{token.name}</div>
+												<div className={styles.tokenTicker}>{token.ticker}</div>
+											</div>
 										</div>
-										<div className={styles.nameContainer}>
-											<div className={styles.tokenName}>{token.name}</div>
-											<div className={styles.tokenTicker}>{token.ticker}</div>
+									</td>
+									<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{abbreviateAge(token.createdAt)}</td>
+									<td className={`${styles.cell} 	 ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.price)}</td>
+									<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.liquidity || 0)}</td>
+									<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{token.volume ? formatCurrency(token.volume) : "-"}</td>
+									<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.marketCap)}</td>
+									<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup} ${token.change24h >= 0 ? styles.positive : styles.negative}`}>
+										{token.change24h >= 0 ? "+" : ""}
+										{formatPercentage(token.change24h)}
+									</td>
+									<td className={`${styles.cell} ${styles.callersCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
+										<div className={styles.callersContainer}>
+											{token.callers && token.callers.length > 0 ? (
+												<>
+													{token.callers.slice(0, 5).map((caller, i) => (
+														<div key={caller.id} className={styles.callerImageWrapper} style={{ zIndex: 5 - i }}>
+															<Image src={caller.profileImageUrl} alt="Caller" width={42} height={42} className={styles.callerImage} />
+														</div>
+													))}
+													{token.callers.length > 5 && <div className={styles.extraCallersCount}>+{token.callers.length - 5}</div>}
+												</>
+											) : (
+												<span className={styles.noCallers}>-</span>
+											)}
 										</div>
-									</div>
-								</td>
-								<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{abbreviateAge(token.createdAt)}</td>
-								<td className={`${styles.cell} 	 ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.price)}</td>
-								<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.liquidity || 0)}</td>
-								<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{token.volume ? formatCurrency(token.volume) : "-"}</td>
-								<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.marketCap)}</td>
-								<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup} ${token.change24h >= 0 ? styles.positive : styles.negative}`}>
-									{token.change24h >= 0 ? "+" : ""}
-									{formatPercentage(token.change24h)}
-								</td>
-								<td className={`${styles.cell} ${styles.callersCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
-									<div className={styles.callersContainer}>
-										{token.callers && token.callers.length > 0 ? (
-											<>
-												{token.callers.slice(0, 5).map((caller, i) => (
-													<div key={caller.id} className={styles.callerImageWrapper} style={{ zIndex: 5 - i }}>
-														<Image src={caller.profileImageUrl} alt="Caller" width={42} height={42} className={styles.callerImage} />
+									</td>
+								</tr>
+								{(expandedTokenId === token.id || closingTokenId === token.id) && (
+									<tr className={`${styles.expandedContent} ${closingTokenId === token.id ? styles.closing : ""}`}>
+										<td colSpan={9}>
+											<div className={`${styles.expandedModules} ${closingTokenId === token.id ? styles.closing : ""}`}>
+												<div className={styles.moduleRow}>
+													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+														<TradingView symbol={token.ticker} />
 													</div>
-												))}
-												{token.callers.length > 5 && <div className={styles.extraCallersCount}>+{token.callers.length - 5}</div>}
-											</>
-										) : (
-											<span className={styles.noCallers}>-</span>
-										)}
-									</div>
-								</td>
-							</tr>
+													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+														<CallerFeed callers={token.callers || []} />
+													</div>
+													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+														<h4>Trade Module</h4>
+													</div>
+												</div>
+												<div className={styles.moduleRow}>
+													<div className={`${styles.module} ${styles.wideModule} ${closingTokenId === token.id ? styles.closing : ""}`}>
+														<TwitterSentiment
+															summary={token.twitterSentiment?.summary || "No sentiment data available"}
+															sentiment={token.twitterSentiment?.sentiment || "neutral"}
+															count={token.twitterSentiment?.count || 0}
+															positiveSplit={token.twitterSentiment?.positiveSplit || 0}
+															negativeSplit={token.twitterSentiment?.negativeSplit || 0}
+														/>
+													</div>
+													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+														<TelegramSentiment
+															summary={token.telegramSentiment?.summary || "No sentiment data available"}
+															sentiment={token.telegramSentiment?.sentiment || "neutral"}
+															count={token.telegramSentiment?.count || 0}
+															positiveSplit={token.telegramSentiment?.positiveSplit || 0}
+															negativeSplit={token.telegramSentiment?.negativeSplit || 0}
+														/>
+													</div>
+												</div>
+											</div>
+										</td>
+									</tr>
+								)}
+							</React.Fragment>
 						))}
 					</tbody>
 				</table>

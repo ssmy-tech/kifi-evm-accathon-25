@@ -1,0 +1,30 @@
+.tradingViewContainer {
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	background-color: #1e222d;
+	position: relative;
+}
+
+.chartContainer {
+	width: 100%;
+	height: 100%;
+}
+
+.fullscreen {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: 100vw !important;
+	height: 100vh !important;
+	z-index: 1000;
+	border-radius: 0;
+}
+
+@media (max-width: 768px) {
+	.tradingViewContainer {
+		height: 300px !important;
+	}
+}
