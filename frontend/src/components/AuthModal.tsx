@@ -154,19 +154,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 						<div className={styles.preferencesForm}>
 							<div className={styles.formItem}>
 								<label htmlFor="quickBuyAmount">Quick Buy Amount</label>
-								<p className={styles.formItemDescription}>Default amount in ETH you want to use for quick buys or Auto Alpha Buys.</p>
+								<div className={styles.formItemDescription}>Default amount in ETH you want to use for quick buys or Auto Alpha Buys.</div>
 								<input type="number" id="quickBuyAmount" min="0" step="0.01" placeholder="Enter amount" value={formValues.quickBuyAmount} onChange={handleInputChange} className={submitAttempted && formValues.quickBuyAmount === "" ? styles.invalidInput : ""} />
 							</div>
 
 							<div className={styles.formItem}>
 								<label htmlFor="minGroupsIndicator">Minimum Group Call Indicator</label>
-								<p className={styles.formItemDescription}>Minimum number of groups required to call a token before Auto Alpha Buy is triggered. Monitored groups can be configured in settings.</p>
+								<div className={styles.formItemDescription}>Minimum number of groups required to call a token before Auto Alpha Buy is triggered. Monitored groups can be configured in settings.</div>
 								<input type="number" id="minGroupsIndicator" min="1" placeholder="Enter minimum groups" value={formValues.minGroupsIndicator} onChange={handleInputChange} className={submitAttempted && formValues.minGroupsIndicator === "" ? styles.invalidInput : ""} />
 							</div>
 
 							<div className={styles.formItem}>
 								<label htmlFor="targetMarketcaps">Target Market Caps for Memecoin Entries</label>
-								<p className={styles.formItemDescription}>Select the market cap ranges you're interested in trading.</p>
+								<div className={styles.formItemDescription}>Select the market cap ranges you're interested in trading.</div>
 								<div className={`${styles.checkboxGroup} ${submitAttempted && !Object.values(formValues.marketCaps).some((v) => v) ? styles.invalidCheckboxGroup : ""}`}>
 									<div className={styles.checkboxItem}>
 										<input type="checkbox" id="microCap" checked={formValues.marketCaps.microCap} onChange={handleInputChange} />

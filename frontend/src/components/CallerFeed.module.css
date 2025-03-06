@@ -1,3 +1,4 @@
+/* Container and Title */
 .container {
 	width: 100%;
 	height: 100%;
@@ -26,6 +27,7 @@
 	margin-right: 10px;
 }
 
+/* Table Container and Scroll */
 .scrollContainer {
 	flex: 1;
 	min-height: 0;
@@ -40,8 +42,19 @@
 	right: 0;
 	bottom: 0;
 	overflow-y: auto;
+	padding: 0rem 1rem;
 }
 
+/* Loading and Empty States */
+.loading,
+.empty {
+	padding: 2rem 0;
+	text-align: center;
+	color: var(--text-secondary);
+	font-style: italic;
+}
+
+/* Table Base Styles */
 .table {
 	width: 100%;
 	border-collapse: collapse;
@@ -58,8 +71,8 @@
 }
 
 .table th {
-	border-bottom: 1px solid var(--border-color, #333);
-	color: var(--text-secondary, #a0a0a0);
+	border-bottom: 1px solid var(--border-color);
+	color: var(--text-secondary);
 	font-weight: 500;
 	position: sticky;
 	top: 0;
@@ -68,13 +81,14 @@
 }
 
 .table td {
-	border-bottom: 1px solid var(--border-color, #222);
+	border-bottom: 1px solid var(--border-color);
 	color: var(--text-primary);
 	font-size: 0.95rem;
-	padding: 0 1rem 0 1rem;
+	padding: 0 1rem;
 	vertical-align: middle;
 }
 
+/* Sort Headers */
 .sortable {
 	cursor: pointer;
 	user-select: none;
@@ -90,8 +104,42 @@
 	margin-left: 0.25rem;
 }
 
+/* Column Widths */
+.nameColumn {
+	width: 35%;
+	text-align: left;
+}
+
+.timestampColumn {
+	width: 35%;
+	text-align: left;
+}
+
+.rateColumn {
+	width: 20%;
+	text-align: center;
+}
+
+.messageHeader {
+	width: 120px;
+	min-width: 120px;
+	text-align: center;
+}
+
+/* Align center headers */
+th.messageHeader {
+	text-align: center;
+}
+
+td.messageCell {
+	text-align: center;
+}
+
+/* Caller Row Styles */
 .callerRow {
-	transition: background-color 0.2s;
+	transform: translateZ(0);
+	will-change: transform, background-color;
+	transition: background-color 0.2s ease;
 	height: 70px;
 	box-sizing: border-box;
 }
@@ -100,56 +148,7 @@
 	background-color: var(--hover-color, rgba(255, 255, 255, 0.05));
 }
 
-.addressCell {
-	max-width: 150px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.addressLink {
-	color: var(--tint);
-	text-decoration: none;
-	transition: opacity 0.2s;
-}
-
-.addressLink:hover {
-	opacity: 0.8;
-	text-decoration: underline;
-}
-
-.loading,
-.empty {
-	padding: 2rem 0;
-	text-align: center;
-	color: var(--text-secondary, #a0a0a0);
-	font-style: italic;
-}
-
-@media (max-width: 768px) {
-	.container {
-		padding: 0.75rem;
-	}
-
-	.table {
-		font-size: 0.75rem;
-	}
-
-	.table th,
-	.table td {
-		padding: 0.5rem 0.25rem;
-	}
-
-	.addressCell {
-		max-width: 100px;
-	}
-}
-
-.imageHeader {
-	width: 60px;
-	min-width: 60px;
-	max-width: 60px;
-}
-
+/* Image Cell Styles */
 .imageCell {
 	width: 60px;
 	min-width: 60px;
@@ -172,6 +171,22 @@
 	height: 38px;
 }
 
+/* Timestamp Styles */
+.timestamp {
+	font-size: 0.9em;
+	color: var(--text-secondary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Message Cell Styles */
+.messageCell {
+	text-align: center;
+	width: 120px;
+	min-width: 120px;
+}
+
 .hasMessage {
 	cursor: pointer;
 }
@@ -180,19 +195,10 @@
 	background-color: var(--hover-color, rgba(255, 255, 255, 0.08));
 }
 
-.messageHeader {
-	width: 120px;
-	min-width: 120px;
-	text-align: center;
-}
-
-.messageCell {
-	text-align: center;
-	width: 120px;
-	min-width: 120px;
-}
-
 .viewButton {
+	transform: translateZ(0);
+	will-change: background-color, color;
+	transition: all 0.2s ease;
 	background-color: var(--tint);
 	color: var(--forest);
 	border: none;
@@ -200,7 +206,6 @@
 	padding: 4px 8px;
 	font-size: 0.8rem;
 	cursor: pointer;
-	transition: background-color 0.2s;
 }
 
 .viewButton:hover {
@@ -208,6 +213,7 @@
 	color: var(--cream);
 }
 
+/* Message Row Styles */
 .messageRow {
 	background-color: var(--background-light, rgba(255, 255, 255, 0.03));
 	position: relative;
@@ -215,6 +221,9 @@
 }
 
 .messageContentWrapper {
+	transform: translateZ(0);
+	will-change: transform;
+	backface-visibility: hidden;
 	max-height: 150px;
 	overflow-y: auto;
 	position: relative;
@@ -222,6 +231,43 @@
 	scrollbar-color: var(--tint) transparent;
 }
 
+.messageContent {
+	color: var(--text-primary);
+	font-style: italic;
+	border-bottom: 1px solid var(--border-color);
+	background-color: var(--background-light, rgba(255, 255, 255, 0.03));
+	padding: 1rem 2rem;
+}
+
+/* Animations */
+@keyframes expandDown {
+	from {
+		opacity: 0;
+		transform: translateY(-10px) translateZ(0);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) translateZ(0);
+	}
+}
+
+.closing {
+	animation: fadeOut 0.2s ease-out forwards;
+	will-change: transform, opacity;
+}
+
+@keyframes fadeOut {
+	from {
+		opacity: 1;
+		transform: translateY(0) translateZ(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(-10px) translateZ(0);
+	}
+}
+
+/* Scrollbar Styles */
 .messageContentWrapper::-webkit-scrollbar {
 	width: 6px;
 }
@@ -235,77 +281,36 @@
 	border-radius: 3px;
 }
 
-.messageContent {
-	color: var(--text-primary);
-	font-style: italic;
-	border-bottom: 1px solid var(--border-color, #222);
-	background-color: var(--background-light, rgba(255, 255, 255, 0.03));
-	padding: 1rem 2rem;
-}
-
-@keyframes expandDown {
-	from {
-		opacity: 0;
+/* Responsive Styles */
+@media (max-width: 768px) {
+	.container {
+		padding: 0.75rem;
 	}
-	to {
-		opacity: 1;
-	}
-}
 
-.closing {
-	animation: fadeOut 0.3s ease-out forwards;
-}
-
-@keyframes fadeOut {
-	from {
-		opacity: 1;
+	.table {
+		font-size: 0.75rem;
 	}
-	to {
-		opacity: 0;
+
+	.table th,
+	.table td {
+		padding: 0.5rem 0.25rem;
 	}
 }
 
-.nameColumn {
-	width: 25%;
-	text-align: left;
+@media (max-width: 1900px) {
+	.nameColumn {
+		width: 35%;
+	}
+
+	.timestampColumn {
+		width: 35%;
+	}
+
+	.rateColumn {
+		width: 20%;
+	}
 }
 
-.timestampColumn {
-	width: 25%;
-	text-align: left;
-}
-
-.countColumn {
-	width: 15%;
-	text-align: center;
-}
-
-.rateColumn {
-	width: 15%;
-	text-align: center;
-}
-
-th.countColumn,
-th.rateColumn,
-th.messageHeader {
-	text-align: center;
-}
-
-td.countColumn,
-td.rateColumn,
-td.messageCell {
-	text-align: center;
-}
-
-.timestamp {
-	font-size: 0.9em;
-	color: var(--text-secondary, #a0a0a0);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-/* Update responsive styles for timestamps */
 @media (min-width: 1200px) {
 	.title {
 		font-size: 1.5rem;
@@ -362,12 +367,7 @@ td.messageCell {
 		height: 44px;
 	}
 
-	.imageCell {
-		width: 70px;
-		min-width: 70px;
-		max-width: 70px;
-	}
-
+	.imageCell,
 	.imageHeader {
 		width: 70px;
 		min-width: 70px;
@@ -382,27 +382,5 @@ td.messageCell {
 	.messageCell {
 		width: 140px;
 		min-width: 140px;
-	}
-}
-
-/* Hide count column for screens 1900px and under */
-@media (max-width: 1900px) {
-	.countColumn {
-		display: none;
-	}
-}
-
-/* Adjust column widths when count is hidden */
-@media (max-width: 1900px) {
-	.nameColumn {
-		width: 30%;
-	}
-
-	.timestampColumn {
-		width: 30%;
-	}
-
-	.rateColumn {
-		width: 20%;
 	}
 }

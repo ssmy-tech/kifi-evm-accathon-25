@@ -130,8 +130,11 @@
 }
 
 .tokenRow {
+	transform: translateZ(0);
+	will-change: transform, background-color;
 	transition: background-color 0.2s ease;
 	height: 80px;
+	backface-visibility: hidden;
 }
 
 .tokenRow:hover {
@@ -144,6 +147,9 @@
 }
 
 .expandedContent {
+	transform-style: preserve-3d;
+	will-change: transform, opacity;
+	backface-visibility: hidden;
 	background-color: var(--hover-bg, rgba(0, 0, 0, 0.03));
 	height: 800px;
 	animation: expandDown 0.3s ease-out forwards;
@@ -159,30 +165,29 @@
 @keyframes expandDown {
 	from {
 		opacity: 0;
-		max-height: 0;
-		transform: scaleY(0);
+		transform: scaleY(0) translateZ(0);
 	}
 	to {
 		opacity: 1;
-		max-height: 50vh;
-		transform: scaleY(1);
+		transform: scaleY(1) translateZ(0);
 	}
 }
 
 @keyframes collapseUp {
 	from {
 		opacity: 1;
-		max-height: 50vh;
-		transform: scaleY(1);
+		transform: scaleY(1) translateZ(0);
 	}
 	to {
 		opacity: 0;
-		max-height: 0;
-		transform: scaleY(0);
+		transform: scaleY(0) translateZ(0);
 	}
 }
 
 .expandedModules {
+	transform: translateZ(0);
+	will-change: transform, opacity;
+	backface-visibility: hidden;
 	flex: 1;
 	padding: 20px;
 	display: flex;
@@ -201,22 +206,22 @@
 @keyframes fadeIn {
 	from {
 		opacity: 0;
-		transform: translateY(10px);
+		transform: translateY(10px) translateZ(0);
 	}
 	to {
 		opacity: 1;
-		transform: translateY(0);
+		transform: translateY(0) translateZ(0);
 	}
 }
 
 @keyframes fadeOut {
 	from {
 		opacity: 1;
-		transform: translateY(0);
+		transform: translateY(0) translateZ(0);
 	}
 	to {
 		opacity: 0;
-		transform: translateY(10px);
+		transform: translateY(10px) translateZ(0);
 	}
 }
 
@@ -240,6 +245,9 @@
 }
 
 .module {
+	transform: translateZ(0);
+	will-change: transform, opacity;
+	backface-visibility: hidden;
 	flex: 1;
 	min-height: 0;
 	background-color: var(--background);
@@ -283,22 +291,22 @@
 @keyframes slideIn {
 	from {
 		opacity: 0;
-		transform: translateY(20px);
+		transform: translateY(20px) translateZ(0);
 	}
 	to {
 		opacity: 1;
-		transform: translateY(0);
+		transform: translateY(0) translateZ(0);
 	}
 }
 
 @keyframes slideOut {
 	from {
 		opacity: 1;
-		transform: translateY(0);
+		transform: translateY(0) translateZ(0);
 	}
 	to {
 		opacity: 0;
-		transform: translateY(20px);
+		transform: translateY(20px) translateZ(0);
 	}
 }
 

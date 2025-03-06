@@ -1,0 +1,263 @@
+.container {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px;
+	height: 100%;
+	width: 100%;
+	background-color: var(--background);
+	border-radius: 12px;
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.titleGroup {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.titleGroup h3 {
+	font-size: 1.6rem;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.titleWithIcon {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.icon {
+	color: var(--text-primary);
+	height: 30px;
+	width: 30px;
+	margin-right: 10px;
+}
+
+.contentWrapper {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 16px;
+	border-radius: 12px;
+	height: 100%;
+	position: relative;
+}
+
+.tokenInput {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 1.5rem;
+	background-color: var(--border-color);
+	border-radius: 12px;
+	flex: 1;
+	min-height: 120px;
+	justify-content: space-between;
+}
+
+.inputLabel {
+	font-size: 1.5rem;
+	font-weight: 600;
+	color: var(--text-primary);
+	margin-bottom: auto;
+}
+
+.inputContainer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
+}
+
+.amountInput {
+	flex: 1;
+	background: none;
+	border: none;
+	font-size: clamp(1.5rem, 4vw, 2.5rem);
+	color: var(--text-primary);
+	outline: none;
+	width: 100%;
+	min-width: 0;
+}
+
+.tokenSelector {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 0.5rem 1rem;
+	background-color: var(--border-color);
+	border-radius: 0.5rem;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.tokenSelector span {
+	font-size: 1rem;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.balanceContainer {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.balanceInfo {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.usdValue {
+	font-size: 1rem;
+	color: var(--text-secondary);
+	opacity: 0.8;
+}
+
+.maxAmount {
+	font-size: 1.2rem;
+	color: var(--text-secondary);
+	cursor: pointer;
+	transition: opacity 0.2s;
+}
+
+.maxAmount:hover {
+	opacity: 0.8;
+}
+
+.maxButton {
+	padding: 4px 8px;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: var(--cream);
+	background-color: var(--forest);
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: opacity 0.2s;
+}
+
+.maxButton:hover {
+	opacity: 0.8;
+}
+
+.swapIcon {
+	position: absolute;
+	left: 50%;
+	top: calc(50% - 3rem);
+	transform: translate(-50%, -50%);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	background-color: var(--background);
+	cursor: pointer;
+	z-index: 1;
+	font-size: 3rem;
+	box-shadow: 0 0 0 6px var(--background);
+}
+
+.swapIcon svg {
+	color: var(--forest);
+}
+
+.swapIcon:hover svg {
+	color: var(--tint);
+	transition: color 0.2s;
+}
+
+.tradeInfo {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	width: 100%;
+	gap: 16px;
+}
+
+.tradeSettings {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-evenly;
+	gap: 16px;
+	padding: 12px 16px;
+	height: 64px;
+	background-color: var(--forest);
+	border-radius: 8px;
+	flex: 1;
+}
+
+.settingItem {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	font-size: 1.1rem;
+	color: white;
+	min-width: 80px;
+}
+
+.settingItem span:first-child {
+	opacity: 0.8;
+	color: var(--cream);
+	font-size: 0.9rem;
+}
+
+.settingEnabled {
+	color: var(--tint);
+	font-weight: 700;
+}
+
+.settingDisabled {
+	color: var(--error);
+	font-weight: 700;
+}
+
+.tradeActions {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 8px;
+	min-width: 50%;
+}
+
+.reviewButton {
+	width: 100%;
+	height: 64px;
+	padding: 0 16px;
+	background-color: var(--tint);
+	color: var(--text-primary);
+	border: none;
+	border-radius: 8px;
+	font-size: 1.4rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.reviewButtonDisabled {
+	background-color: var(--border-color);
+	cursor: not-allowed;
+	opacity: 0.8;
+}
+
+.reviewButton:not(.reviewButtonDisabled):hover {
+	opacity: 0.9;
+}
+
+.exchangeRate {
+	font-size: 1rem;
+	color: var(--text-secondary);
+}

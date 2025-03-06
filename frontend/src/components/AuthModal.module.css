@@ -50,7 +50,7 @@
 .step p {
 	margin-bottom: 20px;
 	color: #666;
-	font-size: clamp(1rem, 2.5vw, 1.6rem);
+	font-size: clamp(1rem, 2.5vw, 1.5rem);
 	line-height: 1.5;
 }
 
@@ -89,7 +89,7 @@
 
 .formItem label {
 	font-weight: 600;
-	font-size: clamp(1rem, 2vw, 1.2rem);
+	font-size: clamp(1rem, 2vw, 1.6rem);
 	color: #333;
 	margin-bottom: 0.25rem;
 }
@@ -130,17 +130,18 @@
 
 .checkboxItem label {
 	font-weight: 400;
-	font-size: clamp(1rem, 2.2vw, 1.2rem);
+	font-size: clamp(1rem, 2.2vw, 1.4rem);
 	line-height: 1.4;
 }
 
 .formItemDescription {
-	font-size: clamp(0.75rem, 1.1vw, 0.875rem);
+	font-size: 1.2rem;
 	color: #666;
 	line-height: 1.4;
-	margin-bottom: 0.75rem;
-	font-weight: 400;
+	margin-bottom: 0.5rem;
+	font-weight: normal;
 	text-align: left;
+	opacity: 0.8;
 }
 
 .invalidInput {

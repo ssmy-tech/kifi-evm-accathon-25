@@ -33,7 +33,7 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 			setTimeout(() => {
 				setExpandedCallerId(null);
 				setClosingCallerId(null);
-			}, 300); // Match animation duration
+			}, 200);
 		} else {
 			setExpandedCallerId(callerId);
 		}
@@ -109,12 +109,6 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 											{sortField === "timestamp" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
 										</th>
 									)}
-									{callers?.some((caller) => caller.callCount) && (
-										<th onClick={() => handleSort("callCount")} className={`${styles.sortable} ${styles.countColumn}`}>
-											Call Count
-											{sortField === "callCount" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
-										</th>
-									)}
 									{callers?.some((caller) => caller.winRate !== undefined) && (
 										<th onClick={() => handleSort("winRate")} className={`${styles.sortable} ${styles.rateColumn}`}>
 											Win Rate
@@ -140,13 +134,12 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 											</td>
 											{callers?.some((caller) => caller.name) && <td className={styles.nameColumn}>{caller.name || "-"}</td>}
 											{callers?.some((caller) => caller.timestamp) && <td className={styles.timestampColumn}>{caller.timestamp ? <span className={styles.timestamp}>{formatTimestamp(caller.timestamp, false, true)}</span> : "-"}</td>}
-											{callers?.some((caller) => caller.callCount) && <td className={styles.countColumn}>{caller.callCount?.toLocaleString() || "-"}</td>}
 											{callers?.some((caller) => caller.winRate !== undefined) && <td className={styles.rateColumn}>{caller.winRate !== undefined ? `${caller.winRate}%` : "-"}</td>}
 											{callers?.some((caller) => caller.message) && <td className={styles.messageCell}>{caller.message ? <div className={styles.viewButton}>{expandedCallerId === caller.id ? "Hide" : "View"}</div> : "None"}</td>}
 										</tr>
 										{expandedCallerId === caller.id && caller.message && (
 											<tr className={`${styles.messageRow} ${closingCallerId === caller.id ? styles.closing : ""}`} data-caller-id={caller.id}>
-												<td colSpan={6}>
+												<td colSpan={5}>
 													<div className={styles.messageContentWrapper}>
 														<div className={styles.messageContent}>{caller.message}</div>
 													</div>

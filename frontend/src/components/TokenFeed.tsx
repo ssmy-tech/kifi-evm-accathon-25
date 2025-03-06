@@ -10,6 +10,8 @@ import { TradingView } from "./TradingView";
 import CallerFeed from "./CallerFeed";
 import TwitterSentiment from "./TwitterSentiment";
 import TelegramSentiment from "./TelegramSentiment";
+import TradeModule from "./TradeModule";
+
 const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 	const [sortField, setSortField] = useState<SortField>("callers");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -205,13 +207,13 @@ const TokenFeed: React.FC<TokenFeedProps> = ({ tokens }) => {
 											<div className={`${styles.expandedModules} ${closingTokenId === token.id ? styles.closing : ""}`}>
 												<div className={styles.moduleRow}>
 													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-														<TradingView symbol={token.ticker} />
+														<TradingView symbol={token.ticker + "USD"} />
 													</div>
 													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
 														<CallerFeed callers={token.callers || []} />
 													</div>
 													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-														<h4>Trade Module</h4>
+														<TradeModule />
 													</div>
 												</div>
 												<div className={styles.moduleRow}>
