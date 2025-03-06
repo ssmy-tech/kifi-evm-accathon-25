@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma.service';
+import { ChatType } from '@prisma/client';
 import axios from 'axios';
 
 interface TelegramPhotoResponse {
@@ -10,10 +11,15 @@ interface TelegramPhotoResponse {
 interface TelegramChat {
   id: string;
   name: string;
+  type: string; // 'channel' | 'group' | 'user'
 }
 
 interface TelegramChatsResponse {
   channels: TelegramChat[];
+}
+
+interface SaveChatsInput {
+  chatIds: string[];
 }
 
 @Injectable()
@@ -26,6 +32,19 @@ export class TelegramService {
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
   ) {}
+
+  private mapToChatType(type: string): ChatType {
+    switch (type.toLowerCase()) {
+      case 'channel':
+        return ChatType.Channel;
+      case 'group':
+        return ChatType.Group;
+      case 'user':
+        return ChatType.User;
+      default:
+        return ChatType.Channel; // fallback
+    }
+  }
 
   private async rateLimit() {
     this.requestCount++;
@@ -89,7 +108,12 @@ export class TelegramService {
     }
   }
 
-  private async fetchChatPhoto(user: any, chatId: string): Promise<string | null> {
+  async getChatPhoto(privyId: string, chatId: string): Promise<string | null> {
+    const user = await this.usersService.findByPrivyUserIdFull(privyId);
+    if (!user || !user.tgApiLink) {
+      throw new UnauthorizedException('User or API link not found');
+    }
+
     try {
       await this.rateLimit();
       const response = await axios.get<TelegramPhotoResponse>(
@@ -105,39 +129,6 @@ export class TelegramService {
       console.error(`Failed to fetch photo for chat ${chatId}:`, error.message);
       return null;
     }
-  }
-
-  private async syncChat(user: any, chat: TelegramChat) {
-    const existingChat = await this.prisma.chats.findUnique({
-      where: { tgChatId: chat.id },
-    });
-
-    // If chat doesn't exist or doesn't have an image, fetch the photo
-    if (!existingChat || !existingChat.tgChatImage) {
-      const photoUrl = await this.fetchChatPhoto(user, chat.id);
-      
-      // Upsert the chat with new data
-      return this.prisma.chats.upsert({
-        where: { tgChatId: chat.id },
-        create: {
-          tgChatId: chat.id,
-          tgChatName: chat.name,
-          tgChatImage: photoUrl,
-          users: {
-            connect: { privyId: user.privyId }
-          }
-        },
-        update: {
-          tgChatName: chat.name,
-          tgChatImage: photoUrl || existingChat?.tgChatImage,
-          users: {
-            connect: { privyId: user.privyId }
-          }
-        }
-      });
-    }
-
-    return existingChat;
   }
 
   async getChats(privyId: string) {
@@ -158,24 +149,112 @@ export class TelegramService {
         }
       );
 
-      // Sync each chat with our database
-      const syncPromises = response.data.channels.map((chat: TelegramChat) => 
-        this.syncChat(user, chat)
-      );
-      
-      const syncedChats = await Promise.all(syncPromises);
-
-      // Return the synced chats
       return {
-        channels: syncedChats.map(chat => ({
-          id: chat.tgChatId,
-          name: chat.tgChatName || '',
-          type: 'channel',
-          photoUrl: chat.tgChatImage || null
+        channels: response.data.channels.map(chat => ({
+          id: chat.id,
+          name: chat.name,
+          type: chat.type
         }))
       };
     } catch (error) {
       throw new Error(`Failed to fetch chats: ${error.message}`);
     }
+  }
+
+  private async getChatDetails(user: any, chatId: string): Promise<TelegramChat | null> {
+    try {
+      await this.rateLimit();
+      const response = await axios.get<TelegramChatsResponse>(
+        `${user.tgApiLink}/api/chats`,
+        {
+          headers: {
+            'Authorization': `Bearer ${user.tgApiSecret}`,
+          },
+        }
+      );
+
+      // Find the specific chat in the response
+      const chatDetails = response.data.channels.find(chat => chat.id === chatId);
+      return chatDetails || null;
+    } catch (error) {
+      console.error(`Failed to fetch chat details for ${chatId}:`, error.message);
+      return null;
+    }
+  }
+
+  async createUserSavedChats(privyId: string, input: SaveChatsInput) {
+    const user = await this.usersService.findByPrivyUserIdFull(privyId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Create or connect chats and link them to the user
+    const savedChats = await Promise.all(
+      input.chatIds.map(async (chatId) => {
+        // Get chat details from Telegram API
+        const chatDetails = await this.getChatDetails(user, chatId);
+        if (!chatDetails) {
+          console.error(`Could not fetch details for chat ${chatId}`);
+          return null;
+        }
+
+        // Get chat photo
+        const photoUrl = await this.getChatPhoto(privyId, chatId);
+
+        // Upsert the chat with all details
+        return this.prisma.chats.upsert({
+          where: { tgChatId: chatId },
+          create: {
+            tgChatId: chatId,
+            tgChatName: chatDetails.name,
+            tgChatImage: photoUrl,
+            tgChatType: this.mapToChatType(chatDetails.type),
+            users: {
+              connect: { privyId }
+            }
+          },
+          update: {
+            tgChatName: chatDetails.name,
+            tgChatImage: photoUrl,
+            tgChatType: this.mapToChatType(chatDetails.type),
+            users: {
+              connect: { privyId }
+            }
+          }
+        });
+      })
+    );
+
+    // Filter out any nulls from failed chat fetches
+    return savedChats.filter(chat => chat !== null);
+  }
+
+  async getUserSavedChats(privyId: string) {
+    const user = await this.usersService.findByPrivyUserIdFull(privyId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const savedChats = await this.prisma.chats.findMany({
+      where: {
+        users: {
+          some: {
+            privyId
+          }
+        }
+      },
+      include: {
+        users: true
+      }
+    });
+
+    return {
+      channels: savedChats.map(chat => ({
+        id: chat.tgChatId,
+        name: chat.tgChatName || '',
+        type: chat.tgChatType.toLowerCase(),
+        photoUrl: chat.tgChatImage || null
+      }))
+    };
   }
 } 

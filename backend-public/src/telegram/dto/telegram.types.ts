@@ -1,4 +1,4 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType, InputType } from '@nestjs/graphql';
 
 @ObjectType()
 export class ApiSecretResponse {
@@ -34,4 +34,10 @@ export class TelegramChat {
 export class ChatsResponse {
   @Field(() => [TelegramChat])
   channels: TelegramChat[];
+}
+
+@InputType()
+export class SaveChatsInput {
+  @Field(() => [String])
+  chatIds: string[];
 } 

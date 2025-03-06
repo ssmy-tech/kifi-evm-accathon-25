@@ -21,6 +21,7 @@ model Chats {
     tgChatId String @id @unique
     tgChatName String?
     tgChatImage String?
+    tgChatType ChatType
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     users User[]
@@ -77,4 +78,10 @@ enum Chain {
 enum DataStatus {
     Private
     Public
+}
+
+enum ChatType {
+    Channel
+    Group
+    User
 }
