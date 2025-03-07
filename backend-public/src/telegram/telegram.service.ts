@@ -2,11 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma.service';
 import { ChatType } from '@prisma/client';
+import { S3Service } from '../s3/s3.service';
 import axios from 'axios';
-
-interface TelegramPhotoResponse {
-  photoUrl: string;
-}
 
 interface TelegramChat {
   id: string;
@@ -15,7 +12,13 @@ interface TelegramChat {
 }
 
 interface TelegramChatsResponse {
-  channels: TelegramChat[];
+  data: Array<{
+    id: string;
+    name: string;
+    type: string;
+    unreadCount: number;
+    avatar: string;
+  }>;
 }
 
 interface SaveChatsInput {
@@ -31,6 +34,7 @@ export class TelegramService {
   constructor(
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
+    private readonly s3Service: S3Service,
   ) {}
 
   private mapToChatType(type: string): ChatType {
@@ -67,13 +71,19 @@ export class TelegramService {
     }
   }
 
-  async updateApiLink(privyId: string, apiLink: string) {
+  async updateApiLink(privyId: string, apiLink: string): Promise<boolean> {
     const user = await this.usersService.findByPrivyUserIdFull(privyId);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
-    return this.usersService.updateTelegramApi(privyId, apiLink);
+    try {
+      await this.usersService.updateTelegramApi(privyId, apiLink);
+      return true;
+    } catch (error) {
+      console.error('Failed to update Telegram API:', error);
+      return false;
+    }
   }
 
   async getApiSecret(privyId: string) {
@@ -93,22 +103,21 @@ export class TelegramService {
 
     try {
       await this.rateLimit();
-      const response = await axios.post(
+      const response = await axios.get(
         `${user.tgApiLink}/api/health`,
-        {},
         {
           headers: {
             'Authorization': `Bearer ${user.tgApiSecret}`,
           },
         }
-      );
+      )
       return { status: response.status === 200 ? 'healthy' : 'unhealthy' };
     } catch (error) {
       return { status: 'unhealthy', error: error.message };
     }
   }
 
-  async getChatPhoto(privyId: string, chatId: string): Promise<string | null> {
+  async getChatPhoto(privyId: string, chatId: string): Promise<Buffer | null> {
     const user = await this.usersService.findByPrivyUserIdFull(privyId);
     if (!user || !user.tgApiLink) {
       throw new UnauthorizedException('User or API link not found');
@@ -116,15 +125,17 @@ export class TelegramService {
 
     try {
       await this.rateLimit();
-      const response = await axios.get<TelegramPhotoResponse>(
-        `${user.tgApiLink}/api/chats/${chatId}/photo`,
+      const response = await axios.get<ArrayBuffer>(
+        `${user.tgApiLink}/api/telegram/photo/${chatId}`,
         {
           headers: {
             'Authorization': `Bearer ${user.tgApiSecret}`,
           },
+          responseType: 'arraybuffer'
         }
       );
-      return response.data.photoUrl || null;
+
+      return Buffer.from(new Uint8Array(response.data));
     } catch (error) {
       console.error(`Failed to fetch photo for chat ${chatId}:`, error.message);
       return null;
@@ -141,19 +152,19 @@ export class TelegramService {
       // Fetch chats from Telegram API
       await this.rateLimit();
       const response = await axios.get<TelegramChatsResponse>(
-        `${user.tgApiLink}/api/chats`,
+        `${user.tgApiLink}/api/telegram/chats`,
         {
           headers: {
             'Authorization': `Bearer ${user.tgApiSecret}`,
           },
         }
       );
-
       return {
-        channels: response.data.channels.map(chat => ({
+        chats: response.data.data.map(chat => ({
           id: chat.id,
           name: chat.name,
-          type: chat.type
+          type: chat.type,
+          photoUrl: chat.avatar
         }))
       };
     } catch (error) {
@@ -165,7 +176,7 @@ export class TelegramService {
     try {
       await this.rateLimit();
       const response = await axios.get<TelegramChatsResponse>(
-        `${user.tgApiLink}/api/chats`,
+        `${user.tgApiLink}/api/telegram/chats`,
         {
           headers: {
             'Authorization': `Bearer ${user.tgApiSecret}`,
@@ -174,7 +185,7 @@ export class TelegramService {
       );
 
       // Find the specific chat in the response
-      const chatDetails = response.data.channels.find(chat => chat.id === chatId);
+      const chatDetails = response.data.data.find(chat => chat.id === chatId);
       return chatDetails || null;
     } catch (error) {
       console.error(`Failed to fetch chat details for ${chatId}:`, error.message);
@@ -198,16 +209,28 @@ export class TelegramService {
           return null;
         }
 
-        // Get chat photo
-        const photoUrl = await this.getChatPhoto(privyId, chatId);
+        // Get chat photo and upload to S3
+        const photoBuffer = await this.getChatPhoto(privyId, chatId);
+        let photoUrl: string | null = null;
+        
+        if (photoBuffer) {
+          try {
+            // Upload to S3 with a unique key
+            const key = `chat-photos/${chatId}.jpg`;
+            photoUrl = await this.s3Service.uploadBase64Image(photoBuffer, key);
+          } catch (error) {
+            console.error(`Failed to upload photo to S3 for chat ${chatId}:`, error);
+            photoUrl = null;
+          }
+        }
 
         // Upsert the chat with all details
-        return this.prisma.chats.upsert({
+        const savedChat = await this.prisma.chats.upsert({
           where: { tgChatId: chatId },
           create: {
             tgChatId: chatId,
             tgChatName: chatDetails.name,
-            tgChatImage: photoUrl,
+            tgChatImageUrl: photoUrl,
             tgChatType: this.mapToChatType(chatDetails.type),
             users: {
               connect: { privyId }
@@ -215,18 +238,28 @@ export class TelegramService {
           },
           update: {
             tgChatName: chatDetails.name,
-            tgChatImage: photoUrl,
+            tgChatImageUrl: photoUrl,
             tgChatType: this.mapToChatType(chatDetails.type),
             users: {
               connect: { privyId }
             }
           }
         });
+
+        return savedChat;
       })
     );
 
-    // Filter out any nulls from failed chat fetches
-    return savedChats.filter(chat => chat !== null);
+    // Filter out nulls and format response
+    const validChats = savedChats.filter(chat => chat !== null);
+    return {
+      chats: validChats.map(chat => ({
+        id: chat.tgChatId,
+        name: chat.tgChatName || '',
+        type: chat.tgChatType.toLowerCase(),
+        photoUrl: chat.tgChatImageUrl
+      }))
+    };
   }
 
   async getUserSavedChats(privyId: string) {
@@ -249,11 +282,11 @@ export class TelegramService {
     });
 
     return {
-      channels: savedChats.map(chat => ({
+      chats: savedChats.map(chat => ({
         id: chat.tgChatId,
         name: chat.tgChatName || '',
         type: chat.tgChatType.toLowerCase(),
-        photoUrl: chat.tgChatImage || null
+        photoUrl: chat.tgChatImageUrl
       }))
     };
   }

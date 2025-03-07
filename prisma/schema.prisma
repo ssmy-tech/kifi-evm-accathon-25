@@ -20,7 +20,7 @@ model User {
 model Chats {
     tgChatId String @id @unique
     tgChatName String?
-    tgChatImage String?
+    tgChatImageUrl String?
     tgChatType ChatType
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt

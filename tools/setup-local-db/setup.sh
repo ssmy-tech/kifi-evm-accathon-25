@@ -2,7 +2,7 @@
 
 # Define paths
 SHARED_PRISMA_PATH="../../prisma/schema.prisma"
-DOCKER_PROJECT_NAME="prisma_postgres"
+DOCKER_PROJECT_NAME="prisma_kifi_accelation_db"
 
 # Step 1: Start Docker container
 echo "Starting PostgreSQL container..."

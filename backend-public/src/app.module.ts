@@ -7,7 +7,7 @@ import { PrismaService } from './prisma.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PrivyModule } from './privy/privy.module';
-
+import { TelegramModule } from './telegram/telegram.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -21,6 +21,7 @@ import { PrivyModule } from './privy/privy.module';
     UsersModule,
     AuthModule,
     PrivyModule,
+    TelegramModule,
   ],
   providers: [PrismaService],
 })

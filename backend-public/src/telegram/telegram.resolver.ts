@@ -13,10 +13,10 @@ export class TelegramResolver {
   async updateTelegramApiLink(
     @Context() context: any,
     @Args('apiLink') apiLink: string,
-  ) {
+  ): Promise<boolean> {
     const privyId = context.req?.user?.claims?.userId;
-    await this.telegramService.updateApiLink(privyId, apiLink);
-    return true;
+    
+    return await this.telegramService.updateApiLink(privyId, apiLink);;
   }
 
   @Query(() => ApiSecretResponse)
@@ -31,6 +31,16 @@ export class TelegramResolver {
   async checkTelegramApiHealth(@Context() context: any) {
     const privyId = context.req?.user?.claims?.userId;
     return this.telegramService.checkApiHealth(privyId);
+  }
+
+  @Query(() => String, { nullable: true })
+  @UseGuards(PrivyAuthGuard)
+  async getChatPhoto(
+    @Context() context: any,
+    @Args('chatId') chatId: string,
+  ) {
+    const privyId = context.req?.user?.claims?.userId;
+    return this.telegramService.getChatPhoto(privyId, chatId);
   }
 
   @Query(() => ChatsResponse)

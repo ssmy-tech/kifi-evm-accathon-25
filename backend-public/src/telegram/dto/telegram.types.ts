@@ -33,7 +33,7 @@ export class TelegramChat {
 @ObjectType()
 export class ChatsResponse {
   @Field(() => [TelegramChat])
-  channels: TelegramChat[];
+  chats: TelegramChat[];
 }
 
 @InputType()
