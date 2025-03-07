@@ -2,7 +2,7 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 
 const config: CodegenConfig = {
   schema: './src/schema.gql',
-  documents: ['./src/graphql/**/*.ts'],
+  documents: ['./src/graphql/queries.ts'],  // Only read from queries.ts since telegram.operations.ts re-exports
   generates: {
     // Backend types
     './src/types/graphql.ts': {
@@ -24,17 +24,11 @@ const config: CodegenConfig = {
       },
     },
     // Frontend SDK with types and hooks
-    '../frontend/src/generated/': {
-      preset: 'client',
-      presetConfig: {
-        gqlTagName: 'gql',
-        fragmentMasking: false
-      },
+    '../frontend/src/generated/graphql.ts': {
       plugins: [
         'typescript',
         'typescript-operations',
-        'typescript-react-apollo',
-        'typescript-react-query'
+        'typescript-react-apollo'
       ],
       config: {
         withHooks: true,
@@ -44,8 +38,6 @@ const config: CodegenConfig = {
         withRefetchFn: true,
         reactApolloVersion: 3,
         pureMagicComment: true,
-        exposeFetcher: true,
-        exposeQueryKeys: true,
         dedupeFragments: true,
         scalars: {
           DateTime: 'string',

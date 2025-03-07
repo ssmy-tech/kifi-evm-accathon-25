@@ -1,29 +1,36 @@
 import { gql } from '@apollo/client';
 
+// Fragments
+export const CHAT_FIELDS = gql`
+  fragment ChatFields on TelegramChat {
+    id
+    name
+    type
+    photoUrl
+  }
+`;
+
+// Queries
 export const GET_USER_SAVED_CHATS = gql`
   query GetUserSavedChats {
     getUserSavedChats {
       chats {
-        id
-        name
-        type
-        photoUrl
+        ...ChatFields
       }
     }
   }
+  ${CHAT_FIELDS}
 `;
 
 export const GET_TELEGRAM_CHATS = gql`
   query GetTelegramChats {
     getTelegramChats {
       chats {
-        id
-        name
-        type
-        photoUrl
+        ...ChatFields
       }
     }
   }
+  ${CHAT_FIELDS}
 `;
 
 export const GET_TELEGRAM_API_SECRET = gql`
@@ -49,17 +56,16 @@ export const GET_CHAT_PHOTO = gql`
   }
 `;
 
+// Mutations
 export const SAVE_USER_CHATS = gql`
   mutation SaveUserChats($input: SaveChatsInput!) {
     saveUserChats(input: $input) {
       chats {
-        id
-        name
-        type
-        photoUrl
+        ...ChatFields
       }
     }
   }
+  ${CHAT_FIELDS}
 `;
 
 export const UPDATE_TELEGRAM_API_LINK = gql`

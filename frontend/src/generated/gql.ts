@@ -14,22 +14,24 @@ import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/
  * Learn more about it here: https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#reducing-bundle-size
  */
 type Documents = {
-    "\n  query GetUserSavedChats {\n    getUserSavedChats {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n": typeof types.GetUserSavedChatsDocument,
-    "\n  query GetTelegramChats {\n    getTelegramChats {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n": typeof types.GetTelegramChatsDocument,
+    "\n  fragment ChatFields on TelegramChat {\n    id\n    name\n    type\n    photoUrl\n  }\n": typeof types.ChatFieldsFragmentDoc,
+    "\n  query GetUserSavedChats {\n    getUserSavedChats {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n": typeof types.GetUserSavedChatsDocument,
+    "\n  query GetTelegramChats {\n    getTelegramChats {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n": typeof types.GetTelegramChatsDocument,
     "\n  query GetTelegramApiSecret {\n    getTelegramApiSecret {\n      apiSecret\n    }\n  }\n": typeof types.GetTelegramApiSecretDocument,
     "\n  query CheckTelegramApiHealth {\n    checkTelegramApiHealth {\n      status\n      error\n    }\n  }\n": typeof types.CheckTelegramApiHealthDocument,
     "\n  query GetChatPhoto($chatId: String!) {\n    getChatPhoto(chatId: $chatId)\n  }\n": typeof types.GetChatPhotoDocument,
-    "\n  mutation SaveUserChats($input: SaveChatsInput!) {\n    saveUserChats(input: $input) {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n": typeof types.SaveUserChatsDocument,
+    "\n  mutation SaveUserChats($input: SaveChatsInput!) {\n    saveUserChats(input: $input) {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n": typeof types.SaveUserChatsDocument,
     "\n  mutation UpdateTelegramApiLink($apiLink: String!) {\n    updateTelegramApiLink(apiLink: $apiLink)\n  }\n": typeof types.UpdateTelegramApiLinkDocument,
     "\n  mutation PrivyLogin {\n    privyLogin {\n      createdUser\n    }\n  }\n": typeof types.PrivyLoginDocument,
 };
 const documents: Documents = {
-    "\n  query GetUserSavedChats {\n    getUserSavedChats {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n": types.GetUserSavedChatsDocument,
-    "\n  query GetTelegramChats {\n    getTelegramChats {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n": types.GetTelegramChatsDocument,
+    "\n  fragment ChatFields on TelegramChat {\n    id\n    name\n    type\n    photoUrl\n  }\n": types.ChatFieldsFragmentDoc,
+    "\n  query GetUserSavedChats {\n    getUserSavedChats {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n": types.GetUserSavedChatsDocument,
+    "\n  query GetTelegramChats {\n    getTelegramChats {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n": types.GetTelegramChatsDocument,
     "\n  query GetTelegramApiSecret {\n    getTelegramApiSecret {\n      apiSecret\n    }\n  }\n": types.GetTelegramApiSecretDocument,
     "\n  query CheckTelegramApiHealth {\n    checkTelegramApiHealth {\n      status\n      error\n    }\n  }\n": types.CheckTelegramApiHealthDocument,
     "\n  query GetChatPhoto($chatId: String!) {\n    getChatPhoto(chatId: $chatId)\n  }\n": types.GetChatPhotoDocument,
-    "\n  mutation SaveUserChats($input: SaveChatsInput!) {\n    saveUserChats(input: $input) {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n": types.SaveUserChatsDocument,
+    "\n  mutation SaveUserChats($input: SaveChatsInput!) {\n    saveUserChats(input: $input) {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n": types.SaveUserChatsDocument,
     "\n  mutation UpdateTelegramApiLink($apiLink: String!) {\n    updateTelegramApiLink(apiLink: $apiLink)\n  }\n": types.UpdateTelegramApiLinkDocument,
     "\n  mutation PrivyLogin {\n    privyLogin {\n      createdUser\n    }\n  }\n": types.PrivyLoginDocument,
 };
@@ -51,11 +53,15 @@ export function gql(source: string): unknown;
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function gql(source: "\n  query GetUserSavedChats {\n    getUserSavedChats {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n"): (typeof documents)["\n  query GetUserSavedChats {\n    getUserSavedChats {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n"];
+export function gql(source: "\n  fragment ChatFields on TelegramChat {\n    id\n    name\n    type\n    photoUrl\n  }\n"): (typeof documents)["\n  fragment ChatFields on TelegramChat {\n    id\n    name\n    type\n    photoUrl\n  }\n"];
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function gql(source: "\n  query GetTelegramChats {\n    getTelegramChats {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n"): (typeof documents)["\n  query GetTelegramChats {\n    getTelegramChats {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n"];
+export function gql(source: "\n  query GetUserSavedChats {\n    getUserSavedChats {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n"): (typeof documents)["\n  query GetUserSavedChats {\n    getUserSavedChats {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n"];
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "\n  query GetTelegramChats {\n    getTelegramChats {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n"): (typeof documents)["\n  query GetTelegramChats {\n    getTelegramChats {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n"];
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -71,7 +77,7 @@ export function gql(source: "\n  query GetChatPhoto($chatId: String!) {\n    get
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function gql(source: "\n  mutation SaveUserChats($input: SaveChatsInput!) {\n    saveUserChats(input: $input) {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n"): (typeof documents)["\n  mutation SaveUserChats($input: SaveChatsInput!) {\n    saveUserChats(input: $input) {\n      chats {\n        id\n        name\n        type\n        photoUrl\n      }\n    }\n  }\n"];
+export function gql(source: "\n  mutation SaveUserChats($input: SaveChatsInput!) {\n    saveUserChats(input: $input) {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n"): (typeof documents)["\n  mutation SaveUserChats($input: SaveChatsInput!) {\n    saveUserChats(input: $input) {\n      chats {\n        ...ChatFields\n      }\n    }\n  }\n  \n"];
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

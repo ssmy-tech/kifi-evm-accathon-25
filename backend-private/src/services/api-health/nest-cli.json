@@ -1,0 +1,5 @@
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src/services/api-health",
+  "entryFile": "services/api-health/main"
+} 

@@ -1,0 +1,5 @@
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src/services/ai-analytics",
+  "entryFile": "services/ai-analytics/main"
+} 
