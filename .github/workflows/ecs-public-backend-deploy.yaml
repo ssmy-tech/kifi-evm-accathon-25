@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Dependencies
         working-directory: ./backend-public
-        run: npm ci --legacy-peer-deps
+        run: npm install --legacy-peer-deps
 
       - name: Run Tests
         working-directory: ./backend-public
