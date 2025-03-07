@@ -38,6 +38,11 @@ jobs:
         working-directory: ./backend-public
         run: npm install --legacy-peer-deps
 
+      - name: Copy Prisma Schema
+        run: |
+          mkdir -p backend-public/prisma
+          cp prisma/schema.prisma backend-public/prisma/
+
       - name: Run Tests
         working-directory: ./backend-public
         run: npm test -- --passWithNoTests
