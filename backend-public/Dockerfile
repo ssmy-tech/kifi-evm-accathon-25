@@ -7,10 +7,6 @@ WORKDIR /usr/src/app
 # Copy package files first
 COPY package*.json ./
 
-# Create prisma directory and copy schema
-RUN mkdir -p prisma
-COPY prisma/schema.prisma ./prisma/
-
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
