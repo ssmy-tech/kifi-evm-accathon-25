@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  privyId        String      @id @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chats     Chats[]
+  tgApiLink String?
+  tgApiSecret String
+  dataStatus DataStatus
+}
+
+model Chats {
+    tgChatId String @id @unique
+    tgChatName String?
+    tgChatImageUrl String?
+    tgChatType ChatType
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    users User[]
+    messages Messages[]
+    calls Calls[]
+}
+
+model Messages {
+    telegramMessageId String @id @unique
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    tgChatId String
+    chat Chats @relation(fields: [tgChatId], references: [tgChatId])
+    callId String?
+    call Calls? @relation(fields: [callId], references: [telegramCallId])
+}
+
+model Calls {
+    telegramCallId String @id @unique @map("telegram_call_id")
+    address String
+    chain Chain
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    tgChatId String
+    chat Chats @relation(fields: [tgChatId], references: [tgChatId])
+    messages Messages[]
+    summaryId String?
+    summary Summary? @relation(fields: [summaryId], references: [id])
+}
+
+model Summary {
+    id String @id @unique
+    privyId String
+    summaryType SummaryType
+    Blockchain Chain
+    address String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    summary String
+    calls Calls[]
+}
+
+enum SummaryType {
+    Telegram
+    Twitter
+}
+
+enum Chain {
+    BASE
+    SOLANA
+    MONAD
+}
+
+enum DataStatus {
+    Private
+    Public
+}
+
+enum ChatType {
+    Channel
+    Group
+    User
+}
