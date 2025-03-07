@@ -1,0 +1,57 @@
+type ApiHealthResponse {
+  error: String
+  status: String!
+}
+
+type ApiSecretResponse {
+  apiSecret: String!
+}
+
+type AuthPayload {
+  createdUser: Boolean!
+}
+
+type ChatsResponse {
+  chats: [TelegramChat!]!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Mutation {
+  privyLogin: AuthPayload!
+  saveUserChats(input: SaveChatsInput!): ChatsResponse!
+  updateTelegramApiLink(apiLink: String!): Boolean!
+}
+
+type Query {
+  checkTelegramApiHealth: ApiHealthResponse!
+  getChatPhoto(chatId: String!): String
+  getTelegramApiSecret: ApiSecretResponse!
+  getTelegramChats: ChatsResponse!
+  getUserSavedChats: ChatsResponse!
+  user(privyId: String!): User
+  users: [User!]!
+  whoAmI: String!
+}
+
+input SaveChatsInput {
+  chatIds: [String!]!
+}
+
+type TelegramChat {
+  id: String!
+  name: String!
+  photoUrl: String
+  type: String!
+}
+
+type User {
+  createdAt: DateTime!
+  email: String!
+  id: Int!
+  name: String
+  updatedAt: DateTime!
+}
