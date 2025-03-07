@@ -24,12 +24,21 @@ export interface Token {
 	price: number;
 	change24h: number;
 	imageUrl: string;
-	liquidity?: number;
-	volume?: number;
-	callers?: Caller[];
+	liquidity: number;
+	volume: number;
+	callers: Array<{
+		id: string;
+		name: string;
+		profileImageUrl: string;
+		timestamp: number;
+		lastCallTimestamp?: number;
+		callCount: number;
+		winRate: number;
+		message?: string;
+	}>;
 	createdAt: string;
-	twitterSentiment?: TwitterSentiment;
-	telegramSentiment?: TelegramSentiment;
+	twitterSentiment: TwitterSentiment;
+	telegramSentiment: TelegramSentiment;
 }
 
 export type SortField = "rank" | "age" | "name" | "price" | "liquidity" | "marketCap" | "change24h" | "callers" | "volume" | "createdAt";

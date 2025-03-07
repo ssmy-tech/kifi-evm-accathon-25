@@ -1,0 +1,275 @@
+.container {
+	display: flex;
+	width: 100%;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+.tableContainer {
+	flex: 1;
+	width: 100%;
+	overflow: auto;
+	background: var(--card-background);
+	min-height: 0;
+}
+
+.table {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: auto;
+}
+
+.table th,
+.table td {
+	padding: 1.5rem 2rem;
+	text-align: left;
+	border-bottom: 1px solid var(--border-color);
+	font-weight: 500;
+	vertical-align: middle;
+	color: var(--text-primary);
+	font-size: 1.2rem;
+}
+
+.table th {
+	background: var(--card-background);
+	font-weight: 600;
+	color: var(--text-secondary);
+	font-size: 1.2rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.table th:nth-child(1),
+.table td:nth-child(1) {
+	width: 200px;
+	text-align: center;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+	width: 180px;
+}
+
+.table th:nth-child(6),
+.table td:nth-child(6) {
+	width: 230px;
+}
+
+.table th:nth-child(7),
+.table td:nth-child(7) {
+	width: 240px;
+}
+
+.table td:nth-child(3) {
+	font-weight: 700;
+	font-size: 1.4rem;
+}
+
+.table td:nth-child(4) {
+	font-weight: 600;
+	font-size: 1.4rem;
+}
+
+.table th:nth-child(5) {
+	font-weight: 600;
+}
+
+.table tr {
+	background: var(--card-background);
+	transition: background-color 0.2s ease;
+}
+
+.table tr:hover {
+	background: var(--background-hover);
+}
+
+.hashLink {
+	color: var(--text-secondary);
+	text-decoration: underline;
+	font-family: var(--font-mono);
+	font-size: 1.2rem;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.externalIcon {
+	font-size: 1.2rem;
+	opacity: 0.7;
+}
+
+.hashLink:hover .externalIcon {
+	opacity: 1;
+}
+
+.status {
+	border-radius: 1rem;
+	font-size: 1.3rem;
+	font-weight: 600;
+	text-transform: capitalize;
+	display: inline-block;
+}
+
+.pending {
+	color: var(--warning);
+}
+
+.completed {
+	color: var(--success);
+}
+
+.failed {
+	color: var(--error);
+}
+
+.condition {
+	padding: 0.6rem 1.2rem;
+	border-radius: 1rem;
+	font-size: 1.1rem;
+	font-weight: 600;
+	display: inline-block;
+}
+
+.autoAlphaContainer {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 1rem;
+}
+
+.autoAlpha {
+	background: var(--primary-light);
+	color: var(--primary-dark);
+}
+
+.manual {
+	background: var(--secondary-light);
+	color: var(--secondary-dark);
+}
+
+.type {
+	padding: 0.5rem 1rem;
+	border-radius: 1rem;
+	font-size: 1.2rem;
+	font-weight: 600;
+	text-transform: capitalize;
+	display: inline-block;
+}
+
+.buy {
+	background: var(--success-light);
+	color: var(--success-dark);
+}
+
+.sell {
+	background: var(--error-light);
+	color: var(--error-dark);
+}
+
+.timeCell {
+	text-align: center;
+	position: relative;
+	height: 84px;
+}
+
+.timestamp {
+	position: absolute;
+	color: var(--text-primary);
+	display: inline-block;
+	min-width: 200px;
+	cursor: pointer;
+	text-align: center;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	font-size: 1.2rem;
+}
+
+.relativeTime,
+.absoluteTime {
+	position: absolute;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	white-space: nowrap;
+	transition: opacity 0.2s ease;
+	width: 100%;
+	text-align: center;
+}
+
+.relativeTime {
+	opacity: 1;
+}
+
+.absoluteTime {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.showAbsolute .relativeTime {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.showAbsolute .absoluteTime {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.timestamp:not(.showAbsolute):hover .relativeTime {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.timestamp:not(.showAbsolute):hover .absoluteTime {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+/* Modify the table header to be sticky */
+.table thead {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: var(--card-background);
+}
+
+/* Caller profile pictures styling */
+.callersContainer {
+	display: flex;
+	align-items: center;
+}
+
+.callerImageWrapper {
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	overflow: hidden;
+	border: 2px solid var(--tint);
+	margin-right: -12px;
+	position: relative;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: var(--background);
+	flex-shrink: 0;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.callerImage {
+	object-fit: cover;
+	width: 100%;
+	height: 100%;
+}
+
+.extraCallersCount {
+	margin-left: 16px;
+	font-size: 1.1rem;
+	color: var(--text-secondary);
+	font-weight: 500;
+}
+
+.table td:nth-child(5) {
+	min-width: 240px;
+}
