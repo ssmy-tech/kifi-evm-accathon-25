@@ -40,7 +40,7 @@ jobs:
 
       - name: Copy Prisma Schema
         run: |
-          rm -f backend-public/prisma/schema.prisma
+          rm -f backend-public/prisma
           mkdir -p backend-public/prisma
           cp prisma/schema.prisma backend-public/prisma/
 
