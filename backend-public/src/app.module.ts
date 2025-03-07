@@ -19,6 +19,8 @@ import { HealthModule } from './health/health.module';
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
+      playground: true,
+      csrfPrevention: false,
     }),
     UsersModule,
     AuthModule,
