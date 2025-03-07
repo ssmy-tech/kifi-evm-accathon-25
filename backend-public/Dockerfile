@@ -4,14 +4,17 @@ FROM node:20
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Copy package files first
 COPY package*.json ./
-COPY prisma ./prisma/
+
+# Create prisma directory and copy schema
+RUN mkdir -p prisma
+COPY prisma/schema.prisma ./prisma/
 
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Copy the rest of the application code from backend-public
+# Copy the rest of the application code
 COPY . .
 
 # Generate Prisma client
