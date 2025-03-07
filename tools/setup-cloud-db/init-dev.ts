@@ -41,11 +41,20 @@ async function main() {
       console.log('Reset output:', resetResult.stdout);
       if (resetResult.stderr) console.error('Reset errors:', resetResult.stderr);
     } else {
-      // Apply pending migrations
-      console.log('🔄 Applying migrations...');
-      const migrateResult = await execAsync(`npx prisma migrate deploy --schema "${schemaPath}"`);
-      console.log('Migration output:', migrateResult.stdout);
-      if (migrateResult.stderr) console.error('Migration errors:', migrateResult.stderr);
+      // Create and apply initial migration
+      console.log('📝 Creating and applying migration...');
+      try {
+        const migrationResult = await execAsync(`npx prisma migrate dev --name init --schema "${schemaPath}"`);
+        console.log('Migration output:', migrationResult.stdout);
+        if (migrationResult.stderr) console.error('Migration errors:', migrationResult.stderr);
+      } catch (error) {
+        console.error('Migration creation failed:', error);
+        // If migration fails, try deploying existing migrations
+        console.log('Attempting to deploy existing migrations...');
+        const deployResult = await execAsync(`npx prisma migrate deploy --schema "${schemaPath}"`);
+        console.log('Migration deploy output:', deployResult.stdout);
+        if (deployResult.stderr) console.error('Migration deploy errors:', deployResult.stderr);
+      }
     }
 
     // Generate Prisma client
@@ -54,10 +63,16 @@ async function main() {
     console.log('Generate output:', generateResult.stdout);
     if (generateResult.stderr) console.error('Generate errors:', generateResult.stderr);
 
-    // Verify database connection
-    console.log('🔍 Verifying database connection...');
-    const result = await prisma.$queryRaw<[{ current_database: string }]>`SELECT current_database()`;
-    console.log('✅ Successfully connected to database:', result[0].current_database);
+    // Verify database connection and schema
+    console.log('🔍 Verifying database connection and schema...');
+    const tables = await prisma.$queryRaw`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      AND table_name != '_prisma_migrations'
+      ORDER BY table_name
+    `;
+    console.log('✅ Database tables:', tables);
 
     console.log('✅ Development environment initialized successfully!');
   } catch (error) {
