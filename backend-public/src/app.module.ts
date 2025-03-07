@@ -8,6 +8,8 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PrivyModule } from './privy/privy.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { HealthModule } from './health/health.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -22,6 +24,7 @@ import { TelegramModule } from './telegram/telegram.module';
     AuthModule,
     PrivyModule,
     TelegramModule,
+    HealthModule,
   ],
   providers: [PrismaService],
 })
