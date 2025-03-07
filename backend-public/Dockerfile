@@ -6,6 +6,7 @@ WORKDIR /usr/src/app
 
 # Copy package files first
 COPY package*.json ./
+COPY prisma ./prisma/ 
 
 # Install dependencies
 RUN npm install --legacy-peer-deps
