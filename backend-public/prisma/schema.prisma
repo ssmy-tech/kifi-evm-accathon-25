@@ -24,9 +24,13 @@ model Chats {
     tgChatType ChatType
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+    lastProcessedMessageId String?
+    lastProcessedAt DateTime?
     users User[]
     messages Messages[]
     calls Calls[]
+
+    @@index([lastProcessedAt])
 }
 
 model Messages {
@@ -34,6 +38,7 @@ model Messages {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     tgChatId String
+    text String
     chat Chats @relation(fields: [tgChatId], references: [tgChatId])
     callId String?
     call Calls? @relation(fields: [callId], references: [telegramCallId])

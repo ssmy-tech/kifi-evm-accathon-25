@@ -203,69 +203,100 @@ export class TelegramService {
   }
 
   async createUserSavedChats(privyId: string, input: SaveChatsInput) {
-    const user = await this.usersService.findByPrivyUserIdFull(privyId);
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
+    try {
+      const user = await this.usersService.findByPrivyUserIdFull(privyId);
+      if (!user) {
+        throw new Error('User not found');
+      }
 
-    // Create or connect chats and link them to the user
-    const savedChats = await Promise.all(
-      input.chatIds.map(async (chatId) => {
-        // Get chat details from Telegram API
-        const chatDetails = await this.getChatDetails(user, chatId);
-        if (!chatDetails) {
-          console.error(`Could not fetch details for chat ${chatId}`);
-          return null;
-        }
+      if (!user.tgApiLink) {
+        throw new Error('Telegram API link not set');
+      }
 
-        // Generate the expected S3 URL for the photo
-        const s3Key = `chat-photos/${chatId}.jpg`;
-        const expectedPhotoUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
-        let photoUrl: string = 'no-photo';
-
-        try {
-          // Try to fetch from Telegram and upload to S3 if needed
-          photoUrl = await this.getChatPhoto(privyId, chatId);
-        } catch (error) {
-          console.error(`Failed to handle photo for chat ${chatId}:`, error);
-        }
-
-        // Upsert the chat with all details
-        const savedChat = await this.prisma.chats.upsert({
-          where: { tgChatId: chatId },
-          create: {
-            tgChatId: chatId,
-            tgChatName: chatDetails.name,
-            tgChatType: this.mapToChatType(chatDetails.type),
-            tgChatImageUrl: photoUrl === 'no-photo' ? null : photoUrl,
-            users: {
-              connect: { privyId }
-            }
-          },
-          update: {
-            tgChatName: chatDetails.name,
-            tgChatType: this.mapToChatType(chatDetails.type),
-            tgChatImageUrl: photoUrl === 'no-photo' ? null : photoUrl,
-            users: {
-              connect: { privyId }
-            }
+      // Get all chat details
+      const chatDetails = await Promise.all(
+        input.chatIds.map(async (chatId) => {
+          const chat = await this.getChatDetails(user, chatId);
+          if (!chat) {
+            return null;
           }
-        });
+          return chat;
+        }),
+      );
 
-        return savedChat;
-      })
-    );
+      // Filter out null values
+      const validChats = chatDetails.filter(
+        (chat): chat is TelegramChat => chat !== null,
+      );
 
-    // Filter out nulls and format response
-    const validChats = savedChats.filter(chat => chat !== null);
-    return {
-      chats: validChats.map(chat => ({
-        id: chat.tgChatId,
-        name: chat.tgChatName || '',
-        type: chat.tgChatType.toLowerCase(),
-        photoUrl: chat.tgChatImageUrl
-      }))
-    };
+      // First, disconnect all existing chats from the user
+      await this.prisma.user.update({
+        where: { privyId },
+        data: {
+          chats: {
+            disconnect: await this.prisma.chats.findMany({
+              where: {
+                users: {
+                  some: {
+                    privyId
+                  }
+                }
+              },
+              select: {
+                tgChatId: true
+              }
+            }).then(chats => chats.map(chat => ({ tgChatId: chat.tgChatId })))
+          }
+        }
+      });
+
+      // Then, connect or create the new chats
+      const savedChats = await Promise.all(
+        validChats.map(async (chat) => {
+          // Try to get the chat photo
+          let photoUrl: string | null = null;
+          try {
+            photoUrl = await this.getChatPhoto(privyId, chat.id);
+          } catch (error) {
+            console.error(`Failed to get chat photo for ${chat.id}:`, error);
+          }
+
+          // Create or update the chat and connect it to the user
+          return this.prisma.chats.upsert({
+            where: { tgChatId: chat.id },
+            update: {
+              tgChatName: chat.name,
+              tgChatImageUrl: photoUrl,
+              tgChatType: this.mapToChatType(chat.type),
+              users: {
+                connect: { privyId },
+              },
+            },
+            create: {
+              tgChatId: chat.id,
+              tgChatName: chat.name,
+              tgChatImageUrl: photoUrl,
+              tgChatType: this.mapToChatType(chat.type),
+              users: {
+                connect: { privyId },
+              },
+            },
+          });
+        }),
+      );
+
+      return {
+        chats: savedChats.map((chat) => ({
+          id: chat.tgChatId,
+          name: chat.tgChatName || '',
+          type: chat.tgChatType,
+          photoUrl: chat.tgChatImageUrl,
+        })),
+      };
+    } catch (error) {
+      console.error('Error saving user chats:', error);
+      throw new Error(`Failed to save user chats: ${error.message}`);
+    }
   }
 
   async getUserSavedChats(privyId: string) {
