@@ -7,9 +7,14 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (better layer caching)
 COPY package*.json ./
-COPY prisma ./prisma/
 
-RUN npm ci
+# Copy prisma schema directly (no symlinks)
+COPY prisma/schema.prisma ./prisma/schema.prisma
+
+# Use npm install directly
+RUN npm install
+
+RUN npx prisma generate
 
 # Copy source code
 COPY . .

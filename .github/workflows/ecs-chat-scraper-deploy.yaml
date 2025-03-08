@@ -34,7 +34,7 @@ jobs:
 
       - name: Install Dependencies
         working-directory: ./backend-private
-        run: npm ci
+        run: npm install
 
       - name: Run Tests
         working-directory: ./backend-private
@@ -43,6 +43,10 @@ jobs:
       - name: Build Docker Image
         working-directory: ./backend-private/docker
         run: |
+          # Set environment variable to avoid Prisma symlinks
+          export PRISMA_GENERATE_SKIP_AUTOINSTALL=true
+          
+          # Build the Docker image
           docker build -t ${{ secrets.SCRAPER_ECR_REPOSITORY }}/chat-scraper:${{ github.sha }} -f Dockerfile.chat-scraper ..
 
       - name: Configure AWS Credentials
