@@ -117,7 +117,7 @@ export class TelegramService {
     }
   }
 
-  async getChatPhoto(privyId: string, chatId: string): Promise<Buffer | null> {
+  async getChatPhoto(privyId: string, chatId: string): Promise<string> {
     const user = await this.usersService.findByPrivyUserIdFull(privyId);
     if (!user || !user.tgApiLink) {
       throw new UnauthorizedException('User or API link not found');
@@ -125,7 +125,7 @@ export class TelegramService {
 
     try {
       await this.rateLimit();
-      const response = await axios.get<ArrayBuffer>(
+      const response = await axios.get(
         `${user.tgApiLink}/api/telegram/photo/${chatId}`,
         {
           headers: {
@@ -135,10 +135,19 @@ export class TelegramService {
         }
       );
 
-      return Buffer.from(new Uint8Array(response.data));
+      // Check if the buffer is empty
+      const buffer = Buffer.from(response.data as ArrayBuffer);
+      if (buffer.length === 0) {
+        return 'no-photo';
+      }
+
+      // Upload to S3 with a unique key
+      const key = `chat-photos/${chatId}.jpg`;
+      const photoUrl = await this.s3Service.uploadBase64Image(buffer, key);
+      return photoUrl;
     } catch (error) {
       console.error(`Failed to fetch photo for chat ${chatId}:`, error.message);
-      return null;
+      return 'no-photo';
     }
   }
 
@@ -209,19 +218,16 @@ export class TelegramService {
           return null;
         }
 
-        // Get chat photo and upload to S3
-        const photoBuffer = await this.getChatPhoto(privyId, chatId);
-        let photoUrl: string | null = null;
-        
-        if (photoBuffer) {
-          try {
-            // Upload to S3 with a unique key
-            const key = `chat-photos/${chatId}.jpg`;
-            photoUrl = await this.s3Service.uploadBase64Image(photoBuffer, key);
-          } catch (error) {
-            console.error(`Failed to upload photo to S3 for chat ${chatId}:`, error);
-            photoUrl = null;
-          }
+        // Generate the expected S3 URL for the photo
+        const s3Key = `chat-photos/${chatId}.jpg`;
+        const expectedPhotoUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
+        let photoUrl: string = 'no-photo';
+
+        try {
+          // Try to fetch from Telegram and upload to S3 if needed
+          photoUrl = await this.getChatPhoto(privyId, chatId);
+        } catch (error) {
+          console.error(`Failed to handle photo for chat ${chatId}:`, error);
         }
 
         // Upsert the chat with all details
@@ -230,16 +236,16 @@ export class TelegramService {
           create: {
             tgChatId: chatId,
             tgChatName: chatDetails.name,
-            tgChatImageUrl: photoUrl,
             tgChatType: this.mapToChatType(chatDetails.type),
+            tgChatImageUrl: photoUrl === 'no-photo' ? null : photoUrl,
             users: {
               connect: { privyId }
             }
           },
           update: {
             tgChatName: chatDetails.name,
-            tgChatImageUrl: photoUrl,
             tgChatType: this.mapToChatType(chatDetails.type),
+            tgChatImageUrl: photoUrl === 'no-photo' ? null : photoUrl,
             users: {
               connect: { privyId }
             }

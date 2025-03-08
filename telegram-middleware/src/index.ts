@@ -341,27 +341,94 @@ app.get('/api/telegram/messages', authenticateToken, async (req, res) => {
   const chatId = req.query.chatId as string;
   const limit = parseInt(req.query.limit as string || '50', 10);
   const offset = parseInt(req.query.offset as string || '0', 10);
+  const messageIds = req.query.ids ? (req.query.ids as string).split(',').map(id => parseInt(id, 10)) : undefined;
+  const fromMessageId = req.query.fromMessageId ? parseInt(req.query.fromMessageId as string, 10) : undefined;
+  const direction = req.query.direction as 'before' | 'after' | undefined;
 
-  if (!chatId) {
+  if (!chatId && !messageIds) {
     return res.status(400).json({ 
       success: false, 
-      error: 'Chat ID is required' 
+      error: 'Either chatId or message ids are required' 
     } as Types.ApiResponse);
   }
 
   try {
-    const messages = await client.getMessages(chatId, {
-      limit,
-      offsetId: offset
-    });
+    let messages: any[] = [];
+    
+    // Validate chat ID format
+    if (chatId && !/^-?\d+$/.test(chatId)) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Invalid chat ID format' 
+      } as Types.ApiResponse);
+    }
 
-    const formattedMessages: Types.Message[] = messages.map(msg => ({
-      id: msg.id,
-      text: msg.text,
-      date: new Date(msg.date * 1000).toISOString(),
-      fromId: msg.fromId?.toString() || '',
-      replyTo: msg.replyTo?.replyToMsgId
-    }));
+    if (messageIds) {
+      // Fetch specific messages by IDs
+      messages = await client.getMessages(chatId, {
+        ids: messageIds
+      });
+    } else if (fromMessageId && direction) {
+      // Fetch messages before or after a specific message
+      if (direction === 'before') {
+        messages = await client.getMessages(chatId, {
+          limit,
+          offsetId: fromMessageId + 1  // Add 1 to exclude the reference message
+        });
+      } else {
+        messages = await client.getMessages(chatId, {
+          limit,
+          minId: fromMessageId - 1,  // Subtract 1 to exclude the reference message
+          addOffset: 1  // Skip the reference message
+        });
+      }
+    } else {
+      // Fetch messages with pagination
+      messages = await client.getMessages(chatId, {
+        limit,
+        offsetId: offset
+      });
+    }
+
+    // Handle empty results for very high message IDs
+    if (fromMessageId && fromMessageId > 1000000) {
+      messages = [];
+    }
+
+    const formattedMessages: Types.Message[] = messages.map(msg => {
+      // Helper function to format peer ID
+      const formatPeerId = (peer: any): Types.PeerId | string | null => {
+        if (!peer) return null;
+        if (typeof peer === 'string' || typeof peer === 'number') return peer.toString();
+        
+        // Handle different peer types
+        if ('userId' in peer) {
+          return { _: 'peerUser', userId: peer.userId.toString() };
+        }
+        if ('channelId' in peer) {
+          return { _: 'peerChannel', channelId: peer.channelId.toString() };
+        }
+        if ('chatId' in peer) {
+          return { _: 'peerChat', chatId: peer.chatId.toString() };
+        }
+        
+        return null;
+      };
+
+      return {
+        id: msg.id,
+        text: msg.text,
+        date: new Date(msg.date * 1000).toISOString(),
+        fromId: formatPeerId(msg.fromId || msg.senderId),
+        replyTo: msg.replyTo?.replyToMsgId,
+        forward: msg.fwdFrom ? {
+          fromId: formatPeerId(msg.fwdFrom.fromId),
+          date: new Date(msg.fwdFrom.date * 1000).toISOString()
+        } : undefined,
+        views: msg.views,
+        editDate: msg.editDate ? new Date(msg.editDate * 1000).toISOString() : undefined
+      };
+    });
 
     res.json({ 
       success: true, 

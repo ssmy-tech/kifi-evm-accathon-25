@@ -68,11 +68,6 @@ export type QueryGetChatPhotoArgs = {
   chatId: Scalars['String']['input'];
 };
 
-
-export type QueryUserArgs = {
-  privyId: Scalars['String']['input'];
-};
-
 export type SaveChatsInput = {
   chatIds: Array<Scalars['String']['input']>;
 };
@@ -86,9 +81,8 @@ export type TelegramChat = {
 
 export type User = {
   createdAt: Scalars['DateTime']['output'];
-  email: Scalars['String']['output'];
-  id: Scalars['Int']['output'];
-  name: Maybe<Scalars['String']['output']>;
+  privyId: Scalars['String']['output'];
+  tgApiLink: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
 };
 
@@ -170,7 +164,6 @@ export type ResolversTypes = ResolversObject<{
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   ChatsResponse: ResolverTypeWrapper<ChatsResponse>;
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
-  Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   Mutation: ResolverTypeWrapper<{}>;
   Query: ResolverTypeWrapper<{}>;
   SaveChatsInput: SaveChatsInput;
@@ -187,7 +180,6 @@ export type ResolversParentTypes = ResolversObject<{
   Boolean: Scalars['Boolean']['output'];
   ChatsResponse: ChatsResponse;
   DateTime: Scalars['DateTime']['output'];
-  Int: Scalars['Int']['output'];
   Mutation: {};
   Query: {};
   SaveChatsInput: SaveChatsInput;
@@ -233,7 +225,7 @@ export type QueryResolvers<ContextType = Context, ParentType extends ResolversPa
   getTelegramApiSecret?: Resolver<ResolversTypes['ApiSecretResponse'], ParentType, ContextType>;
   getTelegramChats?: Resolver<ResolversTypes['ChatsResponse'], ParentType, ContextType>;
   getUserSavedChats?: Resolver<ResolversTypes['ChatsResponse'], ParentType, ContextType>;
-  user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType, RequireFields<QueryUserArgs, 'privyId'>>;
+  user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
   users?: Resolver<Array<ResolversTypes['User']>, ParentType, ContextType>;
   whoAmI?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
@@ -248,9 +240,8 @@ export type TelegramChatResolvers<ContextType = Context, ParentType extends Reso
 
 export type UserResolvers<ContextType = Context, ParentType extends ResolversParentTypes['User'] = ResolversParentTypes['User']> = ResolversObject<{
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
-  email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  name?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  privyId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  tgApiLink?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;

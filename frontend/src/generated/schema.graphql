@@ -32,7 +32,7 @@ type Query {
   getTelegramApiSecret: ApiSecretResponse!
   getTelegramChats: ChatsResponse!
   getUserSavedChats: ChatsResponse!
-  user(privyId: String!): User
+  user: User
   users: [User!]!
   whoAmI: String!
 }
@@ -50,8 +50,7 @@ type TelegramChat {
 
 type User {
   createdAt: DateTime!
-  email: String!
-  id: Int!
-  name: String
+  privyId: String!
+  tgApiLink: String
   updatedAt: DateTime!
 }

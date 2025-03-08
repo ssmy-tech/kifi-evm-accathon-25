@@ -20,9 +20,12 @@ export namespace Types {
   }
 
   export interface ApiRequest {
-    chatId: number | string;
+    chatId?: number | string;
     limit?: number;
     offset?: number;
+    ids?: number[];  // Add support for fetching specific message IDs
+    fromMessageId?: number; // Message ID to start from
+    direction?: 'before' | 'after'; // Direction to fetch messages
   }
 
   export interface ApiResponse<T = any> {
@@ -30,6 +33,15 @@ export namespace Types {
     data?: T;
     error?: string;
     retryAfter?: number;  // Number of seconds to wait before retrying when rate limited
+  }
+
+  export interface HealthCheckResponse {
+    success: boolean;
+    telegram: {
+      available: boolean;
+      authenticated: boolean;
+      timestamp: string;
+    };
   }
 
   export interface TelegramCredentials {
@@ -54,11 +66,35 @@ export namespace Types {
     avatar?: string; // Base64 encoded image or null if no avatar
   }
 
+  // Telegram sender types
+  export interface PeerUser {
+    _: 'peerUser';
+    userId: string | number;
+  }
+
+  export interface PeerChannel {
+    _: 'peerChannel';
+    channelId: string | number;
+  }
+
+  export interface PeerChat {
+    _: 'peerChat';
+    chatId: string | number;
+  }
+
+  export type PeerId = PeerUser | PeerChannel | PeerChat;
+
   export interface Message {
     id: number;
     text: string;
     date: string;
-    fromId: string;
+    fromId: PeerId | string | null;
     replyTo?: number;
+    forward?: {
+      fromId: PeerId | string | null;
+      date: string;
+    };
+    views?: number;
+    editDate?: string;
   }
 } 

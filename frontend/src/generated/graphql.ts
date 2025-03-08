@@ -74,11 +74,6 @@ export type QueryGetChatPhotoArgs = {
   chatId: Scalars['String']['input'];
 };
 
-
-export type QueryUserArgs = {
-  privyId: Scalars['String']['input'];
-};
-
 export type SaveChatsInput = {
   chatIds: Array<Scalars['String']['input']>;
 };
@@ -94,9 +89,8 @@ export type TelegramChat = {
 export type User = {
   __typename?: 'User';
   createdAt: Scalars['DateTime']['output'];
-  email: Scalars['String']['output'];
-  id: Scalars['Int']['output'];
-  name?: Maybe<Scalars['String']['output']>;
+  privyId: Scalars['String']['output'];
+  tgApiLink?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
 };
 
