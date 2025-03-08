@@ -43,7 +43,7 @@ jobs:
       - name: Build Docker Image
         working-directory: ./backend-private/docker
         run: |
-          docker build -t ${{ secrets.ECR_REPOSITORY }}/chat-scraper:${{ github.sha }} -f Dockerfile.chat-scraper ..
+          docker build -t ${{ secrets.SCRAPER_ECR_REPOSITORY }}/chat-scraper:${{ github.sha }} -f Dockerfile.chat-scraper ..
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -55,7 +55,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Push Docker Image to ECR
-        run: docker push ${{ secrets.ECR_REPOSITORY }}/chat-scraper:${{ github.sha }}
+        run: docker push ${{ secrets.SCRAPER_ECR_REPOSITORY }}/chat-scraper:${{ github.sha }}
 
       - name: Set image tag output
         id: set-tag
@@ -79,7 +79,7 @@ jobs:
         run: |
           CURRENT_TASK_DEF=$(aws ecs describe-task-definition --task-definition "${{ secrets.CHAT_SCRAPER_TASK_DEFINITION }}" --query 'taskDefinition' --output json)
           echo "Image tag from build: ${{ needs.build.outputs.image_tag }}"
-          NEW_TASK_DEF=$(echo "$CURRENT_TASK_DEF" | jq --arg IMAGE "${{ secrets.ECR_REPOSITORY }}/chat-scraper:${{ needs.build.outputs.image_tag }}" '.containerDefinitions[0].image = $IMAGE')          
+          NEW_TASK_DEF=$(echo "$CURRENT_TASK_DEF" | jq --arg IMAGE "${{ secrets.SCRAPER_ECR_REPOSITORY }}/chat-scraper:${{ needs.build.outputs.image_tag }}" '.containerDefinitions[0].image = $IMAGE')          
           CLEAN_TASK_DEF=$(echo "$NEW_TASK_DEF" | jq 'del(.status, .revision, .taskDefinitionArn, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Registering new task definition..."
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json "$CLEAN_TASK_DEF" --query 'taskDefinition.taskDefinitionArn' --output text)
