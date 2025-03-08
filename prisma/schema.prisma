@@ -24,9 +24,13 @@ model Chats {
     tgChatType ChatType
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+    lastProcessedMessageId String?
+    lastProcessedAt DateTime?
     users User[]
     messages Messages[]
     calls Calls[]
+
+    @@index([lastProcessedAt])
 }
 
 model Messages {

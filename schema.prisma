@@ -24,13 +24,18 @@ model Chats {
     tgChatType ChatType
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+    lastProcessedMessageId String?
+    lastProcessedAt DateTime?
     users User[]
     messages Messages[]
     calls Calls[]
+
+    @@index([lastProcessedAt])
 }
 
 model Messages {
     telegramMessageId String @id @unique
+    text String?
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     tgChatId String
@@ -43,6 +48,8 @@ model Calls {
     telegramCallId String @id @unique @map("telegram_call_id")
     address String
     chain Chain
+    ticker String?
+    tokenName String?
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     tgChatId String
@@ -73,6 +80,7 @@ enum Chain {
     BASE
     SOLANA
     MONAD
+    ETHEREUM
 }
 
 enum DataStatus {
