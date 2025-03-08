@@ -47,6 +47,8 @@ model Messages {
 model Calls {
     telegramCallId String @id @unique @map("telegram_call_id")
     address String
+    ticker String?
+    tokenName String?
     chain Chain
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt

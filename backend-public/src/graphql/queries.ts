@@ -56,6 +56,26 @@ export const GET_CHAT_PHOTO = gql`
   }
 `;
 
+export const GET_CALLS_BY_TOKEN = gql`
+  query GetCallsByToken($input: GetCallsInput) {
+    getCallsByToken(input: $input) {
+      tokenCalls {
+        chain
+        address
+        calls {
+          chat {
+            id
+            name
+            type
+            photoUrl
+          }
+          callCount
+        }
+      }
+    }
+  }
+`;
+
 // Mutations
 export const SAVE_USER_CHATS = gql`
   mutation SaveUserChats($input: SaveChatsInput!) {
