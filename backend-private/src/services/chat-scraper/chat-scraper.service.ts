@@ -84,6 +84,7 @@ export class ChatScraperService implements OnModuleInit {
 
   @Cron('*/15 * * * * *') // Runs every 15 seconds
   async handleChatScraping() {
+    this.logger.log('Starting chat scraping');
     try {
       const chats = await this.prisma.chats.findMany({
         include: {
@@ -109,6 +110,7 @@ export class ChatScraperService implements OnModuleInit {
   }
 
   private async processChat(chat: any) {
+    this.logger.log(`Processing chat: ${chat.tgChatName || chat.tgChatId}`);
     if (!chat.users?.length) {
       return;
     }
@@ -243,7 +245,7 @@ export class ChatScraperService implements OnModuleInit {
         for (const address of matches) {
           const result = await this.blockchainService.verifyContract(address);
           if (result.isValid && result.chain) {
-            this.logger.log(`Found valid contract: ${address} on chain: ${result.chain}`);
+            this.logger.log(`Found valid contract: ${address} on chain: ${result.chain}`, `${message.id}_${address}`);
             
             try {
               // Create call record with metadata
