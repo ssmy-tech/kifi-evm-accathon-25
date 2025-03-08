@@ -15,6 +15,11 @@ type AuthPayload {
   createdUser: Boolean!
 }
 
+type CallWithChat {
+  callCount: Float!
+  chat: TelegramChat!
+}
+
 type ChatsResponse {
   chats: [TelegramChat!]!
 }
@@ -24,6 +29,11 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+input GetCallsInput {
+  address: String
+  chain: String
+}
+
 type Mutation {
   privyLogin: AuthPayload!
   saveUserChats(input: SaveChatsInput!): ChatsResponse!
@@ -32,6 +42,7 @@ type Mutation {
 
 type Query {
   checkTelegramApiHealth: ApiHealthResponse!
+  getCallsByToken(input: GetCallsInput): TokenCallsResponse!
   getChatPhoto(chatId: String!): String
   getTelegramApiSecret: ApiSecretResponse!
   getTelegramChats: ChatsResponse!
@@ -50,6 +61,16 @@ type TelegramChat {
   name: String!
   photoUrl: String
   type: String!
+}
+
+type TokenCalls {
+  address: String!
+  calls: [CallWithChat!]!
+  chain: String!
+}
+
+type TokenCallsResponse {
+  tokenCalls: [TokenCalls!]!
 }
 
 type User {

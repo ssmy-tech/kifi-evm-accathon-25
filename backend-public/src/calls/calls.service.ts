@@ -18,11 +18,27 @@ export class CallsService {
         throw new Error('User not found');
       }
 
+      // First, get the user's chats
+      const userChats = await this.prisma.chats.findMany({
+        where: {
+          users: {
+            some: {
+              privyId,
+            },
+          },
+        },
+        select: {
+          tgChatId: true,
+        },
+      });
+
+      const chatIds = userChats.map(chat => chat.tgChatId);
+
       // Build the where clause based on optional filters
       const whereClause: any = {
-        users: {
-          some: {
-            privyId,
+        chat: {
+          tgChatId: {
+            in: chatIds,
           },
         },
       };

@@ -32,8 +32,18 @@ export type AuthPayload = {
   createdUser: Scalars['Boolean']['output'];
 };
 
+export type CallWithChat = {
+  callCount: Scalars['Float']['output'];
+  chat: TelegramChat;
+};
+
 export type ChatsResponse = {
   chats: Array<TelegramChat>;
+};
+
+export type GetCallsInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  chain?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type Mutation = {
@@ -54,6 +64,7 @@ export type MutationUpdateTelegramApiLinkArgs = {
 
 export type Query = {
   checkTelegramApiHealth: ApiHealthResponse;
+  getCallsByToken: TokenCallsResponse;
   getChatPhoto: Maybe<Scalars['String']['output']>;
   getTelegramApiSecret: ApiSecretResponse;
   getTelegramChats: ChatsResponse;
@@ -61,6 +72,11 @@ export type Query = {
   user: Maybe<User>;
   users: Array<User>;
   whoAmI: Scalars['String']['output'];
+};
+
+
+export type QueryGetCallsByTokenArgs = {
+  input?: InputMaybe<GetCallsInput>;
 };
 
 
@@ -77,6 +93,16 @@ export type TelegramChat = {
   name: Scalars['String']['output'];
   photoUrl: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
+};
+
+export type TokenCalls = {
+  address: Scalars['String']['output'];
+  calls: Array<CallWithChat>;
+  chain: Scalars['String']['output'];
+};
+
+export type TokenCallsResponse = {
+  tokenCalls: Array<TokenCalls>;
 };
 
 export type User = {
@@ -162,13 +188,18 @@ export type ResolversTypes = ResolversObject<{
   ApiSecretResponse: ResolverTypeWrapper<ApiSecretResponse>;
   AuthPayload: ResolverTypeWrapper<AuthPayload>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
+  CallWithChat: ResolverTypeWrapper<CallWithChat>;
   ChatsResponse: ResolverTypeWrapper<ChatsResponse>;
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
+  Float: ResolverTypeWrapper<Scalars['Float']['output']>;
+  GetCallsInput: GetCallsInput;
   Mutation: ResolverTypeWrapper<{}>;
   Query: ResolverTypeWrapper<{}>;
   SaveChatsInput: SaveChatsInput;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   TelegramChat: ResolverTypeWrapper<TelegramChat>;
+  TokenCalls: ResolverTypeWrapper<TokenCalls>;
+  TokenCallsResponse: ResolverTypeWrapper<TokenCallsResponse>;
   User: ResolverTypeWrapper<User>;
 }>;
 
@@ -178,13 +209,18 @@ export type ResolversParentTypes = ResolversObject<{
   ApiSecretResponse: ApiSecretResponse;
   AuthPayload: AuthPayload;
   Boolean: Scalars['Boolean']['output'];
+  CallWithChat: CallWithChat;
   ChatsResponse: ChatsResponse;
   DateTime: Scalars['DateTime']['output'];
+  Float: Scalars['Float']['output'];
+  GetCallsInput: GetCallsInput;
   Mutation: {};
   Query: {};
   SaveChatsInput: SaveChatsInput;
   String: Scalars['String']['output'];
   TelegramChat: TelegramChat;
+  TokenCalls: TokenCalls;
+  TokenCallsResponse: TokenCallsResponse;
   User: User;
 }>;
 
@@ -201,6 +237,12 @@ export type ApiSecretResponseResolvers<ContextType = Context, ParentType extends
 
 export type AuthPayloadResolvers<ContextType = Context, ParentType extends ResolversParentTypes['AuthPayload'] = ResolversParentTypes['AuthPayload']> = ResolversObject<{
   createdUser?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type CallWithChatResolvers<ContextType = Context, ParentType extends ResolversParentTypes['CallWithChat'] = ResolversParentTypes['CallWithChat']> = ResolversObject<{
+  callCount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  chat?: Resolver<ResolversTypes['TelegramChat'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -221,6 +263,7 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
 
 export type QueryResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
   checkTelegramApiHealth?: Resolver<ResolversTypes['ApiHealthResponse'], ParentType, ContextType>;
+  getCallsByToken?: Resolver<ResolversTypes['TokenCallsResponse'], ParentType, ContextType, Partial<QueryGetCallsByTokenArgs>>;
   getChatPhoto?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType, RequireFields<QueryGetChatPhotoArgs, 'chatId'>>;
   getTelegramApiSecret?: Resolver<ResolversTypes['ApiSecretResponse'], ParentType, ContextType>;
   getTelegramChats?: Resolver<ResolversTypes['ChatsResponse'], ParentType, ContextType>;
@@ -238,6 +281,18 @@ export type TelegramChatResolvers<ContextType = Context, ParentType extends Reso
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type TokenCallsResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TokenCalls'] = ResolversParentTypes['TokenCalls']> = ResolversObject<{
+  address?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  calls?: Resolver<Array<ResolversTypes['CallWithChat']>, ParentType, ContextType>;
+  chain?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type TokenCallsResponseResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TokenCallsResponse'] = ResolversParentTypes['TokenCallsResponse']> = ResolversObject<{
+  tokenCalls?: Resolver<Array<ResolversTypes['TokenCalls']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type UserResolvers<ContextType = Context, ParentType extends ResolversParentTypes['User'] = ResolversParentTypes['User']> = ResolversObject<{
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   privyId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -250,11 +305,14 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   ApiHealthResponse?: ApiHealthResponseResolvers<ContextType>;
   ApiSecretResponse?: ApiSecretResponseResolvers<ContextType>;
   AuthPayload?: AuthPayloadResolvers<ContextType>;
+  CallWithChat?: CallWithChatResolvers<ContextType>;
   ChatsResponse?: ChatsResponseResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   Mutation?: MutationResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   TelegramChat?: TelegramChatResolvers<ContextType>;
+  TokenCalls?: TokenCallsResolvers<ContextType>;
+  TokenCallsResponse?: TokenCallsResponseResolvers<ContextType>;
   User?: UserResolvers<ContextType>;
 }>;
 

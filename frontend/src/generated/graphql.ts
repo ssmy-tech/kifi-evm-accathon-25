@@ -35,9 +35,20 @@ export type AuthPayload = {
   createdUser: Scalars['Boolean']['output'];
 };
 
+export type CallWithChat = {
+  __typename?: 'CallWithChat';
+  callCount: Scalars['Float']['output'];
+  chat: TelegramChat;
+};
+
 export type ChatsResponse = {
   __typename?: 'ChatsResponse';
   chats: Array<TelegramChat>;
+};
+
+export type GetCallsInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  chain?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type Mutation = {
@@ -60,6 +71,7 @@ export type MutationUpdateTelegramApiLinkArgs = {
 export type Query = {
   __typename?: 'Query';
   checkTelegramApiHealth: ApiHealthResponse;
+  getCallsByToken: TokenCallsResponse;
   getChatPhoto?: Maybe<Scalars['String']['output']>;
   getTelegramApiSecret: ApiSecretResponse;
   getTelegramChats: ChatsResponse;
@@ -67,6 +79,11 @@ export type Query = {
   user?: Maybe<User>;
   users: Array<User>;
   whoAmI: Scalars['String']['output'];
+};
+
+
+export type QueryGetCallsByTokenArgs = {
+  input?: InputMaybe<GetCallsInput>;
 };
 
 
@@ -84,6 +101,18 @@ export type TelegramChat = {
   name: Scalars['String']['output'];
   photoUrl?: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
+};
+
+export type TokenCalls = {
+  __typename?: 'TokenCalls';
+  address: Scalars['String']['output'];
+  calls: Array<CallWithChat>;
+  chain: Scalars['String']['output'];
+};
+
+export type TokenCallsResponse = {
+  __typename?: 'TokenCallsResponse';
+  tokenCalls: Array<TokenCalls>;
 };
 
 export type User = {
@@ -122,6 +151,13 @@ export type GetChatPhotoQueryVariables = Exact<{
 
 
 export type GetChatPhotoQuery = { __typename?: 'Query', getChatPhoto?: string | null };
+
+export type GetCallsByTokenQueryVariables = Exact<{
+  input?: InputMaybe<GetCallsInput>;
+}>;
+
+
+export type GetCallsByTokenQuery = { __typename?: 'Query', getCallsByToken: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, calls: Array<{ __typename?: 'CallWithChat', callCount: number, chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null } }> }> } };
 
 export type SaveUserChatsMutationVariables = Exact<{
   input: SaveChatsInput;
@@ -363,6 +399,61 @@ export type GetChatPhotoSuspenseQueryHookResult = ReturnType<typeof useGetChatPh
 export type GetChatPhotoQueryResult = Apollo.QueryResult<GetChatPhotoQuery, GetChatPhotoQueryVariables>;
 export function refetchGetChatPhotoQuery(variables: GetChatPhotoQueryVariables) {
       return { query: GetChatPhotoDocument, variables: variables }
+    }
+export const GetCallsByTokenDocument = /*#__PURE__*/ gql`
+    query GetCallsByToken($input: GetCallsInput) {
+  getCallsByToken(input: $input) {
+    tokenCalls {
+      chain
+      address
+      calls {
+        chat {
+          id
+          name
+          type
+          photoUrl
+        }
+        callCount
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetCallsByTokenQuery__
+ *
+ * To run a query within a React component, call `useGetCallsByTokenQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetCallsByTokenQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetCallsByTokenQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useGetCallsByTokenQuery(baseOptions?: Apollo.QueryHookOptions<GetCallsByTokenQuery, GetCallsByTokenQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetCallsByTokenQuery, GetCallsByTokenQueryVariables>(GetCallsByTokenDocument, options);
+      }
+export function useGetCallsByTokenLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetCallsByTokenQuery, GetCallsByTokenQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetCallsByTokenQuery, GetCallsByTokenQueryVariables>(GetCallsByTokenDocument, options);
+        }
+export function useGetCallsByTokenSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetCallsByTokenQuery, GetCallsByTokenQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetCallsByTokenQuery, GetCallsByTokenQueryVariables>(GetCallsByTokenDocument, options);
+        }
+export type GetCallsByTokenQueryHookResult = ReturnType<typeof useGetCallsByTokenQuery>;
+export type GetCallsByTokenLazyQueryHookResult = ReturnType<typeof useGetCallsByTokenLazyQuery>;
+export type GetCallsByTokenSuspenseQueryHookResult = ReturnType<typeof useGetCallsByTokenSuspenseQuery>;
+export type GetCallsByTokenQueryResult = Apollo.QueryResult<GetCallsByTokenQuery, GetCallsByTokenQueryVariables>;
+export function refetchGetCallsByTokenQuery(variables?: GetCallsByTokenQueryVariables) {
+      return { query: GetCallsByTokenDocument, variables: variables }
     }
 export const SaveUserChatsDocument = /*#__PURE__*/ gql`
     mutation SaveUserChats($input: SaveChatsInput!) {
