@@ -5,7 +5,7 @@ import { BlockchainModule } from '../../common/blockchain/blockchain.module';
 import { ChatScraperService } from './chat-scraper.service';
 import { ChatScraperConfigService } from './config.service';
 import { TelegramApiService } from './telegram-api.service';
-import { HealthController } from '../../health.controller';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
