@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  chat-scraper:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.chat-scraper
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://prisma:prisma@postgres:5432/prisma
+      - ETHEREUM_RPC_URL=${ETHEREUM_RPC_URL}
+      - BASE_RPC_URL=${BASE_RPC_URL}
+      - MONAD_RPC_URL=${MONAD_RPC_URL}
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s

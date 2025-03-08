@@ -1,0 +1,18 @@
+FROM --platform=$TARGETPLATFORM node:20-slim
+
+WORKDIR /app
+
+# Install curl for healthchecks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Install dependencies first (better layer caching)
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build 

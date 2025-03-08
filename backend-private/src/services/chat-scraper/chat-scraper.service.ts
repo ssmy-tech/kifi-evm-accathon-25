@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Controller, Get } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaClient } from '@prisma/client';
 import { BlockchainService } from '../../common/blockchain/blockchain.service';
@@ -13,6 +13,7 @@ interface RateLimitInfo {
 }
 
 @Injectable()
+@Controller('health')
 export class ChatScraperService implements OnModuleInit {
   private readonly logger = new Logger(ChatScraperService.name);
   private readonly prisma: PrismaClient;
@@ -282,6 +283,20 @@ export class ChatScraperService implements OnModuleInit {
           }
         }
       }
+    }
+  }
+
+  @Get()
+  async healthCheck() {
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      return {
+        status: 'healthy',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      this.logger.error('Health check failed:', error);
+      throw error;
     }
   }
 } 
