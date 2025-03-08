@@ -1,8 +1,11 @@
 FROM kifi-base:latest
 
 ENV SERVICE_NAME=chat-scraper
+ENV PORT=9000
+
+EXPOSE 9000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:9000/health/hello || exit 1
 
 CMD ["npm", "run", "start:chat-scraper"] 

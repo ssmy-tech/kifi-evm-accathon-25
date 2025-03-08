@@ -11,6 +11,12 @@ async function bootstrap() {
   
   app.enableShutdownHooks();
 
+  // Get port from environment variable or use default
+  const port = process.env.PORT || 9000;
+  
+  await app.listen(port, '0.0.0.0');
+  logger.log(`Chat Scraper service is running on port ${port}`);
+
   process.on('SIGINT', async () => {
     logger.log('Shutting down...');
     await app.close();
@@ -22,8 +28,6 @@ async function bootstrap() {
     await app.close();
     process.exit(0);
   });
-
-  logger.log('Chat Scraper Service is running');
 }
 
 bootstrap().catch(err => {

@@ -5,12 +5,14 @@ import { BlockchainModule } from '../../common/blockchain/blockchain.module';
 import { ChatScraperService } from './chat-scraper.service';
 import { ChatScraperConfigService } from './config.service';
 import { TelegramApiService } from './telegram-api.service';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
     CommonConfigModule,
     BlockchainModule,
     ScheduleModule.forRoot(),
+    HealthModule,
   ],
   providers: [
     ChatScraperService,
