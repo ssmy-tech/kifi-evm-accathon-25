@@ -8,6 +8,8 @@ import { FaSun, FaMoon } from "react-icons/fa";
 import AuthModal from "./AuthModal";
 import { usePrivy } from "@privy-io/react-auth";
 import Avatar from "./Avatar";
+import { usePrivyLoginMutation } from "@/generated/graphql";
+
 const AUTH_STATUS_KEY = "auth_pending_onboarding";
 
 const NavBar: React.FC = () => {
@@ -15,6 +17,7 @@ const NavBar: React.FC = () => {
 	const [isDarkMode, setIsDarkMode] = useState(true);
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 	const { ready, authenticated, logout, login, user } = usePrivy();
+	const [privyLoginMutation] = usePrivyLoginMutation({});
 
 	// Track authentication state changes to display onboarding after authentication (OAuth)
 	useEffect(() => {
@@ -22,6 +25,10 @@ const NavBar: React.FC = () => {
 			if (authenticated && localStorage.getItem(AUTH_STATUS_KEY) === "pending") {
 				setIsAuthModalOpen(true);
 				localStorage.removeItem(AUTH_STATUS_KEY);
+			}
+			if (authenticated) {
+				console.log("Calling PrivyLoginMutation");
+				privyLoginMutation();
 			}
 		}
 	}, [ready, authenticated, user]);

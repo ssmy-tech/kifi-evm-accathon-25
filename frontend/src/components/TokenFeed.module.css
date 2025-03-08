@@ -44,7 +44,7 @@
 	border-collapse: separate;
 	border-spacing: 0;
 	text-align: left;
-	font-size: 1.2rem;
+	font-size: clamp(0.75rem, 0.5vw + 0.65rem, 1.1rem);
 	table-layout: fixed;
 }
 
@@ -56,9 +56,9 @@
 }
 
 .headerCell {
-	padding: 16px;
+	padding: clamp(8px, 0.5vw + 6px, 16px);
 	font-weight: 600;
-	font-size: 1.25rem;
+	font-size: clamp(0.8rem, 0.6vw + 0.65rem, 1.5rem);
 	color: var(--text-secondary, #a0a0a0);
 	border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
 	position: sticky;
@@ -68,7 +68,7 @@
 	transition: box-shadow 0.3s ease;
 	text-align: left;
 	vertical-align: middle;
-	height: 72px;
+	height: clamp(50px, 4vh + 20px, 80px);
 }
 
 .headerCell:first-child {
@@ -120,9 +120,14 @@
 }
 
 /* Column group styling */
+.tokenGroupHeader,
+.tokenGroupCell {
+	background-color: rgba(255, 255, 255, 0.01);
+}
+
 .metricsGroup {
-	position: relative;
-	background-color: rgba(0, 0, 0, 0.02);
+	background-color: rgba(255, 255, 255, 0.02);
+	font-size: clamp(0.75rem, 0.3vw + 0.7rem, 0.9em);
 }
 
 .callersGroup {
@@ -133,7 +138,7 @@
 	transform: translateZ(0);
 	will-change: transform, background-color;
 	transition: background-color 0.2s ease;
-	height: 80px;
+	height: clamp(60px, 7vh, 72px);
 	backface-visibility: hidden;
 }
 
@@ -151,7 +156,7 @@
 	will-change: transform, opacity;
 	backface-visibility: hidden;
 	background-color: var(--hover-bg, rgba(0, 0, 0, 0.03));
-	height: 800px;
+	height: calc(80vh - var(--navbar-height));
 	animation: expandDown 0.3s ease-out forwards;
 	transform-origin: top center;
 	overflow: hidden;
@@ -194,9 +199,11 @@
 	flex-direction: column;
 	gap: 20px;
 	height: 100%;
+	max-height: 100%;
 	animation: fadeIn 0.4s ease-out forwards;
 	animation-delay: 0.1s;
 	opacity: 0;
+	overflow: auto;
 }
 
 .expandedModules.closing {
@@ -228,20 +235,17 @@
 .moduleRow {
 	display: flex;
 	gap: 20px;
-	height: calc(60% - 10px);
-	min-height: 0;
+	height: 100%;
 }
 
 .moduleRow:first-child {
-	flex: 2;
-	height: calc(70% - 10px);
-	min-height: 500px;
+	flex: 0 0 60%;
+	height: 60%;
 }
 
 .moduleRow:last-child {
-	flex: 1;
-	height: calc(30% - 10px);
-	min-height: 200px;
+	flex: 0 0 30%;
+	height: 30%;
 }
 
 .module {
@@ -336,12 +340,12 @@
 }
 
 .cell {
-	padding: 16px;
+	padding: clamp(8px, 0.5vw + 6px, 16px);
 	border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
-	font-size: 1.3rem;
+	font-size: clamp(0.8rem, 0.6vw + 0.65rem, 1.6rem);
 	font-weight: 500;
 	vertical-align: middle;
-	height: 80px;
+	height: clamp(50px, 4vh + 20px, 90px);
 }
 
 .indexCell {
@@ -362,8 +366,8 @@
 }
 
 .imageContainer {
-	width: 42px;
-	height: 42px;
+	width: clamp(28px, 1.5vw + 24px, 52px);
+	height: clamp(28px, 1.5vw + 24px, 52px);
 	border-radius: 50%;
 	overflow: hidden;
 	display: flex;
@@ -391,7 +395,7 @@
 .tokenName {
 	font-weight: 600;
 	color: var(--text-primary, #ffffff);
-	font-size: 1.35rem;
+	font-size: clamp(0.85rem, 0.7vw + 0.7rem, 1.65rem);
 	line-height: 1.4;
 	white-space: nowrap;
 	overflow: hidden;
@@ -399,7 +403,7 @@
 }
 
 .tokenTicker {
-	font-size: 1.1rem;
+	font-size: clamp(0.7rem, 0.5vw + 0.6rem, 1.3rem);
 	color: var(--text-secondary, #a0a0a0);
 	text-transform: uppercase;
 	line-height: 1.4;
@@ -421,12 +425,12 @@
 }
 
 .callerImageWrapper {
-	width: 42px;
-	height: 42px;
+	width: clamp(28px, 1.5vw + 24px, 40px);
+	height: clamp(28px, 1.5vw + 24px, 40px);
 	border-radius: 50%;
 	overflow: hidden;
-	border: 3px solid var(--tint, rgba(255, 255, 255, 0.2));
-	margin-right: -15px;
+	border: 2px solid var(--tint, rgba(255, 255, 255, 0.2));
+	margin-right: -12px;
 	position: relative;
 	display: flex;
 	justify-content: center;
@@ -442,15 +446,15 @@
 }
 
 .extraCallersCount {
-	margin-left: 24px;
-	font-size: 1.3rem;
+	margin-left: 20px;
+	font-size: clamp(0.8rem, 0.5vw + 0.7rem, 1.1rem);
 	color: var(--text-secondary, #a0a0a0);
 	font-weight: 500;
 }
 
 .noCallers {
 	color: var(--text-secondary, #a0a0a0);
-	font-size: 1.3rem;
+	font-size: clamp(0.8rem, 0.5vw + 0.7rem, 1.1rem);
 }
 
 .telegramIcon {
@@ -465,13 +469,8 @@
 	color: var(--error, #f44336);
 }
 
-.tokenGroupHeader,
-.tokenGroupCell {
-	background-color: rgba(255, 255, 255, 0.01);
-}
-
-.metricsGroup {
-	background-color: rgba(255, 255, 255, 0.02);
+.title {
+	font-size: clamp(1rem, 0.5vw + 0.9rem, 1.4rem);
 }
 
 @media (max-width: 1200px) {
@@ -481,11 +480,13 @@
 	}
 
 	.moduleRow:first-child {
-		min-height: 450px;
+		flex: 0 0 60%;
+		height: 60%;
 	}
 
 	.moduleRow:last-child {
-		min-height: 150px;
+		flex: 0 0 40%;
+		height: 40%;
 	}
 }
 
@@ -501,64 +502,80 @@
 	}
 
 	.moduleRow:first-child {
-		min-height: 400px;
+		flex: 0 0 60%;
+		height: 60%;
 	}
 
 	.moduleRow:last-child {
-		min-height: 120px;
+		flex: 0 0 40%;
+		height: 40%;
+	}
+
+	.tokenRow {
+		height: 60px;
 	}
 }
 
 @media (max-width: 768px) {
 	.container {
-		border-radius: 0;
+		padding: 0;
 	}
 
 	.headerCell,
-	.indexCell,
-	.tableCell {
-		padding: 12px 8px;
+	.cell {
+		padding: 8px 10px;
+	}
+
+	.imageContainer {
+		width: 32px;
+		height: 32px;
+	}
+
+	.tokenRow {
+		height: 55px;
 	}
 
 	.wideColumn {
-		width: 180px;
-		min-width: 180px;
-		max-width: 180px;
+		min-width: 120px;
+		max-width: 140px;
+		width: 130px;
 	}
 
 	.regularColumn:nth-child(3) {
 		display: none;
 	}
 
+	.expandedModules {
+		padding: 15px;
+		gap: 15px;
+	}
+
 	.moduleRow {
 		flex-direction: column;
-		height: auto;
+		gap: 15px;
+	}
+
+	.moduleRow:first-child {
+		flex: 0 0 60%;
+		height: 60%;
+		flex-direction: column;
+	}
+
+	.moduleRow:last-child {
+		flex: 0 0 40%;
+		height: 40%;
+		flex-direction: column;
 	}
 
 	.module {
-		height: 400px;
-		margin-bottom: 20px;
+		height: auto;
+		min-height: 200px;
+		max-height: 350px;
+		margin-bottom: 15px;
 	}
 }
 
-/* Responsive font scaling for larger screens */
 @media (min-width: 1200px) {
-	.headerCell {
-		font-size: 1.35rem;
-	}
-
-	.cell {
-		font-size: 1.4rem;
-	}
-
-	.tokenName {
-		font-size: 1.45rem;
-	}
-
-	.tokenTicker {
-		font-size: 1.2rem;
-	}
-
 	.imageContainer {
 		width: 46px;
 		height: 46px;
@@ -566,24 +583,6 @@
 }
 
 @media (min-width: 1600px) {
-	.headerCell {
-		font-size: 1.5rem;
-		height: 80px;
-	}
-
-	.cell {
-		font-size: 1.6rem;
-		height: 90px;
-	}
-
-	.tokenName {
-		font-size: 1.65rem;
-	}
-
-	.tokenTicker {
-		font-size: 1.3rem;
-	}
-
 	.imageContainer {
 		width: 52px;
 		height: 52px;
@@ -593,19 +592,24 @@
 		height: 90px;
 	}
 
-	.expandedContent {
-		height: 900px;
-	}
-
 	.moduleRow:first-child {
-		min-height: 550px;
+		flex: 0 0 60%;
+		height: 60%;
 	}
 
 	.moduleRow:last-child {
-		min-height: 250px;
+		flex: 0 0 40%;
+		height: 40%;
+	}
+}
+
+@media (max-width: 576px) {
+	.imageContainer {
+		width: 28px;
+		height: 28px;
 	}
 
-	.title {
-		font-size: 1.75rem;
+	.tokenRow {
+		height: 50px;
 	}
 }

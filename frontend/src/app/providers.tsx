@@ -1,6 +1,7 @@
 "use client";
 
 import { PrivyProvider } from "@privy-io/react-auth";
+import ApolloProviderWrapper from "../lib/ApolloProvider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
 	if (!process.env.NEXT_PUBLIC_PRIVY_ID) {
@@ -21,7 +22,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 				},
 			}}
 		>
-			{children}
+			<ApolloProviderWrapper>{children}</ApolloProviderWrapper>
 		</PrivyProvider>
 	);
 }

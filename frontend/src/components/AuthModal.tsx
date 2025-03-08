@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useEffect, useState, useRef, FormEvent } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useUser } from "@privy-io/react-auth";
 import { X } from "lucide-react";
 import styles from "./AuthModal.module.css";
+import { TelegramSetup } from "./telegram/TelegramSetup";
+import { TelegramChatsManager } from "./telegram/TelegramChatsManager";
 
 interface AuthModalProps {
 	isOpen: boolean;
@@ -13,15 +15,16 @@ interface AuthModalProps {
 type OnboardingStep = "welcome" | "preferences" | "telegram" | "complete";
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-	const { ready, authenticated, login, user } = usePrivy();
+	const { ready, authenticated, login, user, getAccessToken } = usePrivy();
+	const { refreshUser } = useUser();
 	const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
 	const [showOnboarding, setShowOnboarding] = useState(false);
 	const [animatingStep, setAnimatingStep] = useState(false);
 	const contentRef = useRef<HTMLDivElement>(null);
 	const modalRef = useRef<HTMLDivElement>(null);
 	const [submitAttempted, setSubmitAttempted] = useState(false);
+	const [telegramStage, setTelegramStage] = useState<"setup" | "manage" | "none">("none");
 
-	// Form state
 	const [formValues, setFormValues] = useState({
 		quickBuyAmount: "",
 		minGroupsIndicator: "",
@@ -34,7 +37,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		},
 	});
 
-	// Check if form is valid
 	const isFormValid = () => {
 		// Check if number inputs are filled
 		const hasQuickBuyAmount = formValues.quickBuyAmount.trim() !== "";
@@ -46,7 +48,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		return hasQuickBuyAmount && hasMinGroups && hasMarketCap;
 	};
 
-	// Handle input changes
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { id, value, type, checked } = e.target;
 
@@ -66,15 +67,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		}
 	};
 
-	// Prevent scrolling when modal is open
 	useEffect(() => {
 		if (isOpen) {
 			document.body.style.overflow = "hidden";
 
 			if (!authenticated) {
 				login();
-			} else {
-				setShowOnboarding(true);
 			}
 		} else {
 			document.body.style.overflow = "auto";
@@ -86,13 +84,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		};
 	}, [isOpen, authenticated]);
 
+	// USER SETUP & TOKEN CHECK
 	useEffect(() => {
-		console.log(authenticated, user, isOpen);
-		if (authenticated && user && isOpen) {
-			console.log(user);
-			setShowOnboarding(true);
-			setOnboardingStep("welcome");
-		}
+		const userSetup = async () => {
+			if (authenticated && user && isOpen) {
+				console.log(user);
+				setShowOnboarding(true);
+				setOnboardingStep("welcome");
+			}
+		};
+		userSetup();
 	}, [authenticated, user, isOpen]);
 
 	// Function to handle step transition with animation
@@ -201,26 +202,34 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 			case "telegram":
 				return (
 					<div className={styles.step}>
-						<h2>Connect Your Telegram</h2>
-						<p>Link your Telegram account to customize your feed and token alerts.</p>
+						{telegramStage === "setup" ? (
+							<TelegramSetup onSetupComplete={() => {}} showManagerAfterSetup={true} onContinue={() => changeStep("complete")} />
+						) : (
+							<>
+								<h2>Connect Your Telegram</h2>
+								<p>Link your Telegram account to customize your feed and token alerts.</p>
 
-						<div className={styles.telegramConnect}>
-							<p className={styles.telegramDescription}>Connecting your Telegram account allows you to:</p>
+								<div className={styles.telegramConnect}>
+									<p className={styles.telegramDescription}>Connecting your Telegram account allows you to:</p>
 
-							<ul className={styles.telegramBenefits}>
-								<li>Aggregate your selected group calls into a single feed</li>
-								<li>Easily view what tokens your groups are calling</li>
-								<li>Trade with Auto Alpha Buys callibrated to your selected channels</li>
-							</ul>
+									<ul className={styles.telegramBenefits}>
+										<li>Aggregate your selected group calls into a single feed</li>
+										<li>Easily view what tokens your groups are calling</li>
+										<li>Trade with Auto Alpha Buys callibrated to your selected channels</li>
+									</ul>
 
-							<div className={styles.telegramButtons}>
-								<button className={styles.nextButton}>Connect Telegram</button>
+									<div className={styles.telegramButtons}>
+										<button className={styles.nextButton} onClick={() => setTelegramStage("setup")}>
+											Connect Telegram
+										</button>
 
-								<button className={styles.skipButton} onClick={() => changeStep("complete")}>
-									Skip for now
-								</button>
-							</div>
-						</div>
+										<button className={styles.skipButton} onClick={() => changeStep("complete")}>
+											Skip for now
+										</button>
+									</div>
+								</div>
+							</>
+						)}
 					</div>
 				);
 

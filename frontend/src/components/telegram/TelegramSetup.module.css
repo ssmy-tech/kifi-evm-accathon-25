@@ -1,0 +1,176 @@
+.container {
+	padding: 1.5rem;
+	display: flex;
+	justify-content: center;
+}
+
+.setupCard {
+	background-color: white;
+	border-radius: 0.5rem;
+	padding: 2rem;
+	width: 100%;
+	max-width: 600px;
+}
+
+.title {
+	font-size: 1.5rem;
+	font-weight: 700;
+	margin-bottom: 1rem;
+	color: #1f2937;
+}
+
+.description {
+	margin-bottom: 1.5rem;
+	color: #4b5563;
+	line-height: 1.5;
+}
+
+.statusSection {
+	margin-bottom: 1.5rem;
+}
+
+.statusIndicator {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.5rem 1rem;
+	border-radius: 9999px;
+	font-weight: 500;
+}
+
+.statusHealthy {
+	background-color: rgba(220, 252, 231, 1);
+	color: rgba(22, 101, 52, 1);
+}
+
+.statusUnhealthy {
+	background-color: rgba(254, 226, 226, 1);
+	color: rgba(153, 27, 27, 1);
+}
+
+.form {
+	margin-bottom: 2rem;
+}
+
+.formGroup {
+	margin-bottom: 1.5rem;
+}
+
+.label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 500;
+	color: #374151;
+}
+
+.input {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid #d1d5db;
+	background-color: white;
+	color: black;
+	border-radius: 0.375rem;
+	font-size: 1rem;
+}
+
+/* Override browser autofill styles */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+	-webkit-box-shadow: 0 0 0 30px white inset !important;
+	-webkit-text-fill-color: black !important;
+	transition: background-color 5000s ease-in-out 0s;
+}
+
+.input:focus {
+	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.errorMessage {
+	color: #ef4444;
+	margin-top: 0.5rem;
+	font-size: 0.875rem;
+}
+
+.submitButton {
+	width: 100%;
+	padding: 0.75rem 1rem;
+	background-color: #3b82f6;
+	color: white;
+	border: none;
+	border-radius: 0.375rem;
+	font-weight: 500;
+	font-size: 1rem;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.submitButton:hover:not(:disabled) {
+	background-color: #2563eb;
+}
+
+.submitButton:disabled {
+	background-color: #93c5fd;
+	cursor: not-allowed;
+}
+
+.helpSection {
+	border-top: 1px solid #e5e7eb;
+	padding-top: 1.5rem;
+}
+
+.helpTitle {
+	font-size: 1.125rem;
+	font-weight: 600;
+	margin-bottom: 1rem;
+	color: #1f2937;
+}
+
+.helpList {
+	padding-left: 1.5rem;
+	color: #4b5563;
+	line-height: 1.6;
+}
+
+.helpList li {
+	margin-bottom: 0.5rem;
+}
+
+.link {
+	color: #3b82f6;
+	text-decoration: underline;
+}
+
+.link:hover {
+	color: #2563eb;
+}
+
+.managerContainer {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	max-height: 70vh;
+	overflow-y: auto;
+}
+
+.continueButton {
+	margin-top: 1.5rem;
+	padding: 0.75rem 1rem;
+	background-color: #3b82f6;
+	color: white;
+	border: none;
+	border-radius: 0.375rem;
+	font-weight: 500;
+	font-size: 1rem;
+	cursor: pointer;
+	transition: background-color 0.2s;
+	width: 100%;
+	max-width: 600px;
+	align-self: center;
+}
+
+.continueButton:hover {
+	background-color: #2563eb;
+}

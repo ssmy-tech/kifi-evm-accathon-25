@@ -1,0 +1,431 @@
+.container {
+	padding: 1.5rem;
+	max-width: 1200px;
+	margin: 0 auto;
+	position: relative;
+}
+
+.sectionHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+	flex-wrap: wrap;
+	gap: 1rem;
+}
+
+.searchContainer {
+	position: relative;
+	width: 100%;
+	max-width: 300px;
+}
+
+.searchInput {
+	width: 100%;
+	padding: 0.75rem 1rem;
+	padding-right: 2.5rem;
+	border: 1px solid #e2e8f0;
+	color: black;
+	border-radius: 0.375rem;
+	font-size: 1rem;
+	background-color: #fff;
+	transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.searchInput:focus {
+	outline: none;
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.searchInput::placeholder {
+	color: #94a3b8;
+}
+
+.searchIcon {
+	position: absolute;
+	right: 0.75rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 1.25rem;
+	height: 1.25rem;
+	color: #94a3b8;
+	pointer-events: none;
+}
+
+.statusIndicator {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.25rem 0.75rem;
+	border-radius: 9999px;
+}
+
+.statusHealthy {
+	background-color: rgba(220, 252, 231, 1);
+	color: rgba(22, 101, 52, 1);
+}
+
+.statusUnhealthy {
+	background-color: rgba(254, 226, 226, 1);
+	color: rgba(153, 27, 27, 1);
+}
+
+.apiForm {
+	margin-bottom: 1.5rem;
+}
+
+.formGroup {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.input {
+	flex: 1;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid #e5e7eb;
+	background-color: #fff;
+	color: black;
+	border-radius: 0.25rem;
+}
+
+.button {
+	padding: 0.5rem 1rem;
+	border-radius: 0.25rem;
+	cursor: pointer;
+	font-weight: 500;
+	border: 1px solid transparent;
+	outline: none;
+}
+
+.buttonPrimary {
+	background-color: #3b82f6;
+	color: white;
+	border-color: #2563eb;
+}
+
+.buttonPrimary:hover:not(:disabled) {
+	background-color: #2563eb;
+}
+
+.buttonPrimary:disabled {
+	background-color: #93c5fd;
+	cursor: not-allowed;
+}
+
+.buttonSuccess {
+	background-color: var(--tint);
+	color: var(--forest);
+}
+
+.buttonSuccess:hover:not(:disabled) {
+	background-color: var(--forest);
+	color: var(--cream);
+}
+
+.buttonSuccess:disabled {
+	background-color: #6ee7b7;
+	cursor: not-allowed;
+}
+
+.sectionTitle {
+	font-size: 1.25rem;
+	font-weight: 700;
+	margin-bottom: 0.75rem;
+}
+
+.chatGrid {
+	display: grid;
+	grid-template-columns: repeat(1, 1fr);
+	gap: 1rem;
+}
+
+@media (max-width: 640px) {
+	.sectionHeader {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.searchContainer {
+		max-width: 100%;
+	}
+}
+
+@media (min-width: 640px) {
+	.chatGrid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (min-width: 768px) {
+	.chatGrid {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (min-width: 1024px) {
+	.chatGrid {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+@media (min-width: 1280px) {
+	.chatGrid {
+		grid-template-columns: repeat(5, 1fr);
+	}
+}
+
+/* Add a new breakpoint for extra large screens */
+@media (min-width: 1536px) {
+	.chatGrid {
+		grid-template-columns: repeat(5, 1fr);
+	}
+}
+
+.chatCard {
+	padding: 1rem;
+	border: 1px solid #e5e7eb;
+	border-radius: 0.25rem;
+	cursor: pointer;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chatCard:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.chatCardSelected {
+	border-color: #3b82f6;
+	background-color: #eff6ff;
+}
+
+.chatAvatar {
+	width: 3rem;
+	height: 3rem;
+	border-radius: 100%;
+	border: 3px solid var(--tint);
+	margin-bottom: 0.5rem;
+}
+
+.chatName {
+	font-weight: 600;
+}
+
+.chatType {
+	font-size: 0.875rem;
+	color: #4b5563;
+}
+
+.section {
+	margin-bottom: 1.5rem;
+}
+
+.saveChatButtonContainer {
+	display: flex;
+	width: 100%;
+	justify-content: flex-end;
+	align-items: center;
+	margin-top: 1rem;
+}
+
+.loadingContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem 1rem;
+	min-height: 200px;
+}
+
+.loadingSpinner {
+	width: 40px;
+	height: 40px;
+	border: 3px solid rgba(59, 130, 246, 0.2);
+	border-radius: 50%;
+	border-top-color: #3b82f6;
+	animation: spin 1s ease-in-out infinite;
+	margin-bottom: 1rem;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.loadingText {
+	font-size: 1rem;
+	color: #4b5563;
+	font-weight: 500;
+}
+
+.errorMessage {
+	padding: 1rem;
+	background-color: rgba(254, 226, 226, 1);
+	color: rgba(153, 27, 27, 1);
+	border-radius: 0.25rem;
+	margin: 1rem 0;
+}
+
+/* Saved chats styles */
+.savedChatCard {
+	position: relative;
+	overflow: hidden;
+}
+
+.chatCardSaved {
+	position: relative;
+	border-color: var(--tint);
+}
+
+.savedBadge {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	background-color: var(--tint);
+	color: var(--forest);
+	font-size: 0.75rem;
+	padding: 0.25rem 0.5rem;
+	border-radius: 9999px;
+	font-weight: 600;
+}
+
+.removeOverlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(239, 68, 68, 0.8);
+	color: white;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 600;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+	cursor: pointer;
+}
+
+.savedChatCard:hover .removeOverlay {
+	opacity: 1;
+}
+
+.removeButton {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 50%;
+	background-color: rgba(239, 68, 68, 0.9);
+	color: white;
+	border: none;
+	font-size: 1.25rem;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.savedChatCard:hover .removeButton {
+	opacity: 1;
+}
+
+.removeButton:hover {
+	background-color: rgb(220, 38, 38);
+}
+
+.savedCountInfo {
+	margin-right: 1rem;
+	color: #4b5563;
+	font-size: 0.875rem;
+}
+
+/* Action containers */
+.selectionActionsContainer {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 1.5rem;
+}
+
+.selectionActions {
+	display: flex;
+	align-items: center;
+}
+
+/* Action buttons container */
+.actionButtonsContainer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 1.5rem;
+	margin-bottom: 1rem;
+}
+
+.buttonSecondary {
+	background-color: #f3f4f6;
+	color: #4b5563;
+	border-color: #e5e7eb;
+}
+
+.buttonSecondary:hover:not(:disabled) {
+	background-color: #e5e7eb;
+}
+
+.emptyState {
+	text-align: center;
+	padding: 2rem;
+	color: #6b7280;
+	font-style: italic;
+}
+
+/* Pagination styles */
+.pagination {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	margin-top: 1.5rem;
+	gap: 1.5rem;
+}
+
+.paginationButton {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	color: #4b5563;
+	background-color: #f3f4f6;
+	border: 1px solid #e5e7eb;
+	border-radius: 50%;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.paginationButton:hover:not(:disabled) {
+	background-color: #e5e7eb;
+	color: #1f2937;
+}
+
+.paginationButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.paginationInfo {
+	font-size: 0.875rem;
+	color: #4b5563;
+	min-width: 100px;
+	text-align: center;
+}
+
+.remainingSlots {
+	font-size: 0.875rem;
+	font-weight: normal;
+	color: #6b7280;
+}
