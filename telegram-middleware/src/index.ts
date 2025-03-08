@@ -60,44 +60,64 @@ let client: TelegramClient | null = null;
 
 async function setupTelegramClient() {
   try {
-    console.log('Initializing Telegram client...');
-    
-    // Use session string from environment if available
-    const sessionString = process.env.TELEGRAM_SESSION || '';
-    const session = new StringSession(sessionString);
-    
-    client = new TelegramClient(session, config.telegramApiId, config.telegramApiHash, {
-      connectionRetries: 5,
-    });
-
-    console.log('Starting Telegram client...');
+    let shouldUseSavedSession = true;
+    client = new TelegramClient(
+      new StringSession(process.env.TELEGRAM_SESSION || ''),
+      config.telegramApiId,
+      config.telegramApiHash,
+      {
+        connectionRetries: 5,
+      }
+    );
     
     try {
       await client.connect();
       const isAuthorized = await client.isUserAuthorized();
       
       if (isAuthorized) {
-        console.log('Successfully loaded existing session');
         return client;
       }
     } catch (error: any) {
-      console.log('Error connecting with existing session:', error);
+      console.error('Error connecting with existing session:', error);
+      shouldUseSavedSession = false;
+      
+      try {
+        await client.disconnect();
+      } catch (disconnectError) {
+        console.error('Error disconnecting client:', disconnectError);
+      }
+      
+      client = new TelegramClient(
+        new StringSession(''),
+        config.telegramApiId,
+        config.telegramApiHash,
+        {
+          connectionRetries: 5,
+        }
+      );
+      
       if (error.code === 420) {
-        throw error; // Propagate rate limit error
+        throw error;
       }
     }
 
-    console.log('Starting new authentication...');
+    if (!shouldUseSavedSession) {
+      try {
+        await client.connect();
+      } catch (error) {
+        console.error('Error connecting with fresh session:', error);
+        throw error;
+      }
+    }
+
     await client.start({
       phoneNumber: config.telegramPhone,
       phoneCode: async () => {
-        console.log('Waiting for verification code...');
         return new Promise((resolve) => {
           global.codeCallback = resolve;
         });
       },
       password: async () => {
-        console.log('2FA password required...');
         return new Promise((resolve) => {
           global.passwordCallback = resolve;
         });
@@ -108,25 +128,22 @@ async function setupTelegramClient() {
       },
     });
     
-    // Get and print the new session string
     const newSessionString = client.session.save() as unknown as string;
     console.log('\n=== TELEGRAM SESSION STRING ===');
     console.log(newSessionString);
     console.log('=== END SESSION STRING ===\n');
-    console.log('Copy this session string and set it as TELEGRAM_SESSION in your environment variables');
 
-    console.log('Telegram client initialized successfully!');
     return client;
   } catch (error: any) {
-    if (error.code === 420) { // FloodWaitError
+    if (error.code === 420) {
       const waitSeconds = error.seconds || 0;
       const waitMinutes = Math.ceil(waitSeconds / 60);
       console.error(`Telegram rate limit exceeded. Please wait ${waitMinutes} minutes before trying again.`);
-      // Store rate limit info in global state
       global.rateLimitInfo = { minutes: waitMinutes };
       throw error;
     }
     console.error('Failed to initialize Telegram client:', error);
+    client = null;
     return null;
   }
 }
@@ -231,16 +248,7 @@ app.post('/auth/telegram/verify', async (req, res) => {
 
 app.post('/auth/telegram/restart', async (req, res) => {
   try {
-    // Check if client exists and is authorized
-    if (client) {
-      const isAuthorized = await client.isUserAuthorized();
-      if (isAuthorized && !global.rateLimitInfo) {
-        res.redirect('/?error=Cannot restart when already authenticated');
-        return;
-      }
-    }
-
-    // Reset the client
+    // Reset all state
     if (client) {
       try {
         await client.disconnect();
@@ -248,21 +256,35 @@ app.post('/auth/telegram/restart', async (req, res) => {
         console.error('Error disconnecting client:', error);
       }
     }
+    
+    // Clear all global state and session
     client = null;
     global.codeCallback = undefined;
     global.passwordCallback = undefined;
     global.rateLimitInfo = null;
+    process.env.TELEGRAM_SESSION = '';
 
-    // Start new client setup
+    // Start new client setup with forced fresh authentication
     try {
+      console.log('Starting fresh authentication...');
       const telegramClient = await setupTelegramClient();
-      if (telegramClient) {
-        console.log('Telegram client restarted successfully!');
-        client = telegramClient;
-        res.redirect('/?success=Authentication restarted');
-      } else {
+      
+      // Verify the client was created and assigned properly
+      if (!client || !telegramClient) {
+        console.error('Failed to initialize Telegram client properly');
         res.redirect('/?error=Failed to initialize Telegram client');
+        return;
       }
+
+      if (!global.codeCallback) {
+        console.error('Authentication callbacks not properly set up');
+        res.redirect('/?error=Authentication system not ready. Please try again.');
+        return;
+      }
+
+      console.log('Telegram client restarted, waiting for verification code...');
+      res.redirect('/?success=Please enter the verification code sent to your Telegram');
+      
     } catch (error: any) {
       console.error('Error restarting Telegram client:', error);
       if (error.code === 420) {
@@ -270,7 +292,7 @@ app.post('/auth/telegram/restart', async (req, res) => {
         const waitMinutes = Math.ceil(waitSeconds / 60);
         res.redirect(`/?error=Telegram rate limit exceeded&rateLimitMinutes=${waitMinutes}`);
       } else {
-        res.redirect('/?error=Failed to restart authentication');
+        res.redirect(`/?error=${encodeURIComponent(error.message || 'Failed to restart authentication')}`);
       }
     }
   } catch (error: any) {
@@ -369,28 +391,26 @@ app.get('/api/telegram/messages', authenticateToken, async (req, res) => {
         ids: messageIds
       });
     } else if (fromMessageId && direction) {
-      // Fetch messages before or after a specific message
       if (direction === 'before') {
         messages = await client.getMessages(chatId, {
           limit,
-          offsetId: fromMessageId + 1  // Add 1 to exclude the reference message
+          offsetId: fromMessageId,
+          addOffset: 1
         });
       } else {
         messages = await client.getMessages(chatId, {
           limit,
-          minId: fromMessageId - 1,  // Subtract 1 to exclude the reference message
-          addOffset: 1  // Skip the reference message
+          minId: fromMessageId,
+          addOffset: 1
         });
       }
     } else {
-      // Fetch messages with pagination
       messages = await client.getMessages(chatId, {
         limit,
         offsetId: offset
       });
     }
 
-    // Handle empty results for very high message IDs
     if (fromMessageId && fromMessageId > 1000000) {
       messages = [];
     }
@@ -425,7 +445,7 @@ app.get('/api/telegram/messages', authenticateToken, async (req, res) => {
           fromId: formatPeerId(msg.fwdFrom.fromId),
           date: new Date(msg.fwdFrom.date * 1000).toISOString()
         } : undefined,
-        views: msg.views,
+        views: msg.views ? (typeof msg.views === 'object' ? parseInt(msg.views.toString(), 10) || 0 : msg.views) : 0,
         editDate: msg.editDate ? new Date(msg.editDate * 1000).toISOString() : undefined
       };
     });
