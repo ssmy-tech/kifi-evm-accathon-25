@@ -40,13 +40,18 @@ jobs:
         working-directory: ./backend-private
         run: npm test -- --passWithNoTests
 
-      - name: Build Docker Image
+      - name: Build Docker Images
         working-directory: ./backend-private/docker
         run: |
           # Set environment variable to avoid Prisma symlinks
           export PRISMA_GENERATE_SKIP_AUTOINSTALL=true
           
-          # Build the Docker image
+          # First build the base image
+          echo "Building base image..."
+          docker build -t kifi-base:latest -f Dockerfile.base ..
+          
+          # Then build the chat-scraper image
+          echo "Building chat-scraper image..."
           docker build -t ${{ secrets.SCRAPER_ECR_REPOSITORY }}/chat-scraper:${{ github.sha }} -f Dockerfile.chat-scraper ..
 
       - name: Configure AWS Credentials
