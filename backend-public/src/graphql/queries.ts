@@ -56,6 +56,62 @@ export const GET_CHAT_PHOTO = gql`
   }
 `;
 
+export const GET_TWITTER_CONTRACT_ANALYTICS = gql`
+  query GetTwitterContractAnalytics($input: TwitterContractAnalyticsInput!) {
+    getTwitterContractAnalytics(input: $input) {
+      summary
+      sentiment {
+        overall
+        communityMood
+        details
+      }
+      keyTopics {
+        topic
+        frequency
+        context
+      }
+      nextSteps {
+        suggestion
+        context
+      }
+      relevantTweets {
+        url
+        text
+        author
+        timestamp
+        engagement {
+          likes
+          retweets
+          replies
+          views
+        }
+      }
+    }
+  }
+`;
+
+export const GET_TELEGRAM_CONTRACT_ANALYTICS = gql`
+  query GetTelegramContractAnalytics($input: TelegramContractAnalyticsInput!) {
+    getTelegramContractAnalytics(input: $input) {
+      summary
+      sentiment {
+        overall
+        communityMood
+        details
+      }
+      keyTopics {
+        topic
+        frequency
+        context
+      }
+      nextSteps {
+        suggestion
+        context
+      }
+    }
+  }
+`;
+
 export const GET_CALLS_BY_TOKEN = gql`
   query GetCallsByToken($input: GetCallsInput) {
     getCallsByToken(input: $input) {

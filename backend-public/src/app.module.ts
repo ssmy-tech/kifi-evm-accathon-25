@@ -10,6 +10,7 @@ import { PrivyModule } from './privy/privy.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { HealthModule } from './health/health.module';
 import { CallsModule } from './calls/calls.module';
+import { AiAnalyticsModule } from './ai-analytics/ai-analytics.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CallsModule } from './calls/calls.module';
     TelegramModule,
     HealthModule,
     CallsModule,
+    AiAnalyticsModule,
   ],
   providers: [PrismaService],
 })

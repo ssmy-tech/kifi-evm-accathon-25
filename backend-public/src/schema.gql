@@ -35,6 +35,12 @@ input GetCallsInput {
   chain: String
 }
 
+type KeyTopic {
+  context: String!
+  frequency: Float!
+  topic: String!
+}
+
 type Message {
   createdAt: DateTime!
   fromId: String
@@ -48,12 +54,19 @@ type Mutation {
   updateTelegramApiLink(apiLink: String!): Boolean!
 }
 
+type NextStep {
+  context: String!
+  suggestion: String!
+}
+
 type Query {
   checkTelegramApiHealth: ApiHealthResponse!
   getCallsByToken(input: GetCallsInput): TokenCallsResponse!
   getChatPhoto(chatId: String!): String
   getTelegramApiSecret: ApiSecretResponse!
   getTelegramChats: ChatsResponse!
+  getTelegramContractAnalytics(input: TelegramContractAnalyticsInput!): TelegramAnalyticsResponse!
+  getTwitterContractAnalytics(input: TwitterContractAnalyticsInput!): TwitterAnalyticsResponse!
   getUserSavedChats: ChatsResponse!
   user: User
   users: [User!]!
@@ -64,11 +77,30 @@ input SaveChatsInput {
   chatIds: [String!]!
 }
 
+type Sentiment {
+  communityMood: String!
+  details: [String!]!
+  overall: String!
+}
+
+type TelegramAnalyticsResponse {
+  keyTopics: [KeyTopic!]!
+  lastGeneratedAt: DateTime!
+  nextSteps: [NextStep!]!
+  sentiment: Sentiment!
+  summary: String!
+  timeUntilNextGeneration: Float!
+}
+
 type TelegramChat {
   id: String!
   name: String!
   photoUrl: String
   type: String!
+}
+
+input TelegramContractAnalyticsInput {
+  contractAddress: String!
 }
 
 type TokenCalls {
@@ -79,6 +111,35 @@ type TokenCalls {
 
 type TokenCallsResponse {
   tokenCalls: [TokenCalls!]!
+}
+
+type Tweet {
+  author: String!
+  engagement: TweetEngagement!
+  text: String!
+  timestamp: String!
+  url: String!
+}
+
+type TweetEngagement {
+  likes: Float!
+  replies: Float!
+  retweets: Float!
+  views: Float!
+}
+
+type TwitterAnalyticsResponse {
+  keyTopics: [KeyTopic!]!
+  lastGeneratedAt: DateTime!
+  nextSteps: [NextStep!]!
+  relevantTweets: [Tweet!]!
+  sentiment: Sentiment!
+  summary: String!
+  timeUntilNextGeneration: Float!
+}
+
+input TwitterContractAnalyticsInput {
+  contractAddress: String!
 }
 
 type User {
