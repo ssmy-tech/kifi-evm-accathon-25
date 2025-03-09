@@ -35,6 +35,7 @@ export type AuthPayload = {
 export type CallWithChat = {
   callCount: Scalars['Float']['output'];
   chat: TelegramChat;
+  messages: Maybe<Array<Message>>;
 };
 
 export type ChatsResponse = {
@@ -44,6 +45,13 @@ export type ChatsResponse = {
 export type GetCallsInput = {
   address?: InputMaybe<Scalars['String']['input']>;
   chain?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type Message = {
+  createdAt: Scalars['DateTime']['output'];
+  fromId: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  text: Maybe<Scalars['String']['output']>;
 };
 
 export type Mutation = {
@@ -193,6 +201,7 @@ export type ResolversTypes = ResolversObject<{
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   GetCallsInput: GetCallsInput;
+  Message: ResolverTypeWrapper<Message>;
   Mutation: ResolverTypeWrapper<{}>;
   Query: ResolverTypeWrapper<{}>;
   SaveChatsInput: SaveChatsInput;
@@ -214,6 +223,7 @@ export type ResolversParentTypes = ResolversObject<{
   DateTime: Scalars['DateTime']['output'];
   Float: Scalars['Float']['output'];
   GetCallsInput: GetCallsInput;
+  Message: Message;
   Mutation: {};
   Query: {};
   SaveChatsInput: SaveChatsInput;
@@ -243,6 +253,7 @@ export type AuthPayloadResolvers<ContextType = Context, ParentType extends Resol
 export type CallWithChatResolvers<ContextType = Context, ParentType extends ResolversParentTypes['CallWithChat'] = ResolversParentTypes['CallWithChat']> = ResolversObject<{
   callCount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   chat?: Resolver<ResolversTypes['TelegramChat'], ParentType, ContextType>;
+  messages?: Resolver<Maybe<Array<ResolversTypes['Message']>>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -254,6 +265,14 @@ export type ChatsResponseResolvers<ContextType = Context, ParentType extends Res
 export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['DateTime'], any> {
   name: 'DateTime';
 }
+
+export type MessageResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Message'] = ResolversParentTypes['Message']> = ResolversObject<{
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  fromId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  text?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
 
 export type MutationResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = ResolversObject<{
   privyLogin?: Resolver<ResolversTypes['AuthPayload'], ParentType, ContextType>;
@@ -308,6 +327,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   CallWithChat?: CallWithChatResolvers<ContextType>;
   ChatsResponse?: ChatsResponseResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
+  Message?: MessageResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   TelegramChat?: TelegramChatResolvers<ContextType>;

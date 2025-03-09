@@ -70,6 +70,12 @@ export const GET_CALLS_BY_TOKEN = gql`
             photoUrl
           }
           callCount
+          messages {
+            id
+            createdAt
+            text
+            fromId
+          }
         }
       }
     }

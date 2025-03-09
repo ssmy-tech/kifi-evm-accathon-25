@@ -14,6 +14,7 @@ type AuthPayload {
 type CallWithChat {
   callCount: Float!
   chat: TelegramChat!
+  messages: [Message!]
 }
 
 type ChatsResponse {
@@ -28,6 +29,13 @@ scalar DateTime
 input GetCallsInput {
   address: String
   chain: String
+}
+
+type Message {
+  createdAt: DateTime!
+  fromId: String
+  id: String!
+  text: String
 }
 
 type Mutation {

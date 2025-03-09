@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { Chain } from '@prisma/client';
-import { TokenCallsResponse, TokenCalls, CallWithChat } from './dto/calls.types';
+import { TokenCallsResponse, TokenCalls, CallWithChat, Message } from './dto/calls.types';
 
 @Injectable()
 export class CallsService {
@@ -56,6 +56,11 @@ export class CallsService {
         where: whereClause,
         include: {
           chat: true,
+          messages: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
         },
       });
 
@@ -76,9 +81,41 @@ export class CallsService {
           (c) => c.chat.id === call.chat.tgChatId
         );
 
+        // Map messages to the expected format
+        const messages: Message[] = call.messages.map(msg => {
+          // Create the message object with fromId as null by default
+          return {
+            id: msg.telegramMessageId,
+            createdAt: msg.createdAt,
+            text: msg.text || undefined,
+            fromId: (msg as any).fromId || null
+          };
+        });
+
         if (existingCallIndex >= 0) {
           // Increment call count if chat already exists
           acc[key].calls[existingCallIndex].callCount += 1;
+          
+          // Add messages to existing call
+          if (!acc[key].calls[existingCallIndex].messages) {
+            acc[key].calls[existingCallIndex].messages = [];
+          }
+          
+          // Add new messages that aren't already in the array
+          const existingMessageIds = new Set(
+            acc[key].calls[existingCallIndex].messages?.map(m => m.id) || []
+          );
+          
+          messages.forEach(msg => {
+            if (!existingMessageIds.has(msg.id)) {
+              acc[key].calls[existingCallIndex].messages!.push(msg);
+            }
+          });
+          
+          // Sort messages by createdAt
+          acc[key].calls[existingCallIndex].messages!.sort(
+            (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+          );
         } else {
           // Add new chat with call count 1
           acc[key].calls.push({
@@ -89,6 +126,7 @@ export class CallsService {
               photoUrl: call.chat.tgChatImageUrl || undefined,
             },
             callCount: 1,
+            messages,
           });
         }
 

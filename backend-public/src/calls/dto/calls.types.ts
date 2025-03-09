@@ -3,12 +3,30 @@ import { TelegramChat } from '../../telegram/dto/telegram.types';
 import { Chain } from '@prisma/client';
 
 @ObjectType()
+export class Message {
+  @Field()
+  id: string;
+
+  @Field()
+  createdAt: Date;
+
+  @Field({ nullable: true })
+  text?: string;
+  
+  @Field({ nullable: true })
+  fromId?: string;
+}
+
+@ObjectType()
 export class CallWithChat {
   @Field(() => TelegramChat)
   chat: TelegramChat;
 
   @Field()
   callCount: number;
+
+  @Field(() => [Message], { nullable: true })
+  messages?: Message[];
 }
 
 @ObjectType()

@@ -39,6 +39,7 @@ export type CallWithChat = {
   __typename?: 'CallWithChat';
   callCount: Scalars['Float']['output'];
   chat: TelegramChat;
+  messages?: Maybe<Array<Message>>;
 };
 
 export type ChatsResponse = {
@@ -49,6 +50,14 @@ export type ChatsResponse = {
 export type GetCallsInput = {
   address?: InputMaybe<Scalars['String']['input']>;
   chain?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type Message = {
+  __typename?: 'Message';
+  createdAt: Scalars['DateTime']['output'];
+  fromId?: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  text?: Maybe<Scalars['String']['output']>;
 };
 
 export type Mutation = {
@@ -157,7 +166,7 @@ export type GetCallsByTokenQueryVariables = Exact<{
 }>;
 
 
-export type GetCallsByTokenQuery = { __typename?: 'Query', getCallsByToken: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, calls: Array<{ __typename?: 'CallWithChat', callCount: number, chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null } }> }> } };
+export type GetCallsByTokenQuery = { __typename?: 'Query', getCallsByToken: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, calls: Array<{ __typename?: 'CallWithChat', callCount: number, chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null }, messages?: Array<{ __typename?: 'Message', id: string, createdAt: string, text?: string | null, fromId?: string | null }> | null }> }> } };
 
 export type SaveUserChatsMutationVariables = Exact<{
   input: SaveChatsInput;
@@ -414,6 +423,12 @@ export const GetCallsByTokenDocument = /*#__PURE__*/ gql`
           photoUrl
         }
         callCount
+        messages {
+          id
+          createdAt
+          text
+          fromId
+        }
       }
     }
   }
