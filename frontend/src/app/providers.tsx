@@ -1,7 +1,7 @@
 "use client";
 
 import { PrivyProvider } from "@privy-io/react-auth";
-import ApolloProviderWrapper from "../lib/ApolloProvider";
+import ApolloProviderWrapper from "../backend/ApolloProvider";
 import ImagePreloader from "@/components/ImagePreloader";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
