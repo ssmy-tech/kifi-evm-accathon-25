@@ -157,76 +157,89 @@ export class TelegramAnalyticsService {
   }
 
   /**
-   * Analyze Telegram messages for a specific contract
-   */
-  async analyzeContractMessages(
-    contractAddress: string,
-    startDate?: string,
-    endDate?: string,
-    limit?: number,
-  ): Promise<AnalysisResult> {
-    this.logger.log(`Analyzing messages for contract: ${contractAddress}`);
-    
-    try {
-      const calls = await this.fetchContractCalls(contractAddress, startDate, endDate, limit);
-      console.log(calls);
-      if (!calls?.length) throw new HttpException('No calls found for this contract', HttpStatus.NOT_FOUND);
-      
-      const allMessages = this.extractMessagesFromCalls(calls);
-      console.log(allMessages);
-      if (!allMessages.length) throw new HttpException('No messages found for this contract', HttpStatus.NOT_FOUND);
-      
-      return await this.analyzeMessagesWithLLM(allMessages, contractAddress);
-    } catch (error) {
-      this.logger.error(`Error analyzing contract messages: ${error.message}`, error.stack);
-      throw new HttpException(
-        error.message || 'Failed to analyze contract messages',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
    * Fetch contract calls from the database using Prisma
    */
   private async fetchContractCalls(
     contractAddress: string,
+    privyId?: string,
     startDate?: string,
     endDate?: string,
-    limit?: number,
   ): Promise<TelegramCall[]> {
-    this.logger.debug(`Fetching calls for contract: ${contractAddress}`);
+    this.logger.debug(`Fetching calls for contract: ${contractAddress}${privyId ? ` and privyId: ${privyId}` : ''}`);
     
     try {
       const dateFilter = {};
       if (startDate) dateFilter['gte'] = new Date(startDate);
       if (endDate) dateFilter['lte'] = new Date(endDate);
 
-      const contractCalls = await this.prisma.calls.findMany({
-        where: {
-          address: { equals: contractAddress, mode: 'insensitive' as const },
-          ...(startDate || endDate ? { createdAt: dateFilter } : {}),
-        },
-        include: { messages: true, chat: true },
-        orderBy: { createdAt: 'desc' as const },
-        ...(limit && limit > 0 ? { take: limit } : {}),
-      }) as CallWithMessages[];
-      
-      return contractCalls.map(call => ({
-        id: call.telegramCallId,
-        timestamp: call.createdAt.toISOString(),
-        messages: call.messages.map(msg => ({
-          id: msg.telegramMessageId,
-          text: msg.text || '',
-          timestamp: msg.createdAt.toISOString(),
-          sender: this.extractSenderFromJson(msg.fromId),
-          chatId: msg.tgChatId,
-        })),
-      }));
+      if (privyId) {
+        // Get calls only for the specified user's chats
+        const user = await this.prisma.user.findUnique({
+          where: { privyId },
+          include: {
+            chats: {
+              include: {
+                calls: {
+                  where: {
+                    address: { equals: contractAddress, mode: 'insensitive' as const },
+                    ...(startDate || endDate ? { createdAt: dateFilter } : {}),
+                  },
+                  include: {
+                    messages: true,
+                  },
+                  orderBy: { createdAt: 'desc' as const },
+                },
+              },
+            },
+          },
+        });
+
+        if (!user) {
+          throw new HttpException(`User not found with privyId: ${privyId}`, HttpStatus.NOT_FOUND);
+        }
+
+        // Flatten the calls from all chats
+        const contractCalls = user.chats.flatMap(chat => chat.calls) as CallWithMessages[];
+        return this.formatCalls(contractCalls);
+      } else {
+        // Get all calls for the contract address
+        const contractCalls = await this.prisma.calls.findMany({
+          where: {
+            address: { equals: contractAddress, mode: 'insensitive' as const },
+            ...(startDate || endDate ? { createdAt: dateFilter } : {}),
+          },
+          include: {
+            messages: true,
+          },
+          orderBy: { createdAt: 'desc' as const },
+        }) as CallWithMessages[];
+
+        return this.formatCalls(contractCalls);
+      }
     } catch (error) {
       this.logger.error(`Error fetching contract calls from Prisma: ${error.message}`, error.stack);
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new Error(`Failed to fetch contract calls: ${error.message}`);
     }
+  }
+
+  /**
+   * Format calls into the expected response format
+   */
+  private formatCalls(calls: CallWithMessages[]): TelegramCall[] {
+    return calls.map(call => ({
+      id: call.telegramCallId,
+      timestamp: call.createdAt.toISOString(),
+      messages: call.messages.map(msg => ({
+        id: msg.telegramMessageId,
+        text: msg.text || '',
+        timestamp: msg.createdAt.toISOString(),
+        sender: this.extractSenderFromJson(msg.fromId),
+        chatId: msg.tgChatId,
+      })),
+    }));
   }
 
   /**
@@ -372,6 +385,34 @@ export class TelegramAnalyticsService {
     } catch (error) {
       this.logger.error(`LLM analysis error: ${error.message}`, error.stack);
       throw new Error(`Failed to analyze messages: ${error.message}`);
+    }
+  }
+
+  /**
+   * Analyze Telegram messages for a specific contract
+   */
+  async analyzeContractMessages(
+    contractAddress: string,
+    privyId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<AnalysisResult> {
+    this.logger.log(`Analyzing messages for contract: ${contractAddress} and privyId: ${privyId}`);
+    
+    try {
+      const calls = await this.fetchContractCalls(contractAddress, privyId, startDate, endDate);
+      if (!calls?.length) throw new HttpException('No calls found for this contract', HttpStatus.NOT_FOUND);
+      
+      const allMessages = this.extractMessagesFromCalls(calls);
+      if (!allMessages.length) throw new HttpException('No messages found for this contract', HttpStatus.NOT_FOUND);
+      
+      return await this.analyzeMessagesWithLLM(allMessages, contractAddress);
+    } catch (error) {
+      this.logger.error(`Error analyzing contract messages: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to analyze contract messages',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 } 

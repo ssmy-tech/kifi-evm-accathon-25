@@ -6,18 +6,18 @@ import { AnalysisResult } from './types';
 export class TelegramAnalyticsController {
   constructor(private readonly telegramAnalyticsService: TelegramAnalyticsService) {}
 
-  @Get('contract/:contractAddress')
+  @Get('contract/:contractAddress/privy/:privyId')
   async analyzeContractMessages(
     @Param('contractAddress') contractAddress: string,
+    @Param('privyId') privyId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @Query('limit') limit?: number,
   ): Promise<AnalysisResult> {
     return this.telegramAnalyticsService.analyzeContractMessages(
       contractAddress,
+      privyId,
       startDate,
       endDate,
-      limit,
     );
   }
 } 
