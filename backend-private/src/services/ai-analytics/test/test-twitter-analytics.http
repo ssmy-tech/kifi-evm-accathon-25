@@ -1,0 +1,15 @@
+### Basic Request - Replace with your contract address
+GET http://localhost:3000/twitter-analytics/contract/0x1234567890abcdef
+
+### With Date Range - Last 7 days
+GET http://localhost:3000/twitter-analytics/contract/0x1234567890abcdef?startDate=2024-03-07&endDate=2024-03-14
+
+### WOSAMA Example
+GET http://localhost:3000/twitter-analytics/contract/0x1234567890abcdef?startDate=2024-03-14
+
+### Test Error Cases
+# Invalid Address
+GET http://localhost:3000/twitter-analytics/contract/invalid-address
+
+# Invalid Date
+GET http://localhost:3000/twitter-analytics/contract/0x1234567890abcdef?startDate=invalid-date 
