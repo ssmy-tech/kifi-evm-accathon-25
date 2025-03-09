@@ -83,13 +83,15 @@ export class CallsService {
 
         // Map messages to the expected format
         const messages: Message[] = call.messages.map(msg => {
+          const msgAny = msg as any;
           // Create the message object with fromId as null by default
-          return {
+          const messageObj: Message = {
             id: msg.telegramMessageId,
             createdAt: msg.createdAt,
             text: msg.text || undefined,
-            fromId: (msg as any).fromId || null
+            fromId: msgAny.fromId ? JSON.stringify(msgAny.fromId) : undefined
           };
+          return messageObj;
         });
 
         if (existingCallIndex >= 0) {
