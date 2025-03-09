@@ -1,0 +1,17 @@
+### Basic Request
+GET http://localhost:3000/telegram-analytics/contract/0x1234567890abcdef
+
+### With Date Range
+GET http://localhost:3000/telegram-analytics/contract/0x1234567890abcdef?startDate=2024-01-01&endDate=2024-03-14
+
+### With Limit
+GET http://localhost:3000/telegram-analytics/contract/0x1234567890abcdef?limit=50
+
+### With All Parameters
+GET http://localhost:3000/telegram-analytics/contract/0x1234567890abcdef?startDate=2024-01-01&endDate=2024-03-14&limit=50
+
+### Invalid Address
+GET http://localhost:3000/telegram-analytics/contract/invalid-address
+
+### Invalid Date
+GET http://localhost:3000/telegram-analytics/contract/0x1234567890abcdef?startDate=invalid-date 
