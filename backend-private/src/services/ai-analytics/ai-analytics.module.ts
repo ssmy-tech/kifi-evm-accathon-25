@@ -6,7 +6,7 @@ import { AiAnalyticsService } from './ai-analytics.service';
 import { TelegramAnalyticsModule } from './telegram-analytics';
 import { TwitterAnalyticsModule } from './twitter-analytics';
 import aiAnalyticsConfig from './config/ai-analytics.config';
-
+import { HealthController } from './health/health.controller';
 @Module({
   imports: [
     CommonConfigModule,
@@ -15,6 +15,7 @@ import aiAnalyticsConfig from './config/ai-analytics.config';
     TelegramAnalyticsModule,
     TwitterAnalyticsModule,
   ],
+  controllers: [HealthController],
   providers: [AiAnalyticsService],
 })
 export class AiAnalyticsModule {} 

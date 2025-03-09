@@ -11,6 +11,7 @@ export interface TwitterMessage {
     bookmarks: number;
     quotes: number;
   };
+  url?: string;
 }
 
 export interface AnalysisResult {
@@ -28,5 +29,17 @@ export interface AnalysisResult {
   nextSteps: {
     suggestion: string;
     context: string;
+  }[];
+  relevantTweets: {
+    url: string;
+    text: string;
+    author: string;
+    timestamp: string;
+    engagement: {
+      likes: number;
+      retweets: number;
+      replies: number;
+      views: number;
+    };
   }[];
 } 

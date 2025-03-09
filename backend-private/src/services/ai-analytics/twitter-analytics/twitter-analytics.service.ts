@@ -172,12 +172,37 @@ export class TwitterAnalyticsService {
             views: parseInt(tweet.views, 10),
             bookmarks: tweet.bookmarks,
             quotes: tweet.quotes
-          }
+          },
+          url: `https://twitter.com/${tweet.screen_name}/status/${tweet.tweet_id}`
         }));
     } catch (error) {
       this.logger.error(`Failed to fetch tweets: ${error.message}`, error.stack);
       throw new HttpException('Failed to fetch tweets', HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  /**
+   * Get the most relevant tweets based on engagement metrics
+   */
+  private getRelevantTweets(tweets: TwitterMessage[], limit: number = 5): TwitterMessage[] {
+    // Calculate engagement score for each tweet
+    const tweetsWithScore = tweets.map(tweet => ({
+      tweet,
+      score: (
+        tweet.metrics.likes * 1 +
+        tweet.metrics.retweets * 2 +
+        tweet.metrics.replies * 1.5 +
+        tweet.metrics.views * 0.01 +
+        tweet.metrics.quotes * 1.5 +
+        tweet.metrics.bookmarks * 1
+      )
+    }));
+
+    // Sort by score and return top tweets
+    return tweetsWithScore
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(t => t.tweet);
   }
 
   /**
@@ -241,6 +266,9 @@ export class TwitterAnalyticsService {
       // Fetch token data from DexScreener
       const tokenData = await this.fetchTokenData(contractAddress, latestCall?.chain || 'ETHEREUM');
 
+      // Get the most relevant tweets
+      const relevantTweets = this.getRelevantTweets(tweets);
+
       const tokenContext = latestCall?.ticker ? 
         `Token Information:
         Name: ${latestCall.tokenName || 'Unknown'}
@@ -254,7 +282,7 @@ export class TwitterAnalyticsService {
       const formattedTweets = tweets
         .map(tweet => {
           const tweetTime = new Date(tweet.timestamp);
-          const metrics = `[👍 ${tweet.metrics.likes} 🔄 ${tweet.metrics.retweets} 💬 ${tweet.metrics.replies}]`;
+          const metrics = `[👍 ${tweet.metrics.likes} 🔄 ${tweet.metrics.retweets} 💬 ${tweet.metrics.replies} 👀 ${tweet.metrics.views}]`;
           return `[${tweetTime.toLocaleString()} (${tweetTime.toTimeString().split(' ')[0]})] @${tweet.author} ${metrics}: ${tweet.text}`;
         })
         .join('\n');
@@ -335,7 +363,19 @@ export class TwitterAnalyticsService {
         nextSteps: [{
           suggestion: 'Monitor for more activity',
           context: 'Insufficient data for detailed suggestions'
-        }]
+        }],
+        relevantTweets: relevantTweets.map(tweet => ({
+          url: tweet.url!,
+          text: tweet.text,
+          author: tweet.author,
+          timestamp: tweet.timestamp,
+          engagement: {
+            likes: tweet.metrics.likes,
+            retweets: tweet.metrics.retweets,
+            replies: tweet.metrics.replies,
+            views: tweet.metrics.views
+          }
+        }))
       };
     } catch (error) {
       this.logger.error(`LLM analysis error: ${error.message}`, error.stack);
