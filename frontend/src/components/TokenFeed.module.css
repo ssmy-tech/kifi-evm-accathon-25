@@ -1,8 +1,10 @@
 .container {
 	display: flex;
+	flex-grow: 1;
 	flex-direction: column;
 	width: 100%;
-	height: calc(100vh - var(--navbar-height));
+	height: 100vh;
+	max-height: calc(100vh - var(--navbar-height));
 	overflow: hidden;
 	position: relative;
 }
@@ -27,11 +29,13 @@
 }
 
 .tableContainer {
+	flex: 1;
 	overflow-y: auto;
 	height: 100%;
 	width: 100%;
 	scrollbar-width: none;
 	-ms-overflow-style: none;
+	position: relative;
 }
 
 .tableContainer::-webkit-scrollbar {
@@ -58,7 +62,7 @@
 .headerCell {
 	padding: clamp(8px, 0.5vw + 6px, 16px);
 	font-weight: 600;
-	font-size: clamp(0.8rem, 0.6vw + 0.65rem, 1.5rem);
+	font-size: clamp(0.8rem, 0.6vw + 0.65rem, 1.1rem);
 	color: var(--text-secondary, #a0a0a0);
 	border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
 	position: sticky;
@@ -68,7 +72,7 @@
 	transition: box-shadow 0.3s ease;
 	text-align: left;
 	vertical-align: middle;
-	height: clamp(50px, 4vh + 20px, 80px);
+	height: clamp(60px, 4vh + 25px, 80px);
 }
 
 .headerCell:first-child {
@@ -106,9 +110,9 @@
 }
 
 .wideColumn {
-	width: 250px;
-	min-width: 250px;
-	max-width: 250px;
+	width: 280px;
+	min-width: 280px;
+	max-width: 280px;
 }
 
 .leftAligned {
@@ -127,7 +131,6 @@
 
 .metricsGroup {
 	background-color: rgba(255, 255, 255, 0.02);
-	font-size: clamp(0.75rem, 0.3vw + 0.7rem, 0.9em);
 }
 
 .callersGroup {
@@ -268,6 +271,92 @@
 	position: relative;
 }
 
+/* Loading state styles */
+.loadingContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 300px;
+	width: 100%;
+	padding: 2rem;
+}
+
+.loadingSpinner {
+	width: 50px;
+	height: 50px;
+	border: 3px solid rgba(0, 0, 0, 0.1);
+	border-radius: 50%;
+	border-top-color: var(--accent);
+	animation: spin 1s ease-in-out infinite;
+	margin-bottom: 1rem;
+}
+
+.loadingText {
+	font-size: 1rem;
+	color: var(--text-secondary);
+	font-weight: 500;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Debug section styles */
+.debugSection {
+	margin-bottom: 2rem;
+	padding: 1rem;
+	background-color: #f8f9fa;
+	border-radius: 8px;
+	border: 1px solid #e9ecef;
+}
+
+.debugSection h3 {
+	margin-top: 0;
+	margin-bottom: 1rem;
+	color: #495057;
+	font-size: 1.2rem;
+}
+
+.debugContent {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+}
+
+.debugItem {
+	flex: 1;
+	min-width: 300px;
+	padding: 1rem;
+	background-color: white;
+	border-radius: 6px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.debugItem p {
+	margin: 0.5rem 0;
+}
+
+.callsList {
+	margin-top: 0.5rem;
+	padding-left: 1rem;
+	border-left: 2px solid #e9ecef;
+}
+
+.callItem {
+	margin-bottom: 0.5rem;
+	padding: 0.5rem;
+	background-color: #f8f9fa;
+	border-radius: 4px;
+}
+
+.callItem p {
+	margin: 0.25rem 0;
+	font-size: 0.9rem;
+}
+
 .moduleRow:first-child .module:nth-child(1) {
 	animation-delay: 0.15s;
 }
@@ -342,10 +431,10 @@
 .cell {
 	padding: clamp(8px, 0.5vw + 6px, 16px);
 	border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
-	font-size: clamp(0.8rem, 0.6vw + 0.65rem, 1.6rem);
+	font-size: clamp(0.8rem, 0.6vw + 0.65rem, 1.1rem);
 	font-weight: 500;
 	vertical-align: middle;
-	height: clamp(50px, 4vh + 20px, 90px);
+	height: clamp(70px, 5vh + 30px, 100px);
 }
 
 .indexCell {
@@ -359,29 +448,29 @@
 .tokenInfo {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 8px 0;
+	gap: 16px;
+	padding: 10px 0;
 	width: 100%;
 	overflow: hidden;
 }
 
 .imageContainer {
-	width: clamp(28px, 1.5vw + 24px, 52px);
-	height: clamp(28px, 1.5vw + 24px, 52px);
+	width: clamp(42px, 2vw + 32px, 72px);
+	height: clamp(42px, 2vw + 32px, 72px);
 	border-radius: 50%;
 	overflow: hidden;
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	background-color: rgba(255, 255, 255, 0.1);
-	padding: 4px;
+	border: 3px solid var(--tint, rgba(255, 255, 255, 0.2));
 	flex-shrink: 0;
 }
 
 .tokenImage {
 	object-fit: contain;
-	width: 85%;
-	height: 85%;
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
 }
 
 .nameContainer {
@@ -389,13 +478,13 @@
 	flex-direction: column;
 	justify-content: center;
 	overflow: hidden;
-	width: calc(100% - 54px);
+	width: calc(100% - 80px);
 }
 
 .tokenName {
 	font-weight: 600;
 	color: var(--text-primary, #ffffff);
-	font-size: clamp(0.85rem, 0.7vw + 0.7rem, 1.65rem);
+	font-size: clamp(0.9rem, 0.7vw + 0.8rem, 1.2rem);
 	line-height: 1.4;
 	white-space: nowrap;
 	overflow: hidden;
@@ -403,7 +492,7 @@
 }
 
 .tokenTicker {
-	font-size: clamp(0.7rem, 0.5vw + 0.6rem, 1.3rem);
+	font-size: clamp(0.75rem, 0.5vw + 0.65rem, 1rem);
 	color: var(--text-secondary, #a0a0a0);
 	text-transform: uppercase;
 	line-height: 1.4;
@@ -425,11 +514,11 @@
 }
 
 .callerImageWrapper {
-	width: clamp(28px, 1.5vw + 24px, 40px);
-	height: clamp(28px, 1.5vw + 24px, 40px);
+	width: clamp(28px, 1.5vw + 24px, 55px);
+	height: clamp(28px, 1.5vw + 24px, 55px);
 	border-radius: 50%;
 	overflow: hidden;
-	border: 2px solid var(--tint, rgba(255, 255, 255, 0.2));
+	border: 3px solid var(--tint, rgba(255, 255, 255, 0.2));
 	margin-right: -12px;
 	position: relative;
 	display: flex;

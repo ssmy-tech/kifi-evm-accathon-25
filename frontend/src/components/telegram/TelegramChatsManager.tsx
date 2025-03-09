@@ -7,9 +7,11 @@ import { FaSearch } from "react-icons/fa";
 const CHAT_PHOTOS_STORAGE_KEY = "telegram-chat-photos";
 
 // Maximum number of saved chats allowed
-const MAX_SAVED_CHATS = 5;
+const MAX_SAVED_CHATS = 20;
 
-export const TelegramChatsManager: React.FC = () => {
+interface TelegramChatsManagerProps {}
+
+export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
 	const [selectedChats, setSelectedChats] = useState<string[]>([]);
 	const [apiLink, setApiLink] = useState("");
 	// Pagination state
@@ -22,11 +24,20 @@ export const TelegramChatsManager: React.FC = () => {
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	// Search state
 	const [searchTerm, setSearchTerm] = useState("");
+	const [isMobileView, setIsMobileView] = useState(false);
+	// Page limit state
+	const [pageLimit, setPageLimit] = useState(16); // Default to desktop view
+	const [savedChatsPageLimit, setSavedChatsPageLimit] = useState(5); // Fixed 5 per page for saved chats
 
 	// Initialize chatPhotos from localStorage if available
 	const [chatPhotos, setChatPhotos] = useState<Record<string, string>>(() => {
-		const storedPhotos = localStorage.getItem(CHAT_PHOTOS_STORAGE_KEY);
-		return storedPhotos ? JSON.parse(storedPhotos) : {};
+		try {
+			const storedPhotos = localStorage.getItem(CHAT_PHOTOS_STORAGE_KEY);
+			return storedPhotos ? JSON.parse(storedPhotos) : {};
+		} catch (error) {
+			console.error("Error loading chat photos from localStorage:", error);
+			return {};
+		}
 	});
 
 	// Queries
@@ -39,46 +50,109 @@ export const TelegramChatsManager: React.FC = () => {
 		onCompleted: () => {
 			refetchSavedChats();
 			setSelectedChats([]);
+			setPendingSavedChats([]);
 			setErrorMessage(null);
 			setHasUnsavedChanges(false);
 		},
 	});
 
-	// Initialize pendingSavedChats from savedChats when data is loaded
-	useEffect(() => {
-		if (savedChats?.getUserSavedChats.chats) {
-			const savedChatIds = savedChats.getUserSavedChats.chats.map((chat) => chat.id);
-			setPendingSavedChats(savedChatIds);
-		}
-	}, [savedChats]);
-
-	const [updateApiLink, { data: updateApiLinkData, loading: updatingLink }] = useUpdateTelegramApiLinkMutation({
+	const [updateApiLink, { loading: updatingLink }] = useUpdateTelegramApiLinkMutation({
 		onCompleted: () => {
-			refetchSavedChats();
+			setErrorMessage(null);
+		},
+		onError: (error) => {
+			setErrorMessage(`Error updating API link: ${error.message}`);
 		},
 	});
 
-	const pageLimit = 15;
-	const savedChatsLimit = MAX_SAVED_CHATS;
+	// Save chat photos to localStorage whenever they change
+	useEffect(() => {
+		try {
+			localStorage.setItem(CHAT_PHOTOS_STORAGE_KEY, JSON.stringify(chatPhotos));
+		} catch (error) {
+			console.error("Error saving chat photos to localStorage:", error);
+		}
+	}, [chatPhotos]);
+
+	// Function to determine page limit based on screen size
+	const getPageLimit = () => {
+		if (isMobileView) {
+			return 4;
+		}
+		const width = window.innerWidth;
+		if (width < 640) {
+			return 4;
+		} else if (width < 780) {
+			return 6;
+		} else if (width < 1280) {
+			return 10;
+		}
+		return 15;
+	};
+
+	// Check for mobile view on mount and window resize
+	useEffect(() => {
+		const checkMobileView = () => {
+			const isMobile = window.innerWidth < 640;
+			setIsMobileView(isMobile);
+		};
+
+		// Initial check
+		checkMobileView();
+
+		// Update on resize
+		window.addEventListener("resize", checkMobileView);
+		return () => window.removeEventListener("resize", checkMobileView);
+	}, []);
+
+	// Update page limit on resize
+	useEffect(() => {
+		const handleResize = () => {
+			const newLimit = getPageLimit();
+			setPageLimit(newLimit);
+
+			// Reset to first page if current page would be out of bounds with new limit
+			const availableTotal = telegramChats?.getTelegramChats.chats.length || 0;
+			const availablePages = Math.ceil(availableTotal / newLimit);
+			if (availableChatsPage > availablePages) {
+				setAvailableChatsPage(1);
+			}
+
+			// For saved chats, we use a fixed limit of 5, so we don't need to adjust based on screen size
+			const savedTotal = pendingSavedChats.length;
+			const savedPages = Math.ceil(savedTotal / savedChatsPageLimit);
+			if (savedChatsPage > savedPages && savedPages > 0) {
+				console.log(`Resize: Adjusting saved chats page from ${savedChatsPage} to ${savedPages}`);
+				setSavedChatsPage(savedPages);
+			}
+		};
+
+		// Initial setup
+		handleResize();
+
+		// Update on resize
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
+	}, [telegramChats, pendingSavedChats.length, availableChatsPage, savedChatsPage, savedChatsPageLimit]);
 
 	// Filter chats based on search term
-	const filteredChats = telegramChats?.getTelegramChats.chats?.filter((chat) => chat.name.toLowerCase().includes(searchTerm.toLowerCase())) || [];
+	const filteredChats =
+		telegramChats?.getTelegramChats.chats.filter((chat) => {
+			return chat.name.toLowerCase().includes(searchTerm.toLowerCase());
+		}) || [];
 
-	// Calculate pagination values with filtered chats
+	// Calculate pagination values for available chats
 	const availableChatsTotal = searchTerm ? filteredChats.length : telegramChats?.getTelegramChats.chats.length || 0;
 	const availableChatsPages = Math.ceil(availableChatsTotal / pageLimit);
 	const availableChatsStart = (availableChatsPage - 1) * pageLimit;
 	const availableChatsEnd = availableChatsStart + pageLimit;
 
-	const savedChatsTotal = savedChats?.getUserSavedChats.chats.length || 0;
-	const savedChatsPages = Math.ceil(savedChatsTotal / savedChatsLimit);
-	const savedChatsStart = (savedChatsPage - 1) * savedChatsLimit;
-	const savedChatsEnd = savedChatsStart + savedChatsLimit;
-
-	// Save chatPhotos to localStorage whenever it changes
-	useEffect(() => {
-		localStorage.setItem(CHAT_PHOTOS_STORAGE_KEY, JSON.stringify(chatPhotos));
-	}, [chatPhotos]);
+	// Calculate pagination values for saved chats - always 5 per page
+	const pendingSavedChatsTotal = pendingSavedChats.length;
+	const savedChatsPages = Math.max(1, Math.ceil(pendingSavedChatsTotal / savedChatsPageLimit));
+	const savedChatsStart = (savedChatsPage - 1) * savedChatsPageLimit;
+	const savedChatsEnd = Math.min(savedChatsStart + savedChatsPageLimit, pendingSavedChatsTotal);
+	const displayedSavedChatsCount = pendingSavedChatsTotal > 0 ? Math.min(savedChatsEnd - savedChatsStart, pendingSavedChatsTotal) : 0;
 
 	// Fetch photos for visible available chats
 	useEffect(() => {
@@ -115,30 +189,33 @@ export const TelegramChatsManager: React.FC = () => {
 				.reverse()
 				.forEach((chat) => {
 					if (!chatPhotos[chat.id]) {
-						getChatPhoto({
-							variables: { chatId: chat.id },
-							onCompleted: (data) => {
-								if (data.getChatPhoto) {
-									console.log(data.getChatPhoto);
-									setChatPhotos((prev) => ({
-										...prev,
-										[chat.id]: data.getChatPhoto === "no-photo" || !data.getChatPhoto ? "/assets/KiFi_LOGO.jpg" : data.getChatPhoto,
-									}));
-								}
-							},
-							onError: (error) => {
-								console.error("Error fetching saved chat photo:", error);
-							},
-						});
+						chatPhotos[chat.id] = chat.photoUrl == "no-photo" || !chat.photoUrl ? "/assets/KiFi_LOGO.jpg" : chat.photoUrl;
 					}
 				});
 		}
 	}, [savedChats, getChatPhoto, chatPhotos, savedChatsStart, savedChatsEnd]);
 
+	// Initialize pendingSavedChats when savedChats data is loaded
+	useEffect(() => {
+		if (savedChats?.getUserSavedChats.chats && !hasUnsavedChanges) {
+			const savedChatIds = savedChats.getUserSavedChats.chats.map((chat) => chat.id);
+			setPendingSavedChats(savedChatIds);
+		}
+	}, [savedChats, hasUnsavedChanges]);
+
 	// Reset pagination when search term changes
 	useEffect(() => {
 		setAvailableChatsPage(1);
 	}, [searchTerm]);
+
+	// Reset saved chats pagination when the number of saved chats changes
+	useEffect(() => {
+		const maxValidPage = Math.max(1, Math.ceil(pendingSavedChats.length / savedChatsPageLimit));
+
+		if (savedChatsPage > maxValidPage) {
+			setSavedChatsPage(maxValidPage);
+		}
+	}, [pendingSavedChats.length, savedChatsPage, savedChatsPageLimit]);
 
 	// Handle API link update
 	const handleApiLinkSubmit = async (e: React.FormEvent) => {
@@ -221,19 +298,31 @@ export const TelegramChatsManager: React.FC = () => {
 
 	// Pagination component
 	const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (page: number) => void }) => {
+		// Don't render pagination if there's only one page or no pages
 		if (totalPages <= 1) return null;
+
+		// Ensure current page is within valid range
+		const validCurrentPage = Math.max(1, Math.min(currentPage, totalPages));
+
+		const handlePrevClick = () => {
+			onPageChange(validCurrentPage - 1);
+		};
+
+		const handleNextClick = () => {
+			onPageChange(validCurrentPage + 1);
+		};
 
 		return (
 			<div className={styles.pagination}>
-				<button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className={styles.paginationButton} aria-label="Previous page">
+				<button onClick={handlePrevClick} disabled={validCurrentPage === 1} className={styles.paginationButton} aria-label="Previous page">
 					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 						<path d="M15 18l-6-6 6-6" />
 					</svg>
 				</button>
 				<span className={styles.paginationInfo}>
-					Page {currentPage} of {totalPages}
+					Page {validCurrentPage} of {totalPages}
 				</span>
-				<button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className={styles.paginationButton} aria-label="Next page">
+				<button onClick={handleNextClick} disabled={validCurrentPage === totalPages} className={styles.paginationButton} aria-label="Next page">
 					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 						<path d="M9 18l6-6-6-6" />
 					</svg>
@@ -261,10 +350,15 @@ export const TelegramChatsManager: React.FC = () => {
 
 	return (
 		<div className={styles.container}>
-			{/* API Link Form */}
+			{(savingChats || updatingLink) && (
+				<div className={styles.loadingContainer}>
+					<div className={styles.loadingSpinner}></div>
+					<p className={styles.loadingText}>{savingChats ? "Saving chats..." : updatingLink ? "Updating API link..." : "Loading..."}</p>
+				</div>
+			)}
 			<form onSubmit={handleApiLinkSubmit} className={styles.apiForm}>
 				<div className={styles.formGroup}>
-					<input type="text" value={apiLink} onChange={(e) => setApiLink(e.target.value)} placeholder="Enter Telegram API Link" className={styles.input} />
+					<input type="text" placeholder="Enter Telegram API Link" className={styles.input} value={apiLink} onChange={(e) => setApiLink(e.target.value)} />
 					<button type="submit" disabled={updatingLink} className={`${styles.button} ${styles.buttonPrimary}`}>
 						{updatingLink ? "Updating..." : "Update API Link"}
 					</button>
@@ -274,81 +368,99 @@ export const TelegramChatsManager: React.FC = () => {
 			{errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
 
 			{telegramError ? (
-				<div className={styles.loadingContainer}>Error: {telegramError.message}</div>
+				<div className={styles.loadingContainer}>
+					<p className={styles.errorText}>Error: {telegramError.message}</p>
+				</div>
 			) : (
-				<>
-					{/* Available Chats Section */}
+				<div className={styles.contentWrapper}>
 					<div className={styles.section}>
 						<div className={styles.sectionHeader}>
-							<h2 className={styles.sectionTitle}>Available Telegram Chats</h2>
+							<h2 className={styles.sectionTitle}>Telegram Chats Manager</h2>
 							<div className={styles.searchContainer}>
-								<input type="text" value={searchTerm} onChange={handleSearchChange} placeholder="Search chats by name..." className={styles.searchInput} />
-								<div className={styles.searchIcon}>
-									<FaSearch />
-								</div>
+								<FaSearch className={styles.searchIcon} />
+								<input type="text" placeholder="Search chats..." value={searchTerm} onChange={handleSearchChange} className={styles.searchInput} />
 							</div>
 						</div>
-						<div className={styles.chatGrid}>
+						<div className={`${styles.chatGrid} ${styles.availableChatsRow}`}>
 							{(searchTerm ? filteredChats : telegramChats?.getTelegramChats.chats || []).slice(availableChatsStart, availableChatsEnd).map((chat) => (
 								<div key={chat.id} className={`${styles.chatCard} ${isPendingSaved(chat.id) ? styles.chatCardSaved : ""}`} onClick={() => handleChatSelect(chat.id)}>
-									{chatPhotos[chat.id] && <img src={chatPhotos[chat.id]} alt={chat.name} className={styles.chatAvatar} loading="lazy" />}
-									<h3 className={styles.chatName}>{chat.name}</h3>
+									{chatPhotos[chat.id] ? (
+										<img src={chatPhotos[chat.id]} alt={chat.name} className={styles.chatAvatar} loading="lazy" />
+									) : (
+										<div className={styles.chatAvatarLoading}>
+											<div className={styles.chatAvatarSpinner}></div>
+										</div>
+									)}
+									<h2 className={styles.chatName}>{chat.name}</h2>
 									<p className={styles.chatType}>{chat.type}</p>
 									{isPendingSaved(chat.id) && <div className={styles.savedBadge}>Selected</div>}
 								</div>
 							))}
+							{availableChatsTotal === 0 && searchTerm && <p className={styles.emptyState}>No chats found matching "{searchTerm}"</p>}
 						</div>
-						{availableChatsTotal === 0 && searchTerm && <p className={styles.emptyState}>No chats found matching "{searchTerm}"</p>}
-						<Pagination currentPage={availableChatsPage} totalPages={availableChatsPages} onPageChange={handleAvailableChatsPageChange} />
+						{/* Pagination outside of scrollable area */}
+						<Pagination key={`available-pagination-${availableChatsPage}-${availableChatsPages}`} currentPage={availableChatsPage} totalPages={availableChatsPages} onPageChange={handleAvailableChatsPageChange} />
 					</div>
 
-					{/* Saved Chats */}
+					{/* Saved Chats Section - Fixed at bottom */}
 					<div className={styles.section}>
-						<h2 className={styles.sectionTitle}>
-							Saved Chats ({pendingSavedChats.length}/{MAX_SAVED_CHATS})
-						</h2>
+						<div className={styles.sectionHeader}>
+							<h2 className={styles.sectionTitle}>
+								Saved Chats ({pendingSavedChats.length}/{MAX_SAVED_CHATS})
+							</h2>
+							<div className={styles.savedCountInfo}>{pendingSavedChatsTotal > 0 ? `Showing ${displayedSavedChatsCount} of ${pendingSavedChatsTotal} saved chats` : "No saved chats"}</div>
+						</div>
 
 						{pendingSavedChats.length === 0 ? (
 							<p className={styles.emptyState}>No chats saved yet. Select chats from above to save them.</p>
 						) : (
 							<>
-								<div className={styles.chatGrid}>
-									{pendingSavedChats
-										.map((chatId) => {
-											// Find the chat in either available or saved chats
-											const chat = telegramChats?.getTelegramChats.chats.find((c) => c.id === chatId) || savedChats?.getUserSavedChats.chats.find((c) => c.id === chatId);
+								<div className={`${styles.chatGrid} ${styles.savedChatsRow}`}>
+									{pendingSavedChats.slice(savedChatsStart, savedChatsEnd).map((chatId) => {
+										// Find the chat in either available or saved chats
+										const chat = telegramChats?.getTelegramChats.chats.find((c) => c.id === chatId) || savedChats?.getUserSavedChats.chats.find((c) => c.id === chatId);
 
-											if (!chat) return null;
+										if (!chat) return null;
 
-											return (
-												<div key={chat.id} className={`${styles.chatCard} ${styles.savedChatCard}`} onClick={() => handleSavedChatToggle(chat.id)}>
-													{chatPhotos[chat.id] && <img src={chatPhotos[chat.id]} alt={chat.name} className={styles.chatAvatar} loading="lazy" />}
-													<h3 className={styles.chatName}>{chat.name}</h3>
-													<p className={styles.chatType}>{chat.type}</p>
-													<div className={styles.removeOverlay}>
-														<span>Remove</span>
+										return (
+											<div key={chat.id} className={`${styles.chatCard} ${styles.savedChatCard}`} onClick={() => handleSavedChatToggle(chat.id)}>
+												{chatPhotos[chat.id] ? (
+													<img src={chatPhotos[chat.id]} alt={chat.name} className={styles.chatAvatar} loading="lazy" />
+												) : (
+													<div className={styles.chatAvatarLoading}>
+														<div className={styles.chatAvatarSpinner}></div>
 													</div>
+												)}
+												<h3 className={styles.chatName}>{chat.name}</h3>
+												<p className={styles.chatType}>{chat.type}</p>
+												<div
+													className={styles.removeOverlay}
+													onClick={(e) => {
+														e.stopPropagation();
+														handleSavedChatToggle(chat.id);
+													}}
+												>
+													Remove
 												</div>
-											);
-										})
-										.filter(Boolean)}
+											</div>
+										);
+									})}
+								</div>
+								{/* Pagination for saved chats */}
+								<Pagination key={`saved-pagination-${savedChatsPage}-${savedChatsPages}`} currentPage={savedChatsPage} totalPages={savedChatsPages} onPageChange={handleSavedChatsPageChange} />
+
+								<div className={styles.actionButtonsContainer}>
+									<button onClick={handleCancelChanges} className={`${styles.button} ${styles.buttonSecondary} ${hasUnsavedChanges ? styles.buttonVisible : styles.buttonHidden}`}>
+										Cancel
+									</button>
+									<button onClick={handleSaveChanges} disabled={savingChats} className={`${styles.button} ${styles.buttonSuccess} ${hasUnsavedChanges ? styles.buttonVisible : styles.buttonHidden}`}>
+										{savingChats ? "Saving..." : "Save Changes"}
+									</button>
 								</div>
 							</>
 						)}
 					</div>
-
-					{/* Save/Cancel Actions - Bottom right of container */}
-					{hasUnsavedChanges && (
-						<div className={styles.actionButtonsContainer}>
-							<button onClick={handleCancelChanges} className={`${styles.button} ${styles.buttonSecondary}`}>
-								Cancel
-							</button>
-							<button onClick={handleSaveChanges} disabled={savingChats} className={`${styles.button} ${styles.buttonSuccess}`}>
-								{savingChats ? "Saving..." : "Save Changes"}
-							</button>
-						</div>
-					)}
-				</>
+				</div>
 			)}
 		</div>
 	);

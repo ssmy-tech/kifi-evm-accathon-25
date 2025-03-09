@@ -5,7 +5,7 @@ import { sampleTokens } from "@/data/mockData";
 export default function Home() {
 	return (
 		<div className={styles.page}>
-			<TokenFeed tokens={sampleTokens} />
+			<TokenFeed />
 		</div>
 	);
 }

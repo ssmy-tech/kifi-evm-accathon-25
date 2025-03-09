@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useUpdateTelegramApiLinkMutation, useCheckTelegramApiHealthQuery } from "../../generated/graphql";
+import React, { useState, useEffect } from "react";
+import { useUpdateTelegramApiLinkMutation, useCheckTelegramApiHealthQuery, useGetUserSavedChatsQuery } from "../../generated/graphql";
 import styles from "./TelegramSetup.module.css";
 import { usePrivy } from "@privy-io/react-auth";
 import { TelegramChatsManager } from "./TelegramChatsManager";
@@ -15,9 +15,10 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 	const [apiLink, setApiLink] = useState(initialApiLink);
 	const [error, setError] = useState<string | null>(null);
 	const [setupCompleted, setSetupCompleted] = useState(false);
-	const { data: healthCheck } = useCheckTelegramApiHealthQuery({
+	const { data: healthCheck, loading: healthCheckLoading } = useCheckTelegramApiHealthQuery({
 		pollInterval: 10000,
 	});
+	const { data: savedChats, loading: savedChatsLoading } = useGetUserSavedChatsQuery();
 
 	const [updateApiLink, { loading: updatingLink }] = useUpdateTelegramApiLinkMutation({
 		onCompleted: async () => {
@@ -30,6 +31,19 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 			setError(error.message);
 		},
 	});
+
+	// Check if setup can be skipped (API is healthy and chats exist)
+	useEffect(() => {
+		const isHealthy = healthCheck?.checkTelegramApiHealth.status === "healthy";
+		const hasChats = savedChats?.getUserSavedChats.chats && savedChats.getUserSavedChats.chats.length > 0;
+		// If API is healthy and user has chats, skip setup
+		if (isHealthy && hasChats && !setupCompleted) {
+			if (showManagerAfterSetup) {
+				setSetupCompleted(true);
+			}
+			onSetupComplete();
+		}
+	}, [healthCheck, savedChats, setupCompleted, showManagerAfterSetup, onSetupComplete]);
 
 	const handleApiLinkSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -51,7 +65,20 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 		}
 	};
 
-	const isHealthy = healthCheck?.checkTelegramApiHealth.status === "healthy";
+	// Show loading state while checking health and saved chats
+	if ((healthCheckLoading || savedChatsLoading) && !setupCompleted) {
+		return (
+			<div className={styles.container}>
+				<div className={styles.setupCard}>
+					<h2 className={styles.title}>Checking Telegram Connection</h2>
+					<div className={styles.loadingContainer}>
+						<div className={styles.loadingSpinner}></div>
+						<p className={styles.loadingText}>Checking your Telegram connection...</p>
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	if (setupCompleted && showManagerAfterSetup) {
 		return (
@@ -66,6 +93,7 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 		);
 	}
 
+	const isHealthy = healthCheck?.checkTelegramApiHealth.status === "healthy";
 	return (
 		<div className={styles.container}>
 			<div className={styles.setupCard}>

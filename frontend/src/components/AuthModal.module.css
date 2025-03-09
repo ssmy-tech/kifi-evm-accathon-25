@@ -15,10 +15,8 @@
 .modal {
 	background: white;
 	border-radius: 12px;
-	padding: clamp(1rem, 3vw, 2rem);
 	position: relative;
-	width: min(90%, 900px);
-	max-height: 90vh;
+	padding: 1.2rem 1.5rem;
 	overflow-y: auto;
 	animation: scaleIn 0.3s ease-out;
 	transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
@@ -27,7 +25,6 @@
 }
 
 .content {
-	margin-top: 1rem;
 	transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 	will-change: transform, opacity;
 }
@@ -41,17 +38,31 @@
 }
 
 .step h2 {
-	margin-bottom: 20px;
-	font-size: clamp(1.5rem, 4vw, 2.25rem);
-	font-weight: 600;
-	line-height: 1.2;
+	font-size: 1.75rem;
+	font-weight: 700;
+	margin-bottom: 1rem;
+	color: #1f2937;
+}
+
+.stepTitle {
+	font-size: 1.75rem;
+	font-weight: 700;
+	margin-bottom: 1rem;
+	color: #1f2937;
 }
 
 .step p {
-	margin-bottom: 20px;
-	color: #666;
-	font-size: clamp(1rem, 2.5vw, 1.5rem);
+	font-size: 1rem;
 	line-height: 1.5;
+	color: #4b5563;
+	margin-bottom: 1.5rem;
+}
+
+.stepDescription {
+	font-size: 1rem;
+	line-height: 1.5;
+	color: #4b5563;
+	margin-bottom: 1.5rem;
 }
 
 .nextButton {
@@ -98,6 +109,8 @@
 	margin-top: 0;
 	padding: clamp(0.75rem, 1.5vw, 1rem);
 	border: 1px solid #ddd;
+	background-color: white;
+	color: black;
 	border-radius: 8px;
 	font-size: clamp(1rem, 2vw, 1.2rem);
 	width: 100%;
@@ -175,21 +188,30 @@
 		max-height: 80vh;
 		padding: clamp(1rem, 4vw, 1.5rem);
 	}
+
+	.telegramManagerWrapper {
+		max-height: 80vh;
+	}
 }
 
 @media (max-width: 480px) {
 	.modal {
 		width: 95%;
+		max-width: 400px;
 		padding: 1rem;
 	}
 
 	.step h2 {
-		font-size: 1.2rem;
+		font-size: 1.5rem;
 	}
 
 	.closeButton {
 		top: 0.75rem;
 		right: 0.75rem;
+	}
+
+	.telegramManagerWrapper {
+		max-height: 80vh;
 	}
 }
 
@@ -273,6 +295,7 @@
 .telegramBenefits li {
 	padding: 0.85rem 1.25rem;
 	margin-bottom: 0.75rem;
+	color: black;
 	background-color: #f5f9ff;
 	border-radius: 8px;
 	font-size: clamp(1rem, 2.3vw, 1.3rem);
@@ -314,13 +337,20 @@
 
 .telegramManagerWrapper {
 	width: 100%;
+	height: 100%;
+	max-height: 80vh;
+	overflow: hidden;
+	border-radius: 0.5rem;
+	background-color: #f9fafb;
+	margin-top: 1rem;
 	display: flex;
 	flex-direction: column;
-	max-height: 70vh;
-	overflow-y: auto;
 }
 
 .telegramManagerWrapper > div {
+	height: 100%;
 	width: 100%;
-	padding: 0;
+	border-radius: 0.5rem;
+	overflow: hidden;
+	flex: 1;
 }

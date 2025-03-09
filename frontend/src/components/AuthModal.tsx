@@ -203,11 +203,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 				return (
 					<div className={styles.step}>
 						{telegramStage === "setup" ? (
-							<TelegramSetup onSetupComplete={() => {}} showManagerAfterSetup={true} onContinue={() => changeStep("complete")} />
+							<TelegramSetup onSetupComplete={() => setTelegramStage("manage")} showManagerAfterSetup={true} onContinue={() => changeStep("complete")} />
+						) : telegramStage === "manage" ? (
+							<div className={styles.telegramManagerWrapper}>
+								<TelegramChatsManager />
+								<div className={styles.telegramButtons}>
+									<button className={styles.nextButton} onClick={() => changeStep("complete")}>
+										Continue
+									</button>
+								</div>
+							</div>
 						) : (
 							<>
-								<h2>Connect Your Telegram</h2>
-								<p>Link your Telegram account to customize your feed and token alerts.</p>
+								<h2 className={styles.stepTitle}>Connect Your Telegram</h2>
+								<p className={styles.stepDescription}>Link your Telegram account to customize your feed and token alerts.</p>
 
 								<div className={styles.telegramConnect}>
 									<p className={styles.telegramDescription}>Connecting your Telegram account allows you to:</p>

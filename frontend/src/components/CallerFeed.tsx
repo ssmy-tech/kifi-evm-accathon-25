@@ -4,6 +4,11 @@ import styles from "./CallerFeed.module.css";
 import { formatTimestamp } from "@/utils/formatters";
 import Image from "next/image";
 import { Caller } from "@/types/caller.types";
+import { saveCallerPhoto, getCallerPhoto } from "@/utils/localStorage";
+import { useGetChatPhotoLazyQuery } from "@/generated/graphql";
+
+// Storage key for caller photos in CallerFeed
+const CALLER_FEED_PHOTOS_KEY = "caller-feed-photos";
 
 interface CallerFeedProps {
 	callers: Caller[];
@@ -17,6 +22,86 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 	const [expandedCallerId, setExpandedCallerId] = useState<string | null>(null);
 	const [closingCallerId, setClosingCallerId] = useState<string | null>(null);
 	const tableContainerRef = useRef<HTMLDivElement>(null);
+
+	// Initialize local photo cache from localStorage
+	const [callerPhotos, setCallerPhotos] = useState<Record<string, string>>(() => {
+		try {
+			const storedPhotos = localStorage.getItem(CALLER_FEED_PHOTOS_KEY);
+			return storedPhotos ? JSON.parse(storedPhotos) : {};
+		} catch (error) {
+			console.error("Error loading caller photos from localStorage:", error);
+			return {};
+		}
+	});
+
+	// Get the chat photo query hook
+	const [getChatPhoto] = useGetChatPhotoLazyQuery();
+
+	// Save caller photos to localStorage whenever they change
+	useEffect(() => {
+		try {
+			localStorage.setItem(CALLER_FEED_PHOTOS_KEY, JSON.stringify(callerPhotos));
+		} catch (error) {
+			console.error("Error saving caller photos to localStorage:", error);
+		}
+	}, [callerPhotos]);
+
+	// Fetch photos for callers
+	useEffect(() => {
+		if (callers && callers.length > 0) {
+			callers.forEach((caller) => {
+				// Only fetch if we don't already have the photo in local state
+				if (!callerPhotos[caller.id]) {
+					// First try to get from global caller photos cache
+					const cachedPhoto = getCallerPhoto(caller.id);
+
+					if (cachedPhoto) {
+						// If found in global cache, use it and update local state
+						setCallerPhotos((prev) => ({
+							...prev,
+							[caller.id]: cachedPhoto,
+						}));
+					} else if (caller.profileImageUrl === "/assets/KiFi_LOGO.jpg") {
+						// If using default image, try to fetch from API
+						getChatPhoto({
+							variables: { chatId: caller.id },
+							onCompleted: (data) => {
+								if (data.getChatPhoto) {
+									const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? "/assets/KiFi_LOGO.jpg" : data.getChatPhoto;
+
+									// Update local state
+									setCallerPhotos((prev) => ({
+										...prev,
+										[caller.id]: photoUrl,
+									}));
+
+									// Also save to global cache if it's not the default image
+									if (photoUrl !== "/assets/KiFi_LOGO.jpg") {
+										saveCallerPhoto(caller.id, photoUrl);
+									}
+								}
+							},
+							onError: (error) => {
+								console.error("Error fetching chat photo:", error);
+								// Set default image on error
+								setCallerPhotos((prev) => ({
+									...prev,
+									[caller.id]: "/assets/KiFi_LOGO.jpg",
+								}));
+							},
+						});
+					} else if (caller.profileImageUrl && caller.profileImageUrl !== "/assets/KiFi_LOGO.jpg") {
+						// If caller already has a non-default photo, save it to both caches
+						setCallerPhotos((prev) => ({
+							...prev,
+							[caller.id]: caller.profileImageUrl,
+						}));
+						saveCallerPhoto(caller.id, caller.profileImageUrl);
+					}
+				}
+			});
+		}
+	}, [callers, getChatPhoto, callerPhotos]);
 
 	const handleSort = (field: keyof Caller) => {
 		if (field === sortField) {
@@ -124,30 +209,47 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 								</tr>
 							</thead>
 							<tbody className={styles.tableBody}>
-								{sortedCallers.map((caller) => (
-									<React.Fragment key={caller.id}>
-										<tr className={`${styles.callerRow} ${caller.message ? styles.hasMessage : ""}`} onClick={() => caller.message && toggleExpandCaller(caller.id)} style={caller.message ? { cursor: "pointer" } : {}}>
-											<td className={styles.imageCell}>
-												<div className={styles.profileImage}>
-													<Image src={caller.profileImageUrl} alt={`Caller ${caller.id}`} width={32} height={32} className={styles.avatar} />
-												</div>
-											</td>
-											{callers?.some((caller) => caller.name) && <td className={styles.nameColumn}>{caller.name || "-"}</td>}
-											{callers?.some((caller) => caller.timestamp) && <td className={styles.timestampColumn}>{caller.timestamp ? <span className={styles.timestamp}>{formatTimestamp(caller.timestamp, false, true)}</span> : "-"}</td>}
-											{callers?.some((caller) => caller.winRate !== undefined) && <td className={styles.rateColumn}>{caller.winRate !== undefined ? `${caller.winRate}%` : "-"}</td>}
-											{callers?.some((caller) => caller.message) && <td className={styles.messageCell}>{caller.message ? <div className={styles.viewButton}>{expandedCallerId === caller.id ? "Hide" : "View"}</div> : "None"}</td>}
-										</tr>
-										{expandedCallerId === caller.id && caller.message && (
-											<tr className={`${styles.messageRow} ${closingCallerId === caller.id ? styles.closing : ""}`} data-caller-id={caller.id}>
-												<td colSpan={5}>
-													<div className={styles.messageContentWrapper}>
-														<div className={styles.messageContent}>{caller.message}</div>
+								{sortedCallers.map((caller) => {
+									// Get the best available photo for this caller
+									// Priority: 1. Local cache, 2. Caller object, 3. Global cache, 4. Default
+									const profileImageUrl = callerPhotos[caller.id] || (caller.profileImageUrl !== "/assets/KiFi_LOGO.jpg" ? caller.profileImageUrl : getCallerPhoto(caller.id) || "/assets/KiFi_LOGO.jpg");
+
+									return (
+										<React.Fragment key={caller.id}>
+											<tr className={`${styles.callerRow} ${caller.message ? styles.hasMessage : ""}`} onClick={() => caller.message && toggleExpandCaller(caller.id)} style={caller.message ? { cursor: "pointer" } : {}}>
+												<td className={styles.imageCell}>
+													<div className={styles.profileImage}>
+														<Image
+															src={profileImageUrl}
+															alt={`Caller ${caller.id}`}
+															width={32}
+															height={32}
+															className={styles.avatar}
+															onError={(e) => {
+																// Fallback to default image if the profile image fails to load
+																const target = e.target as HTMLImageElement;
+																target.src = "/assets/KiFi_LOGO.jpg";
+															}}
+														/>
 													</div>
 												</td>
+												{callers?.some((caller) => caller.name) && <td className={styles.nameColumn}>{caller.name || "-"}</td>}
+												{callers?.some((caller) => caller.timestamp) && <td className={styles.timestampColumn}>{caller.timestamp ? <span className={styles.timestamp}>{formatTimestamp(caller.timestamp, false, true)}</span> : "-"}</td>}
+												{callers?.some((caller) => caller.winRate !== undefined) && <td className={styles.rateColumn}>{caller.winRate !== undefined ? `${caller.winRate}%` : "-"}</td>}
+												{callers?.some((caller) => caller.message) && <td className={styles.messageCell}>{caller.message ? <div className={styles.viewButton}>{expandedCallerId === caller.id ? "Hide" : "View"}</div> : "None"}</td>}
 											</tr>
-										)}
-									</React.Fragment>
-								))}
+											{expandedCallerId === caller.id && caller.message && (
+												<tr className={`${styles.messageRow} ${closingCallerId === caller.id ? styles.closing : ""}`} data-caller-id={caller.id}>
+													<td colSpan={5}>
+														<div className={styles.messageContentWrapper}>
+															<div className={styles.messageContent}>{caller.message}</div>
+														</div>
+													</td>
+												</tr>
+											)}
+										</React.Fragment>
+									);
+								})}
 							</tbody>
 						</table>
 					</div>

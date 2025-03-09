@@ -204,17 +204,20 @@
 	justify-content: center;
 	align-items: center;
 	z-index: 1000;
+	padding: 1rem;
 }
 
 .telegramModalContainer {
 	background-color: white;
 	border-radius: 0.5rem;
-	width: 50%;
-	min-width: 200px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+	width: 90%;
 	max-width: 1200px;
-	max-height: 90vh;
-	overflow-y: auto;
-	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+	height: 80vh;
+	max-height: 80vh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 }
 
 .telegramModalHeader {
@@ -251,6 +254,21 @@
 
 .telegramModalContent {
 	padding: 0;
+	overflow-y: auto;
+	height: calc(100% - 60px);
+	width: 100%;
+	flex: 1;
+}
+
+@media (max-width: 768px) {
+	.telegramModalContent {
+		max-height: calc(80vh - 60px);
+	}
+
+	.telegramModalContainer {
+		width: 95%;
+		height: 80vh;
+	}
 }
 
 .statusIndicator {
