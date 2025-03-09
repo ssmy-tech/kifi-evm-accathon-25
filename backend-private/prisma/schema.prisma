@@ -39,6 +39,7 @@ model Messages {
     updatedAt DateTime @updatedAt
     tgChatId String
     text String?
+    fromId Json?
     chat Chats @relation(fields: [tgChatId], references: [tgChatId])
     callId String?
     call Calls? @relation(fields: [callId], references: [telegramCallId])

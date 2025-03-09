@@ -243,45 +243,59 @@ export class ChatScraperService implements OnModuleInit {
 
       if (matches) {
         for (const address of matches) {
-          const result = await this.blockchainService.verifyContract(address);
-          if (result.isValid && result.chain) {
-            this.logger.log(`Found valid contract: ${address} on chain: ${result.chain}`, `${message.id}_${address}`);
-            
-            try {
-              // Create call record with metadata
-              await this.prisma.calls.create({
-                data: {
-                  telegramCallId: `${message.id}_${address}`,
-                  address: address,
-                  chain: result.chain,
-                  ticker: result.symbol,
-                  tokenName: result.name,
-                  chat: {
-                    connect: {
-                      tgChatId: chatId
-                    }
-                  },
-                  messages: {
-                    connectOrCreate: {
-                      where: {
-                        telegramMessageId: message.id.toString()
-                      },
-                      create: {
-                        telegramMessageId: message.id.toString(),
-                        text: content,
-                        chat: {
-                          connect: {
-                            tgChatId: chatId
+          this.logger.log(`Found potential contract address: ${address}`, `${message.id}_${address}`);
+          
+          try {
+            const result = await this.blockchainService.verifyContract(address);
+            if (result.isValid && result.chain) {
+              this.logger.log(`Found valid contract: ${address} on chain: ${result.chain}`, `${message.id}_${address}`);
+              
+              try {
+                // Process fromId to ensure it's a valid JSON value
+                const fromIdJson = message.fromId ? 
+                  (typeof message.fromId === 'string' ? 
+                    message.fromId : 
+                    JSON.parse(JSON.stringify(message.fromId))) : 
+                  null;
+                
+                // Create call record with metadata
+                await this.prisma.calls.create({
+                  data: {
+                    telegramCallId: `${message.id}_${address}`,
+                    address: address,
+                    chain: result.chain,
+                    ticker: result.symbol,
+                    tokenName: result.name,
+                    chat: {
+                      connect: {
+                        tgChatId: chatId
+                      }
+                    },
+                    messages: {
+                      connectOrCreate: {
+                        where: {
+                          telegramMessageId: message.id.toString()
+                        },
+                        create: {
+                          telegramMessageId: message.id.toString(),
+                          text: content,
+                          fromId: fromIdJson,
+                          chat: {
+                            connect: {
+                              tgChatId: chatId
+                            }
                           }
                         }
                       }
                     }
                   }
-                }
-              });
-            } catch (error) {
-              this.logger.error(`Failed to create call record: ${error.message}`);
+                });
+              } catch (error) {
+                this.logger.error(`Failed to create call record: ${error.message}`);
+              }
             }
+          } catch (error) {
+            this.logger.error(`Error verifying contract ${address}: ${error.message}`);
           }
         }
       }
