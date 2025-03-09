@@ -47,6 +47,12 @@ export type GetCallsInput = {
   chain?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type KeyTopic = {
+  context: Scalars['String']['output'];
+  frequency: Scalars['Float']['output'];
+  topic: Scalars['String']['output'];
+};
+
 export type Message = {
   createdAt: Scalars['DateTime']['output'];
   fromId: Maybe<Scalars['String']['output']>;
@@ -70,12 +76,19 @@ export type MutationUpdateTelegramApiLinkArgs = {
   apiLink: Scalars['String']['input'];
 };
 
+export type NextStep = {
+  context: Scalars['String']['output'];
+  suggestion: Scalars['String']['output'];
+};
+
 export type Query = {
   checkTelegramApiHealth: ApiHealthResponse;
   getCallsByToken: TokenCallsResponse;
   getChatPhoto: Maybe<Scalars['String']['output']>;
   getTelegramApiSecret: ApiSecretResponse;
   getTelegramChats: ChatsResponse;
+  getTelegramContractAnalytics: TelegramAnalyticsResponse;
+  getTwitterContractAnalytics: TwitterAnalyticsResponse;
   getUserSavedChats: ChatsResponse;
   user: Maybe<User>;
   users: Array<User>;
@@ -92,8 +105,33 @@ export type QueryGetChatPhotoArgs = {
   chatId: Scalars['String']['input'];
 };
 
+
+export type QueryGetTelegramContractAnalyticsArgs = {
+  input: TelegramContractAnalyticsInput;
+};
+
+
+export type QueryGetTwitterContractAnalyticsArgs = {
+  input: TwitterContractAnalyticsInput;
+};
+
 export type SaveChatsInput = {
   chatIds: Array<Scalars['String']['input']>;
+};
+
+export type Sentiment = {
+  communityMood: Scalars['String']['output'];
+  details: Array<Scalars['String']['output']>;
+  overall: Scalars['String']['output'];
+};
+
+export type TelegramAnalyticsResponse = {
+  keyTopics: Array<KeyTopic>;
+  lastGeneratedAt: Scalars['DateTime']['output'];
+  nextSteps: Array<NextStep>;
+  sentiment: Sentiment;
+  summary: Scalars['String']['output'];
+  timeUntilNextGeneration: Scalars['Float']['output'];
 };
 
 export type TelegramChat = {
@@ -101,6 +139,10 @@ export type TelegramChat = {
   name: Scalars['String']['output'];
   photoUrl: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
+};
+
+export type TelegramContractAnalyticsInput = {
+  contractAddress: Scalars['String']['input'];
 };
 
 export type TokenCalls = {
@@ -111,6 +153,35 @@ export type TokenCalls = {
 
 export type TokenCallsResponse = {
   tokenCalls: Array<TokenCalls>;
+};
+
+export type Tweet = {
+  author: Scalars['String']['output'];
+  engagement: TweetEngagement;
+  text: Scalars['String']['output'];
+  timestamp: Scalars['String']['output'];
+  url: Scalars['String']['output'];
+};
+
+export type TweetEngagement = {
+  likes: Scalars['Float']['output'];
+  replies: Scalars['Float']['output'];
+  retweets: Scalars['Float']['output'];
+  views: Scalars['Float']['output'];
+};
+
+export type TwitterAnalyticsResponse = {
+  keyTopics: Array<KeyTopic>;
+  lastGeneratedAt: Scalars['DateTime']['output'];
+  nextSteps: Array<NextStep>;
+  relevantTweets: Array<Tweet>;
+  sentiment: Sentiment;
+  summary: Scalars['String']['output'];
+  timeUntilNextGeneration: Scalars['Float']['output'];
+};
+
+export type TwitterContractAnalyticsInput = {
+  contractAddress: Scalars['String']['input'];
 };
 
 export type User = {
@@ -201,14 +272,23 @@ export type ResolversTypes = ResolversObject<{
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   GetCallsInput: GetCallsInput;
+  KeyTopic: ResolverTypeWrapper<KeyTopic>;
   Message: ResolverTypeWrapper<Message>;
   Mutation: ResolverTypeWrapper<{}>;
+  NextStep: ResolverTypeWrapper<NextStep>;
   Query: ResolverTypeWrapper<{}>;
   SaveChatsInput: SaveChatsInput;
+  Sentiment: ResolverTypeWrapper<Sentiment>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
+  TelegramAnalyticsResponse: ResolverTypeWrapper<TelegramAnalyticsResponse>;
   TelegramChat: ResolverTypeWrapper<TelegramChat>;
+  TelegramContractAnalyticsInput: TelegramContractAnalyticsInput;
   TokenCalls: ResolverTypeWrapper<TokenCalls>;
   TokenCallsResponse: ResolverTypeWrapper<TokenCallsResponse>;
+  Tweet: ResolverTypeWrapper<Tweet>;
+  TweetEngagement: ResolverTypeWrapper<TweetEngagement>;
+  TwitterAnalyticsResponse: ResolverTypeWrapper<TwitterAnalyticsResponse>;
+  TwitterContractAnalyticsInput: TwitterContractAnalyticsInput;
   User: ResolverTypeWrapper<User>;
 }>;
 
@@ -223,14 +303,23 @@ export type ResolversParentTypes = ResolversObject<{
   DateTime: Scalars['DateTime']['output'];
   Float: Scalars['Float']['output'];
   GetCallsInput: GetCallsInput;
+  KeyTopic: KeyTopic;
   Message: Message;
   Mutation: {};
+  NextStep: NextStep;
   Query: {};
   SaveChatsInput: SaveChatsInput;
+  Sentiment: Sentiment;
   String: Scalars['String']['output'];
+  TelegramAnalyticsResponse: TelegramAnalyticsResponse;
   TelegramChat: TelegramChat;
+  TelegramContractAnalyticsInput: TelegramContractAnalyticsInput;
   TokenCalls: TokenCalls;
   TokenCallsResponse: TokenCallsResponse;
+  Tweet: Tweet;
+  TweetEngagement: TweetEngagement;
+  TwitterAnalyticsResponse: TwitterAnalyticsResponse;
+  TwitterContractAnalyticsInput: TwitterContractAnalyticsInput;
   User: User;
 }>;
 
@@ -266,6 +355,13 @@ export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<ResolversT
   name: 'DateTime';
 }
 
+export type KeyTopicResolvers<ContextType = Context, ParentType extends ResolversParentTypes['KeyTopic'] = ResolversParentTypes['KeyTopic']> = ResolversObject<{
+  context?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  frequency?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  topic?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type MessageResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Message'] = ResolversParentTypes['Message']> = ResolversObject<{
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   fromId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
@@ -280,16 +376,41 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   updateTelegramApiLink?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdateTelegramApiLinkArgs, 'apiLink'>>;
 }>;
 
+export type NextStepResolvers<ContextType = Context, ParentType extends ResolversParentTypes['NextStep'] = ResolversParentTypes['NextStep']> = ResolversObject<{
+  context?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  suggestion?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type QueryResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
   checkTelegramApiHealth?: Resolver<ResolversTypes['ApiHealthResponse'], ParentType, ContextType>;
   getCallsByToken?: Resolver<ResolversTypes['TokenCallsResponse'], ParentType, ContextType, Partial<QueryGetCallsByTokenArgs>>;
   getChatPhoto?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType, RequireFields<QueryGetChatPhotoArgs, 'chatId'>>;
   getTelegramApiSecret?: Resolver<ResolversTypes['ApiSecretResponse'], ParentType, ContextType>;
   getTelegramChats?: Resolver<ResolversTypes['ChatsResponse'], ParentType, ContextType>;
+  getTelegramContractAnalytics?: Resolver<ResolversTypes['TelegramAnalyticsResponse'], ParentType, ContextType, RequireFields<QueryGetTelegramContractAnalyticsArgs, 'input'>>;
+  getTwitterContractAnalytics?: Resolver<ResolversTypes['TwitterAnalyticsResponse'], ParentType, ContextType, RequireFields<QueryGetTwitterContractAnalyticsArgs, 'input'>>;
   getUserSavedChats?: Resolver<ResolversTypes['ChatsResponse'], ParentType, ContextType>;
   user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
   users?: Resolver<Array<ResolversTypes['User']>, ParentType, ContextType>;
   whoAmI?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+}>;
+
+export type SentimentResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Sentiment'] = ResolversParentTypes['Sentiment']> = ResolversObject<{
+  communityMood?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  details?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  overall?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type TelegramAnalyticsResponseResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TelegramAnalyticsResponse'] = ResolversParentTypes['TelegramAnalyticsResponse']> = ResolversObject<{
+  keyTopics?: Resolver<Array<ResolversTypes['KeyTopic']>, ParentType, ContextType>;
+  lastGeneratedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  nextSteps?: Resolver<Array<ResolversTypes['NextStep']>, ParentType, ContextType>;
+  sentiment?: Resolver<ResolversTypes['Sentiment'], ParentType, ContextType>;
+  summary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  timeUntilNextGeneration?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type TelegramChatResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TelegramChat'] = ResolversParentTypes['TelegramChat']> = ResolversObject<{
@@ -312,6 +433,34 @@ export type TokenCallsResponseResolvers<ContextType = Context, ParentType extend
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type TweetResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Tweet'] = ResolversParentTypes['Tweet']> = ResolversObject<{
+  author?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  engagement?: Resolver<ResolversTypes['TweetEngagement'], ParentType, ContextType>;
+  text?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  timestamp?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  url?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type TweetEngagementResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TweetEngagement'] = ResolversParentTypes['TweetEngagement']> = ResolversObject<{
+  likes?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  replies?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  retweets?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  views?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type TwitterAnalyticsResponseResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TwitterAnalyticsResponse'] = ResolversParentTypes['TwitterAnalyticsResponse']> = ResolversObject<{
+  keyTopics?: Resolver<Array<ResolversTypes['KeyTopic']>, ParentType, ContextType>;
+  lastGeneratedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  nextSteps?: Resolver<Array<ResolversTypes['NextStep']>, ParentType, ContextType>;
+  relevantTweets?: Resolver<Array<ResolversTypes['Tweet']>, ParentType, ContextType>;
+  sentiment?: Resolver<ResolversTypes['Sentiment'], ParentType, ContextType>;
+  summary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  timeUntilNextGeneration?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type UserResolvers<ContextType = Context, ParentType extends ResolversParentTypes['User'] = ResolversParentTypes['User']> = ResolversObject<{
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   privyId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -327,12 +476,19 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   CallWithChat?: CallWithChatResolvers<ContextType>;
   ChatsResponse?: ChatsResponseResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
+  KeyTopic?: KeyTopicResolvers<ContextType>;
   Message?: MessageResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
+  NextStep?: NextStepResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
+  Sentiment?: SentimentResolvers<ContextType>;
+  TelegramAnalyticsResponse?: TelegramAnalyticsResponseResolvers<ContextType>;
   TelegramChat?: TelegramChatResolvers<ContextType>;
   TokenCalls?: TokenCallsResolvers<ContextType>;
   TokenCallsResponse?: TokenCallsResponseResolvers<ContextType>;
+  Tweet?: TweetResolvers<ContextType>;
+  TweetEngagement?: TweetEngagementResolvers<ContextType>;
+  TwitterAnalyticsResponse?: TwitterAnalyticsResponseResolvers<ContextType>;
   User?: UserResolvers<ContextType>;
 }>;
 

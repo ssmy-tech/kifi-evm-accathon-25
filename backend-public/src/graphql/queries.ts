@@ -86,6 +86,8 @@ export const GET_TWITTER_CONTRACT_ANALYTICS = gql`
           views
         }
       }
+      timeUntilNextGeneration
+      lastGeneratedAt
     }
   }
 `;
@@ -108,6 +110,8 @@ export const GET_TELEGRAM_CONTRACT_ANALYTICS = gql`
         suggestion
         context
       }
+      timeUntilNextGeneration
+      lastGeneratedAt
     }
   }
 `;

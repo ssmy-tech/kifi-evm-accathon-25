@@ -52,6 +52,13 @@ export type GetCallsInput = {
   chain?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type KeyTopic = {
+  __typename?: 'KeyTopic';
+  context: Scalars['String']['output'];
+  frequency: Scalars['Float']['output'];
+  topic: Scalars['String']['output'];
+};
+
 export type Message = {
   __typename?: 'Message';
   createdAt: Scalars['DateTime']['output'];
@@ -77,6 +84,12 @@ export type MutationUpdateTelegramApiLinkArgs = {
   apiLink: Scalars['String']['input'];
 };
 
+export type NextStep = {
+  __typename?: 'NextStep';
+  context: Scalars['String']['output'];
+  suggestion: Scalars['String']['output'];
+};
+
 export type Query = {
   __typename?: 'Query';
   checkTelegramApiHealth: ApiHealthResponse;
@@ -84,6 +97,8 @@ export type Query = {
   getChatPhoto?: Maybe<Scalars['String']['output']>;
   getTelegramApiSecret: ApiSecretResponse;
   getTelegramChats: ChatsResponse;
+  getTelegramContractAnalytics: TelegramAnalyticsResponse;
+  getTwitterContractAnalytics: TwitterAnalyticsResponse;
   getUserSavedChats: ChatsResponse;
   user?: Maybe<User>;
   users: Array<User>;
@@ -100,8 +115,35 @@ export type QueryGetChatPhotoArgs = {
   chatId: Scalars['String']['input'];
 };
 
+
+export type QueryGetTelegramContractAnalyticsArgs = {
+  input: TelegramContractAnalyticsInput;
+};
+
+
+export type QueryGetTwitterContractAnalyticsArgs = {
+  input: TwitterContractAnalyticsInput;
+};
+
 export type SaveChatsInput = {
   chatIds: Array<Scalars['String']['input']>;
+};
+
+export type Sentiment = {
+  __typename?: 'Sentiment';
+  communityMood: Scalars['String']['output'];
+  details: Array<Scalars['String']['output']>;
+  overall: Scalars['String']['output'];
+};
+
+export type TelegramAnalyticsResponse = {
+  __typename?: 'TelegramAnalyticsResponse';
+  keyTopics: Array<KeyTopic>;
+  lastGeneratedAt: Scalars['DateTime']['output'];
+  nextSteps: Array<NextStep>;
+  sentiment: Sentiment;
+  summary: Scalars['String']['output'];
+  timeUntilNextGeneration: Scalars['Float']['output'];
 };
 
 export type TelegramChat = {
@@ -110,6 +152,10 @@ export type TelegramChat = {
   name: Scalars['String']['output'];
   photoUrl?: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
+};
+
+export type TelegramContractAnalyticsInput = {
+  contractAddress: Scalars['String']['input'];
 };
 
 export type TokenCalls = {
@@ -122,6 +168,38 @@ export type TokenCalls = {
 export type TokenCallsResponse = {
   __typename?: 'TokenCallsResponse';
   tokenCalls: Array<TokenCalls>;
+};
+
+export type Tweet = {
+  __typename?: 'Tweet';
+  author: Scalars['String']['output'];
+  engagement: TweetEngagement;
+  text: Scalars['String']['output'];
+  timestamp: Scalars['String']['output'];
+  url: Scalars['String']['output'];
+};
+
+export type TweetEngagement = {
+  __typename?: 'TweetEngagement';
+  likes: Scalars['Float']['output'];
+  replies: Scalars['Float']['output'];
+  retweets: Scalars['Float']['output'];
+  views: Scalars['Float']['output'];
+};
+
+export type TwitterAnalyticsResponse = {
+  __typename?: 'TwitterAnalyticsResponse';
+  keyTopics: Array<KeyTopic>;
+  lastGeneratedAt: Scalars['DateTime']['output'];
+  nextSteps: Array<NextStep>;
+  relevantTweets: Array<Tweet>;
+  sentiment: Sentiment;
+  summary: Scalars['String']['output'];
+  timeUntilNextGeneration: Scalars['Float']['output'];
+};
+
+export type TwitterContractAnalyticsInput = {
+  contractAddress: Scalars['String']['input'];
 };
 
 export type User = {
@@ -160,6 +238,20 @@ export type GetChatPhotoQueryVariables = Exact<{
 
 
 export type GetChatPhotoQuery = { __typename?: 'Query', getChatPhoto?: string | null };
+
+export type GetTwitterContractAnalyticsQueryVariables = Exact<{
+  input: TwitterContractAnalyticsInput;
+}>;
+
+
+export type GetTwitterContractAnalyticsQuery = { __typename?: 'Query', getTwitterContractAnalytics: { __typename?: 'TwitterAnalyticsResponse', summary: string, timeUntilNextGeneration: number, lastGeneratedAt: string, sentiment: { __typename?: 'Sentiment', overall: string, communityMood: string, details: Array<string> }, keyTopics: Array<{ __typename?: 'KeyTopic', topic: string, frequency: number, context: string }>, nextSteps: Array<{ __typename?: 'NextStep', suggestion: string, context: string }>, relevantTweets: Array<{ __typename?: 'Tweet', url: string, text: string, author: string, timestamp: string, engagement: { __typename?: 'TweetEngagement', likes: number, retweets: number, replies: number, views: number } }> } };
+
+export type GetTelegramContractAnalyticsQueryVariables = Exact<{
+  input: TelegramContractAnalyticsInput;
+}>;
+
+
+export type GetTelegramContractAnalyticsQuery = { __typename?: 'Query', getTelegramContractAnalytics: { __typename?: 'TelegramAnalyticsResponse', summary: string, timeUntilNextGeneration: number, lastGeneratedAt: string, sentiment: { __typename?: 'Sentiment', overall: string, communityMood: string, details: Array<string> }, keyTopics: Array<{ __typename?: 'KeyTopic', topic: string, frequency: number, context: string }>, nextSteps: Array<{ __typename?: 'NextStep', suggestion: string, context: string }> } };
 
 export type GetCallsByTokenQueryVariables = Exact<{
   input?: InputMaybe<GetCallsInput>;
@@ -408,6 +500,136 @@ export type GetChatPhotoSuspenseQueryHookResult = ReturnType<typeof useGetChatPh
 export type GetChatPhotoQueryResult = Apollo.QueryResult<GetChatPhotoQuery, GetChatPhotoQueryVariables>;
 export function refetchGetChatPhotoQuery(variables: GetChatPhotoQueryVariables) {
       return { query: GetChatPhotoDocument, variables: variables }
+    }
+export const GetTwitterContractAnalyticsDocument = /*#__PURE__*/ gql`
+    query GetTwitterContractAnalytics($input: TwitterContractAnalyticsInput!) {
+  getTwitterContractAnalytics(input: $input) {
+    summary
+    sentiment {
+      overall
+      communityMood
+      details
+    }
+    keyTopics {
+      topic
+      frequency
+      context
+    }
+    nextSteps {
+      suggestion
+      context
+    }
+    relevantTweets {
+      url
+      text
+      author
+      timestamp
+      engagement {
+        likes
+        retweets
+        replies
+        views
+      }
+    }
+    timeUntilNextGeneration
+    lastGeneratedAt
+  }
+}
+    `;
+
+/**
+ * __useGetTwitterContractAnalyticsQuery__
+ *
+ * To run a query within a React component, call `useGetTwitterContractAnalyticsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetTwitterContractAnalyticsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetTwitterContractAnalyticsQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useGetTwitterContractAnalyticsQuery(baseOptions: Apollo.QueryHookOptions<GetTwitterContractAnalyticsQuery, GetTwitterContractAnalyticsQueryVariables> & ({ variables: GetTwitterContractAnalyticsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetTwitterContractAnalyticsQuery, GetTwitterContractAnalyticsQueryVariables>(GetTwitterContractAnalyticsDocument, options);
+      }
+export function useGetTwitterContractAnalyticsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetTwitterContractAnalyticsQuery, GetTwitterContractAnalyticsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetTwitterContractAnalyticsQuery, GetTwitterContractAnalyticsQueryVariables>(GetTwitterContractAnalyticsDocument, options);
+        }
+export function useGetTwitterContractAnalyticsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetTwitterContractAnalyticsQuery, GetTwitterContractAnalyticsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetTwitterContractAnalyticsQuery, GetTwitterContractAnalyticsQueryVariables>(GetTwitterContractAnalyticsDocument, options);
+        }
+export type GetTwitterContractAnalyticsQueryHookResult = ReturnType<typeof useGetTwitterContractAnalyticsQuery>;
+export type GetTwitterContractAnalyticsLazyQueryHookResult = ReturnType<typeof useGetTwitterContractAnalyticsLazyQuery>;
+export type GetTwitterContractAnalyticsSuspenseQueryHookResult = ReturnType<typeof useGetTwitterContractAnalyticsSuspenseQuery>;
+export type GetTwitterContractAnalyticsQueryResult = Apollo.QueryResult<GetTwitterContractAnalyticsQuery, GetTwitterContractAnalyticsQueryVariables>;
+export function refetchGetTwitterContractAnalyticsQuery(variables: GetTwitterContractAnalyticsQueryVariables) {
+      return { query: GetTwitterContractAnalyticsDocument, variables: variables }
+    }
+export const GetTelegramContractAnalyticsDocument = /*#__PURE__*/ gql`
+    query GetTelegramContractAnalytics($input: TelegramContractAnalyticsInput!) {
+  getTelegramContractAnalytics(input: $input) {
+    summary
+    sentiment {
+      overall
+      communityMood
+      details
+    }
+    keyTopics {
+      topic
+      frequency
+      context
+    }
+    nextSteps {
+      suggestion
+      context
+    }
+    timeUntilNextGeneration
+    lastGeneratedAt
+  }
+}
+    `;
+
+/**
+ * __useGetTelegramContractAnalyticsQuery__
+ *
+ * To run a query within a React component, call `useGetTelegramContractAnalyticsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetTelegramContractAnalyticsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetTelegramContractAnalyticsQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useGetTelegramContractAnalyticsQuery(baseOptions: Apollo.QueryHookOptions<GetTelegramContractAnalyticsQuery, GetTelegramContractAnalyticsQueryVariables> & ({ variables: GetTelegramContractAnalyticsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetTelegramContractAnalyticsQuery, GetTelegramContractAnalyticsQueryVariables>(GetTelegramContractAnalyticsDocument, options);
+      }
+export function useGetTelegramContractAnalyticsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetTelegramContractAnalyticsQuery, GetTelegramContractAnalyticsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetTelegramContractAnalyticsQuery, GetTelegramContractAnalyticsQueryVariables>(GetTelegramContractAnalyticsDocument, options);
+        }
+export function useGetTelegramContractAnalyticsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetTelegramContractAnalyticsQuery, GetTelegramContractAnalyticsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetTelegramContractAnalyticsQuery, GetTelegramContractAnalyticsQueryVariables>(GetTelegramContractAnalyticsDocument, options);
+        }
+export type GetTelegramContractAnalyticsQueryHookResult = ReturnType<typeof useGetTelegramContractAnalyticsQuery>;
+export type GetTelegramContractAnalyticsLazyQueryHookResult = ReturnType<typeof useGetTelegramContractAnalyticsLazyQuery>;
+export type GetTelegramContractAnalyticsSuspenseQueryHookResult = ReturnType<typeof useGetTelegramContractAnalyticsSuspenseQuery>;
+export type GetTelegramContractAnalyticsQueryResult = Apollo.QueryResult<GetTelegramContractAnalyticsQuery, GetTelegramContractAnalyticsQueryVariables>;
+export function refetchGetTelegramContractAnalyticsQuery(variables: GetTelegramContractAnalyticsQueryVariables) {
+      return { query: GetTelegramContractAnalyticsDocument, variables: variables }
     }
 export const GetCallsByTokenDocument = /*#__PURE__*/ gql`
     query GetCallsByToken($input: GetCallsInput) {
