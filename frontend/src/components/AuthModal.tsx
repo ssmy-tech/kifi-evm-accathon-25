@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useRef, FormEvent } from "react";
-import { usePrivy, useUser } from "@privy-io/react-auth";
-import { X } from "lucide-react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import styles from "./AuthModal.module.css";
 import { TelegramSetup } from "./telegram/TelegramSetup";
 import { TelegramChatsManager } from "./telegram/TelegramChatsManager";
@@ -15,8 +14,7 @@ interface AuthModalProps {
 type OnboardingStep = "welcome" | "preferences" | "telegram" | "complete";
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-	const { ready, authenticated, login, user, getAccessToken } = usePrivy();
-	const { refreshUser } = useUser();
+	const { ready, authenticated, login, user } = usePrivy();
 	const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
 	const [showOnboarding, setShowOnboarding] = useState(false);
 	const [animatingStep, setAnimatingStep] = useState(false);
@@ -67,13 +65,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		}
 	};
 
+	const handleLogin = useCallback(async () => {
+		try {
+			login();
+		} catch (error) {
+			console.error("Login error:", error);
+		}
+	}, [login]);
+
 	useEffect(() => {
 		if (isOpen) {
 			document.body.style.overflow = "hidden";
-
-			if (!authenticated) {
-				login();
-			}
 		} else {
 			document.body.style.overflow = "auto";
 			setShowOnboarding(false);
@@ -82,7 +84,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		return () => {
 			document.body.style.overflow = "auto";
 		};
-	}, [isOpen, authenticated]);
+	}, [isOpen]);
+
+	// Separate effect for handling login
+	useEffect(() => {
+		if (isOpen && !authenticated && ready) {
+			handleLogin();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isOpen, authenticated, ready]);
 
 	// USER SETUP & TOKEN CHECK
 	useEffect(() => {
@@ -141,7 +151,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 				return (
 					<div className={styles.step}>
 						<h2>Welcome to KiSignals! 👋</h2>
-						<p>Let's complete your account setup and get to trading.</p>
+						<p>Let&apos;s complete your account setup and get to trading.</p>
 						<button className={styles.nextButton} onClick={() => changeStep("preferences")} disabled={animatingStep}>
 							Get Started
 						</button>
@@ -167,7 +177,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
 							<div className={styles.formItem}>
 								<label htmlFor="targetMarketcaps">Target Market Caps for Memecoin Entries</label>
-								<div className={styles.formItemDescription}>Select the market cap ranges you're interested in trading.</div>
+								<div className={styles.formItemDescription}>Select the market cap ranges you&apos;re interested in trading.</div>
 								<div className={`${styles.checkboxGroup} ${submitAttempted && !Object.values(formValues.marketCaps).some((v) => v) ? styles.invalidCheckboxGroup : ""}`}>
 									<div className={styles.checkboxItem}>
 										<input type="checkbox" id="microCap" checked={formValues.marketCaps.microCap} onChange={handleInputChange} />
@@ -246,7 +256,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 				return (
 					<div className={styles.step}>
 						<h2>All Set! 🎉</h2>
-						<p>You're ready to start trading with KiSignals.</p>
+						<p>You&apos;re ready to start trading with KiSignals.</p>
 						<button className={styles.nextButton} onClick={onClose}>
 							Start Trading
 						</button>

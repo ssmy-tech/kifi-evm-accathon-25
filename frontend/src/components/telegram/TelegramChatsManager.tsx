@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useGetTelegramChatsQuery, useGetUserSavedChatsQuery, useSaveUserChatsMutation, useUpdateTelegramApiLinkMutation, useCheckTelegramApiHealthQuery, useGetChatPhotoLazyQuery } from "../../generated/graphql";
+import Image from "next/image";
+import { useGetTelegramChatsQuery, useGetUserSavedChatsQuery, useSaveUserChatsMutation, useUpdateTelegramApiLinkMutation, useGetChatPhotoLazyQuery } from "../../generated/graphql";
 import styles from "./TelegramChatsManager.module.css";
 import { FaSearch } from "react-icons/fa";
 
@@ -9,10 +10,8 @@ const CHAT_PHOTOS_STORAGE_KEY = "telegram-chat-photos";
 // Maximum number of saved chats allowed
 const MAX_SAVED_CHATS = 20;
 
-interface TelegramChatsManagerProps {}
-
-export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
-	const [selectedChats, setSelectedChats] = useState<string[]>([]);
+export const TelegramChatsManager = () => {
+	const [, setSelectedChats] = useState<string[]>([]);
 	const [apiLink, setApiLink] = useState("");
 	// Pagination state
 	const [availableChatsPage, setAvailableChatsPage] = useState(1);
@@ -26,8 +25,8 @@ export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isMobileView, setIsMobileView] = useState(false);
 	// Page limit state
-	const [pageLimit, setPageLimit] = useState(16); // Default to desktop view
-	const [savedChatsPageLimit, setSavedChatsPageLimit] = useState(5); // Fixed 5 per page for saved chats
+	const [pageLimit, setPageLimit] = useState(15); // Default to desktop view
+	const savedChatsPageLimit = 5; // Fixed 5 per page for saved chats
 
 	// Initialize chatPhotos from localStorage if available
 	const [chatPhotos, setChatPhotos] = useState<Record<string, string>>(() => {
@@ -43,7 +42,7 @@ export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
 	// Queries
 	const { data: telegramChats, loading: loadingTelegram, error: telegramError } = useGetTelegramChatsQuery();
 	const { data: savedChats, loading: loadingSaved, refetch: refetchSavedChats } = useGetUserSavedChatsQuery();
-	const [getChatPhoto, { loading: loadingChatPhoto }] = useGetChatPhotoLazyQuery();
+	const [getChatPhoto, {}] = useGetChatPhotoLazyQuery();
 
 	// Mutations
 	const [saveChats, { loading: savingChats }] = useSaveUserChatsMutation({
@@ -74,22 +73,6 @@ export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
 		}
 	}, [chatPhotos]);
 
-	// Function to determine page limit based on screen size
-	const getPageLimit = () => {
-		if (isMobileView) {
-			return 4;
-		}
-		const width = window.innerWidth;
-		if (width < 640) {
-			return 4;
-		} else if (width < 780) {
-			return 6;
-		} else if (width < 1280) {
-			return 10;
-		}
-		return 15;
-	};
-
 	// Check for mobile view on mount and window resize
 	useEffect(() => {
 		const checkMobileView = () => {
@@ -107,6 +90,21 @@ export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
 
 	// Update page limit on resize
 	useEffect(() => {
+		const getPageLimit = () => {
+			if (isMobileView) {
+				return 4;
+			}
+			const width = window.innerWidth;
+			if (width < 640) {
+				return 4;
+			} else if (width < 780) {
+				return 6;
+			} else if (width < 1280) {
+				return 10;
+			}
+			return 15;
+		};
+
 		const handleResize = () => {
 			const newLimit = getPageLimit();
 			setPageLimit(newLimit);
@@ -133,7 +131,7 @@ export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
 		// Update on resize
 		window.addEventListener("resize", handleResize);
 		return () => window.removeEventListener("resize", handleResize);
-	}, [telegramChats, pendingSavedChats.length, availableChatsPage, savedChatsPage, savedChatsPageLimit]);
+	}, [telegramChats, pendingSavedChats.length, availableChatsPage, savedChatsPage, savedChatsPageLimit, isMobileView]);
 
 	// Filter chats based on search term
 	const filteredChats =
@@ -385,7 +383,7 @@ export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
 							{(searchTerm ? filteredChats : telegramChats?.getTelegramChats.chats || []).slice(availableChatsStart, availableChatsEnd).map((chat) => (
 								<div key={chat.id} className={`${styles.chatCard} ${isPendingSaved(chat.id) ? styles.chatCardSaved : ""}`} onClick={() => handleChatSelect(chat.id)}>
 									{chatPhotos[chat.id] ? (
-										<img src={chatPhotos[chat.id]} alt={chat.name} className={styles.chatAvatar} loading="lazy" />
+										<Image src={chatPhotos[chat.id]} alt={chat.name} className={styles.chatAvatar} width={50} height={50} priority={false} />
 									) : (
 										<div className={styles.chatAvatarLoading}>
 											<div className={styles.chatAvatarSpinner}></div>
@@ -396,7 +394,7 @@ export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
 									{isPendingSaved(chat.id) && <div className={styles.savedBadge}>Selected</div>}
 								</div>
 							))}
-							{availableChatsTotal === 0 && searchTerm && <p className={styles.emptyState}>No chats found matching "{searchTerm}"</p>}
+							{availableChatsTotal === 0 && searchTerm && <p className={styles.emptyState}>No chats found matching &quot;{searchTerm}&quot;</p>}
 						</div>
 						{/* Pagination outside of scrollable area */}
 						<Pagination key={`available-pagination-${availableChatsPage}-${availableChatsPages}`} currentPage={availableChatsPage} totalPages={availableChatsPages} onPageChange={handleAvailableChatsPageChange} />
@@ -425,7 +423,7 @@ export const TelegramChatsManager: React.FC<TelegramChatsManagerProps> = () => {
 										return (
 											<div key={chat.id} className={`${styles.chatCard} ${styles.savedChatCard}`} onClick={() => handleSavedChatToggle(chat.id)}>
 												{chatPhotos[chat.id] ? (
-													<img src={chatPhotos[chat.id]} alt={chat.name} className={styles.chatAvatar} loading="lazy" />
+													<Image src={chatPhotos[chat.id]} alt={chat.name} className={styles.chatAvatar} width={50} height={50} priority={false} />
 												) : (
 													<div className={styles.chatAvatarLoading}>
 														<div className={styles.chatAvatarSpinner}></div>

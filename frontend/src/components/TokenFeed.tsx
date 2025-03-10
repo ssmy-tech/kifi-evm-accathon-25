@@ -3,17 +3,16 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import styles from "./TokenFeed.module.css";
 import { FaTelegramPlane } from "react-icons/fa";
-import { formatDistanceToNow } from "date-fns";
 import { formatCurrency, formatPercentage, abbreviateAge } from "../utils/formatters";
-import { Token, TokenFeedProps, SortField, SortDirection, TokenWithDexInfo, DexScreenerToken, DexScreenerResponse } from "../types/token.types";
+import { SortField, SortDirection, TokenWithDexInfo } from "../types/token.types";
 import { TradingView } from "./TradingView";
 import CallerFeed from "./CallerFeed";
 import TwitterSentiment from "./TwitterSentiment";
 import TelegramSentiment from "./TelegramSentiment";
 import TradeModule from "./TradeModule";
-import { saveCallerPhoto, saveCallerPhotos, getCallerPhoto, cleanupCallerPhotos, getAllCallerPhotos } from "../utils/localStorage";
+import { saveCallerPhoto, getCallerPhoto, cleanupCallerPhotos } from "../utils/localStorage";
 
-import { useGetCallsByTokenQuery, useGetChatPhotoLazyQuery, GetCallsByTokenQuery } from "@/generated/graphql";
+import { useGetCallsByTokenQuery, useGetChatPhotoLazyQuery } from "@/generated/graphql";
 
 // Storage key for chat photos in TokenFeed
 const CHAT_PHOTOS_STORAGE_KEY = "token-feed-chat-photos";
@@ -25,6 +24,7 @@ const TokenFeed: React.FC = () => {
 	const [expandedTokenId, setExpandedTokenId] = useState<string | null>(null);
 	const [closingTokenId, setClosingTokenId] = useState<string | null>(null);
 	const [processedTokens, setProcessedTokens] = useState<TokenWithDexInfo[]>([]);
+	const [processingTokens, setProcessingTokens] = useState(false);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	// Initialize chatPhotos from localStorage if available
@@ -97,6 +97,7 @@ const TokenFeed: React.FC = () => {
 			console.log("Token calls data:", tokenCalls);
 
 			const fetchTokenInfo = async () => {
+				setProcessingTokens(true);
 				const enrichedTokens = await Promise.all(
 					tokenCalls.map(async (tokenCall) => {
 						const address = tokenCall.address;
@@ -120,6 +121,10 @@ const TokenFeed: React.FC = () => {
 
 							if (data) {
 								const dexData = data[0];
+
+								if (!dexData?.baseToken) {
+									return null;
+								}
 
 								// Create a token object from the DexScreener data
 								const token: TokenWithDexInfo = {
@@ -182,6 +187,7 @@ const TokenFeed: React.FC = () => {
 				// Clean up old photo entries once a day (only do this once per session)
 				cleanupCallerPhotos();
 
+				setProcessingTokens(false);
 				setProcessedTokens(validTokens);
 			};
 
@@ -303,7 +309,7 @@ const TokenFeed: React.FC = () => {
 		</div>
 	);
 
-	if (callsByTokenLoading) {
+	if (callsByTokenLoading || processingTokens) {
 		return <LoadingState />;
 	}
 

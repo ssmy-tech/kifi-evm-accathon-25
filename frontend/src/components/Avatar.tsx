@@ -13,7 +13,7 @@ const Avatar = () => {
 	const { user, logout } = usePrivy();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
-	const [telegramSetupStage, setTelegramSetupStage] = useState<"setup" | "manage">("setup");
+	const [, setTelegramSetupStage] = useState<"setup" | "manage">("setup");
 	const avatarRef = useRef<HTMLDivElement>(null);
 	const modalRef = useRef<HTMLDivElement>(null);
 	const telegramModalRef = useRef<HTMLDivElement>(null);

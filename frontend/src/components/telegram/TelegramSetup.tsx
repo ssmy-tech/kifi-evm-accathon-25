@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useUpdateTelegramApiLinkMutation, useCheckTelegramApiHealthQuery, useGetUserSavedChatsQuery } from "../../generated/graphql";
 import styles from "./TelegramSetup.module.css";
-import { usePrivy } from "@privy-io/react-auth";
 import { TelegramChatsManager } from "./TelegramChatsManager";
 
 interface TelegramSetupProps {
@@ -61,7 +60,7 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 				},
 			});
 		} catch (error) {
-			// Error is handled in onError callback
+			console.error("Error updating API link:", error);
 		}
 	};
 
@@ -93,7 +92,6 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 		);
 	}
 
-	const isHealthy = healthCheck?.checkTelegramApiHealth.status === "healthy";
 	return (
 		<div className={styles.container}>
 			<div className={styles.setupCard}>

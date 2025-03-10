@@ -37,6 +37,8 @@ export function TradingView({ symbol = "BINANCE:BTCUSDT", interval = "1D", theme
 					hide_side_toolbar: false,
 					hide_top_toolbar: false,
 					compare_symbols: false,
+					calendar: false,
+					studies: [],
 				});
 			}
 		};
@@ -60,7 +62,31 @@ export function TradingView({ symbol = "BINANCE:BTCUSDT", interval = "1D", theme
 declare global {
 	interface Window {
 		TradingView: {
-			widget: any;
+			widget: new (config: {
+				autosize?: boolean;
+				symbol?: string;
+				interval?: string;
+				timezone?: string;
+				theme?: string;
+				style?: string;
+				locale?: string;
+				toolbar_bg?: string;
+				enable_publishing?: boolean;
+				allow_symbol_change?: boolean;
+				container_id?: string;
+				hide_side_toolbar?: boolean;
+				hide_top_toolbar?: boolean;
+				compare_symbols?: boolean;
+				studies?: string[];
+				save_image?: boolean;
+				hide_legend?: boolean;
+				withdateranges?: boolean;
+				details?: boolean;
+				hotlist?: boolean;
+				calendar?: boolean;
+				width?: string | number;
+				height?: string | number;
+			}) => void;
 		};
 	}
 }

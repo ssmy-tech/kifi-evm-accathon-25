@@ -6,8 +6,6 @@ import { RiSwap2Fill } from "react-icons/ri";
 import { MdSwapVerticalCircle } from "react-icons/md";
 import Image from "next/image";
 
-interface TradeModuleProps {}
-
 interface TokenInputProps {
 	type: "sell" | "buy";
 	value: string;
@@ -72,7 +70,7 @@ interface TradeSettings {
 	estimatedGas: string;
 }
 
-export default function TradeModule({}: TradeModuleProps) {
+export default function TradeModule() {
 	const [sellAmount, setSellAmount] = React.useState("");
 	const [buyAmount, setBuyAmount] = React.useState("");
 	const [sellToken, setSellToken] = React.useState({
@@ -148,7 +146,9 @@ export default function TradeModule({}: TradeModuleProps) {
 					<div className={styles.tradeSettings}>
 						<div className={styles.settingItem}>
 							<span>MEV Protect</span>
-							<span className={settings.mevProtect ? styles.settingEnabled : styles.settingDisabled}>{settings.mevProtect ? "ON" : "OFF"}</span>
+							<span className={settings.mevProtect ? styles.settingEnabled : styles.settingDisabled} onClick={() => setSettings((prev) => ({ ...prev, mevProtect: !prev.mevProtect }))} style={{ cursor: "pointer" }}>
+								{settings.mevProtect ? "ON" : "OFF"}
+							</span>
 						</div>
 						<div className={styles.settingItem}>
 							<span>Slippage</span>

@@ -1,4 +1,3 @@
-import { Caller } from "./caller.types";
 import { GetCallsByTokenQuery } from "@/generated/graphql";
 
 export interface TwitterSentiment {

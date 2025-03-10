@@ -16,7 +16,7 @@ const NavBar: React.FC = () => {
 	const pathname = usePathname();
 	const [isDarkMode, setIsDarkMode] = useState(true);
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-	const { ready, authenticated, logout, login, user } = usePrivy();
+	const { ready, authenticated, logout } = usePrivy();
 	const [privyLoginMutation] = usePrivyLoginMutation({});
 
 	// Track authentication state changes to display onboarding after authentication (OAuth)
@@ -27,11 +27,10 @@ const NavBar: React.FC = () => {
 				localStorage.removeItem(AUTH_STATUS_KEY);
 			}
 			if (authenticated) {
-				console.log("Calling PrivyLoginMutation");
 				privyLoginMutation();
 			}
 		}
-	}, [ready, authenticated, user]);
+	}, [ready, authenticated, privyLoginMutation]);
 
 	useEffect(() => {
 		const savedTheme = localStorage.getItem("theme");

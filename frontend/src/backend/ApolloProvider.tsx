@@ -1,4 +1,4 @@
-import { ApolloProvider, ApolloClient, InMemoryCache, createHttpLink, gql } from "@apollo/client";
+import { ApolloProvider, ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { usePrivy } from "@privy-io/react-auth";
 import { useMemo, useEffect, useState } from "react";
@@ -17,8 +17,8 @@ const ApolloProviderWrapper = ({ children }: { children: React.ReactNode }) => {
 
 			if (authenticated) {
 				const newToken = await getAccessToken();
-				console.log("Setting new token");
-				console.log(newToken);
+				console.log("Setting new privy token");
+				// console.log(newToken);
 				setToken(newToken);
 			} else {
 				console.log("Clearing token - not authenticated");
@@ -37,7 +37,7 @@ const ApolloProviderWrapper = ({ children }: { children: React.ReactNode }) => {
 
 			let currentToken = token;
 			if (authenticated && !currentToken) {
-				console.log("No token in state, fetching new one");
+				console.log("No privy token in state, fetching new one");
 				currentToken = await getAccessToken();
 				setToken(currentToken);
 			}
@@ -47,7 +47,6 @@ const ApolloProviderWrapper = ({ children }: { children: React.ReactNode }) => {
 				Authorization: `Bearer ${currentToken}`,
 			};
 
-			// console.log("Request headers:", updatedHeaders);
 			return { headers: updatedHeaders };
 		});
 
@@ -56,7 +55,7 @@ const ApolloProviderWrapper = ({ children }: { children: React.ReactNode }) => {
 			cache: new InMemoryCache(),
 		});
 		return newClient;
-	}, [ready, authenticated, token]);
+	}, [ready, authenticated, token, getAccessToken]);
 
 	if (!ready) {
 		return null;
