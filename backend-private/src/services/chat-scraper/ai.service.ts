@@ -137,6 +137,7 @@ export class AiService {
   async analyzeContext(payload: ContextAnalysisPayload): Promise<ContextAnalysisResponse> {
     return this.requestQueue.add(async () => {
       await this.waitForRateLimit();
+      this.logger.log(`${this.config.aiApiUrl}`);
       
       try {
         const response = await axios.post(
@@ -159,6 +160,7 @@ export class AiService {
         if (error.code === 'ECONNABORTED') {
           console.error(`✗ ${payload.contextType} timeout: ${payload.token.address}`);
         } else {
+          console.error(error);
           console.error(`✗ ${payload.contextType} failed: ${payload.token.address}`);
         }
         throw error;

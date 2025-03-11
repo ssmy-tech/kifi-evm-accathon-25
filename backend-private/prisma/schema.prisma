@@ -8,13 +8,23 @@ datasource db {
 }
 
 model User {
-  privyId        String      @id @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  chats     Chats[]
-  tgApiLink String?
-  tgApiSecret String
-  dataStatus DataStatus
+  privyId          String      @id @unique
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  chats            Chats[]
+  tgApiLink        String?
+  tgApiSecret      String
+  dataStatus       DataStatus
+  
+  // Auto-alpha settings
+  enableAutoAlpha  Boolean     @default(false)
+  selectedChatsIds String[]    @default([])
+  groupCallThreshold Int       @default(0)
+  slippage         Float       @default(0.1)
+  buyAmount        Float       @default(0.05)
+  
+  // Relations
+  trades           TokenTrade[]
 }
 
 model Chats {
@@ -102,4 +112,51 @@ enum ChatType {
 enum MessageType {
     Call
     Context
+}
+
+enum TradeStatus {
+    PENDING
+    ACTIVE
+    COMPLETED
+    FAILED
+}
+
+enum ExitReason {
+    STOP_LOSS
+    TAKE_PROFIT
+    MANUAL
+}
+
+model TokenTrade {
+    id              String      @id @default(cuid())
+    userId          String
+    tokenAddress    String
+    chain           Chain
+    status          TradeStatus @default(PENDING)
+    createdAt       DateTime    @default(now())
+    updatedAt       DateTime    @updatedAt
+
+    // Entry details
+    entryPrice      Float?
+    entryTxHash     String?
+    amount          String      // Amount in wei
+    
+    // Exit conditions
+    stopLossPrice   Float?
+    takeProfitPrice Float?
+    
+    // Exit details
+    exitPrice       Float?
+    exitTxHash      String?
+    exitReason      ExitReason?
+    
+    // Monitoring status
+    isMonitoring    Boolean     @default(false)
+    lastChecked     DateTime?
+
+    user            User        @relation(fields: [userId], references: [privyId])
+
+    @@index([userId])
+    @@index([status])
+    @@index([isMonitoring])
 }
