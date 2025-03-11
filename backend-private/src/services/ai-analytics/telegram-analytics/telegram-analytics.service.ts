@@ -449,7 +449,8 @@ export class TelegramAnalyticsService {
       const formatMessagesForContext = (messages: MessageInfo[]) => 
         messages.map(msg => {
           const msgTime = new Date(msg.date);
-          return `Message ID ${msg.id}: [${msgTime.toLocaleString()}] User ${msg.fromId.userId}: ${msg.text}`;
+          const sender = msg.fromId ? `User ${msg.fromId.userId}` : 'Channel';
+          return `Message ID ${msg.id}: [${msgTime.toLocaleString()}] ${sender}: ${msg.text}`;
         }).join('\n');
 
       // Create context about the token
@@ -469,40 +470,43 @@ export class TelegramAnalyticsService {
             {
               role: 'system',
               content: `You are analyzing Telegram messages to find discussions related to a specific cryptocurrency token.
-              Your task is to identify ONLY messages that contain EXPLICIT discussions about the token.
+              Your task is to identify messages that are part of the token discussion, including:
               
-              Consider ONLY messages that contain:
-              - Specific token price mentions (e.g., "token is at $5")
-              - Explicit volume or market cap numbers
-              - Clear technical analysis about the token
-              - Specific project announcements or developments
-              - Direct community feedback about the token
-              - Explicit mentions of the token name, symbol, or address
+              DIRECT TOKEN MENTIONS:
+              - Exact token address matches
+              - Token name/symbol mentions (${token.name}, ${token.ticker})
+              
+              CONTEXTUAL MESSAGES that are part of the token discussion:
+              - Questions about the token ("where is this token")
+              - Responses about the token location ("there is the token")
+              - Interest in the token ("I want this token")
+              - Token-related actions ("give me your token")
+              - Messages immediately before/after token address posts that reference "this token" or similar
               
               CRITICAL INSTRUCTIONS:
-              1. Messages must contain EXPLICIT token-related content
-              2. Single letters, numbers, or generic text are NOT relevant
-              3. If no messages contain explicit token discussion, return an empty response
-              4. Never infer or assume relevance - the connection must be explicit
-              5. Each returned message must quote the specific token-related content
+              1. Include both direct mentions AND contextual messages about THIS specific token
+              2. Messages must be clearly about ${token.name} (${token.ticker}) - not other tokens
+              3. Consider conversation flow - include related messages that form part of the token discussion
+              4. Each returned message must have a clear connection to the token discussion
+              5. Exclude generic or unrelated messages
               
               ${tokenContext}`
             },
             {
               role: 'user',
-              content: `Analyze these messages and identify ONLY those with EXPLICIT token-related content.
-              If a message doesn't explicitly discuss the token, omit it completely.
-              If no messages contain explicit token discussion, return an empty response.
+              content: `Analyze these messages and identify ALL messages that are part of the ${token.name} (${token.ticker}) discussion.
+              Include both direct mentions and contextual messages that are clearly part of the same conversation.
               
-              Format your response exactly like this, ONLY for messages with explicit token content:
-              Message ID 123: Contains price "$5.50 for TICKER"
-              Message ID 456: Discusses development "launching token staking next week"
+              Format your response exactly like this:
+              Message ID 123: Direct mention "exact token address ${token.address}"
+              Message ID 456: Context "asking about this specific token's location"
+              Message ID 789: Context "responding with token location"
               
               DO NOT include:
-              - Single letters or numbers
-              - Generic text without token context
-              - Messages that don't explicitly mention the token
-              - Assumed or inferred relationships
+              - Messages about other tokens
+              - Generic market discussion
+              - Unrelated chat messages
+              - Messages that could be about any token
               
               Messages to analyze:
               ${formatMessagesForContext(messages)}`
