@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import styles from "./TokenFeed.module.css";
-import { FaTelegramPlane, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaTelegramPlane, FaSortUp, FaSortDown } from "react-icons/fa";
 import { formatCurrency, formatPercentage, abbreviateAge } from "../utils/formatters";
 import { SortField, SortDirection, TokenWithDexInfo } from "../types/token.types";
 import { TradingView } from "./TradingView";
@@ -10,6 +10,7 @@ import CallerFeed from "./CallerFeed";
 import TwitterSentiment from "./TwitterSentiment";
 import TelegramSentiment from "./TelegramSentiment";
 import TradeModule from "./TradeModule";
+import { usePrivy } from "@privy-io/react-auth";
 
 import { useGetCallsByTokenQuery, useGetChatPhotoLazyQuery } from "@/generated/graphql";
 import { GetCallsByTokenQuery } from "@/generated/graphql";
@@ -54,7 +55,111 @@ const photoCache = {
 	},
 };
 
+const MOCK_TOKENS = [
+	{
+		id: "mock1",
+		name: "Sample Token",
+		ticker: "SAMPLE",
+		price: 0.00023,
+		liquidity: 250000,
+		volume: 890000,
+		marketCap: 1200000,
+		change24h: 12.5,
+		callers: Array(3).fill({ profileImageUrl: DEFAULT_PHOTO }),
+		createdAt: new Date().toISOString(),
+	},
+	{
+		id: "mock2",
+		name: "Demo Token",
+		ticker: "DEMO",
+		price: 1.23,
+		liquidity: 890000,
+		volume: 1500000,
+		marketCap: 5600000,
+		change24h: -5.2,
+		callers: Array(4).fill({ profileImageUrl: DEFAULT_PHOTO }),
+		createdAt: new Date().toISOString(),
+	},
+	{
+		id: "mock3",
+		name: "Test Token",
+		ticker: "TEST",
+		price: 0.0456,
+		liquidity: 450000,
+		volume: 980000,
+		marketCap: 2300000,
+		change24h: 28.4,
+		callers: Array(2).fill({ profileImageUrl: DEFAULT_PHOTO }),
+		createdAt: new Date().toISOString(),
+	},
+].map((token, index) => ({ ...token, rank: index + 1 }));
+
+const BlurredPreviewTable: React.FC = () => {
+	return (
+		<div className={styles.previewTableContainer}>
+			<table className={styles.tokenTable}>
+				<thead>
+					<tr className={styles.tableHeader}>
+						<th className={`${styles.headerCell} ${styles.narrowColumn} ${styles.centerHeader}`}>Rank</th>
+						<th className={`${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned}`}>Token</th>
+						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Age</th>
+						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Price</th>
+						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Liquidity</th>
+						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Volume</th>
+						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Market Cap</th>
+						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>24H %</th>
+						<th className={`${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
+							<div className={styles.callersHeader}>
+								<FaTelegramPlane className={styles.telegramIcon} />
+								<span>Callers</span>
+							</div>
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+					{MOCK_TOKENS.map((token) => (
+						<tr key={token.id} className={styles.tokenRow}>
+							<td className={`${styles.cell} ${styles.indexCell} ${styles.narrowColumn} ${styles.centerAligned}`}>{token.rank}</td>
+							<td className={`${styles.cell} ${styles.tokenCell} ${styles.wideColumn} ${styles.leftAligned}`}>
+								<div className={styles.tokenInfo}>
+									<div className={styles.imageContainer}>
+										<Image src={DEFAULT_PHOTO} alt={token.name} width={42} height={42} className={styles.tokenImage} />
+									</div>
+									<div className={styles.nameContainer}>
+										<div className={styles.tokenName}>{token.name}</div>
+										<div className={styles.tokenTicker}>{token.ticker}</div>
+									</div>
+								</div>
+							</td>
+							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{abbreviateAge(token.createdAt)}</td>
+							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.price, 10, true)}</td>
+							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.liquidity)}</td>
+							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.volume)}</td>
+							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.marketCap)}</td>
+							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup} ${token.change24h >= 0 ? styles.positive : styles.negative}`}>
+								{token.change24h >= 0 ? "+" : ""}
+								{formatPercentage(token.change24h)}
+							</td>
+							<td className={`${styles.cell} ${styles.callersCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
+								<div className={styles.callersContainer}>
+									{token.callers.map((_, i) => (
+										<div key={i} className={styles.callerImageWrapper} style={{ zIndex: token.callers.length - i }}>
+											<Image src={DEFAULT_PHOTO} alt="Caller" width={42} height={42} className={styles.callerImage} />
+										</div>
+									))}
+								</div>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+};
+
 const TokenFeed: React.FC = () => {
+	const { ready, authenticated, login } = usePrivy();
+
 	const [sortField, setSortField] = useState<SortField>("callers");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 	const [sortedTokens, setSortedTokens] = useState<TokenWithDexInfo[]>([]);
@@ -65,10 +170,12 @@ const TokenFeed: React.FC = () => {
 	const [hasMore, setHasMore] = useState(true);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
 	const [isLoadingCooldown, setIsLoadingCooldown] = useState(false);
-	const observerTarget = useRef<HTMLDivElement>(null);
-	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const [isMobile, setIsMobile] = useState(false);
 	const [photos, setPhotos] = useState<PhotoCache>(photoCache.get());
 	const [tokenCallsData, setTokenCallsData] = useState<NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"]>([]);
+
+	const observerTarget = useRef<HTMLDivElement>(null);
+	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const processedDataRef = useRef(false);
 
 	const { data: callsByTokenData, loading: callsByTokenLoading } = useGetCallsByTokenQuery({});
@@ -77,7 +184,6 @@ const TokenFeed: React.FC = () => {
 	// Photo fetching logic
 	const fetchPhoto = useCallback(
 		async (chatId: string, photoUrl?: string | null) => {
-			// Skip if no need to fetch
 			if (!photoUrl?.startsWith("/api/telegram/photo/")) return;
 			if (photos[chatId]?.isLoading || (photos[chatId]?.url && !photos[chatId]?.error)) return;
 
@@ -110,6 +216,20 @@ const TokenFeed: React.FC = () => {
 		[getChatPhoto, photos]
 	);
 
+	// Add mobile detection
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth <= 768);
+		};
+
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+
+		return () => {
+			window.removeEventListener("resize", checkMobile);
+		};
+	}, []);
+
 	// Process token calls data once when it's available
 	useEffect(() => {
 		if (callsByTokenData?.getCallsByToken?.tokenCalls && !processedDataRef.current) {
@@ -119,13 +239,13 @@ const TokenFeed: React.FC = () => {
 
 			// Process photos in one pass
 			const chatIdsToFetch = new Set<string>();
-			const chatMap = new Map<string, { chat: (typeof tokenCalls)[0]["calls"][0]["chat"] }>();
+			const chatMap = new Map<string, { chat: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"][0]["chats"][0]["chat"] }>();
 
 			tokenCalls.forEach((tokenCall) => {
-				tokenCall.calls.forEach((call) => {
-					if (!photos[call.chat.id] || photos[call.chat.id]?.error) {
-						chatIdsToFetch.add(call.chat.id);
-						chatMap.set(call.chat.id, { chat: call.chat });
+				tokenCall.chats.forEach((chatWithCalls) => {
+					if (!photos[chatWithCalls.chat.id] || photos[chatWithCalls.chat.id]?.error) {
+						chatIdsToFetch.add(chatWithCalls.chat.id);
+						chatMap.set(chatWithCalls.chat.id, { chat: chatWithCalls.chat });
 					}
 				});
 			});
@@ -167,6 +287,7 @@ const TokenFeed: React.FC = () => {
 		};
 	}, [hasMore, isLoadingMore, isLoadingCooldown]);
 
+	// Process and fetch token data
 	useEffect(() => {
 		if (tokenCallsData.length > 0) {
 			const fetchTokenInfo = async () => {
@@ -174,8 +295,8 @@ const TokenFeed: React.FC = () => {
 
 				// Sort token calls by call count before processing
 				const sortedTokenCalls = [...tokenCallsData].sort((a, b) => {
-					const aCallCount = a.calls.reduce((sum: number, call) => sum + call.callCount, 0);
-					const bCallCount = b.calls.reduce((sum: number, call) => sum + call.callCount, 0);
+					const aCallCount = a.chats.reduce((sum: number, chatWithCalls) => sum + chatWithCalls.chat.callCount, 0);
+					const bCallCount = b.chats.reduce((sum: number, chatWithCalls) => sum + chatWithCalls.chat.callCount, 0);
 					return bCallCount - aCallCount;
 				});
 
@@ -241,23 +362,23 @@ const TokenFeed: React.FC = () => {
 									liquidity: dexData.liquidity?.usd || 0,
 									imageUrl: dexData.info?.imageUrl || "/assets/coin.png",
 									createdAt: validCreatedAt || "",
-									callers: tokenCall.calls.map((call) => {
-										const photo = photos[call.chat.id];
+									callers: tokenCall.chats.map((chatWithCalls) => {
+										const photo = photos[chatWithCalls.chat.id];
 										const profileImageUrl = photo?.url || DEFAULT_PHOTO;
 										return {
-											id: call.chat.id,
-											name: call.chat.name,
+											id: chatWithCalls.chat.id,
+											name: chatWithCalls.chat.name,
 											profileImageUrl,
 											timestamp: Date.now(),
-											callCount: call.callCount,
+											callCount: chatWithCalls.chat.callCount,
 											winRate: 0,
 											chat: {
-												...call.chat,
-												type: call.chat.type as "Group" | "Channel" | "Private",
+												...chatWithCalls.chat,
+												type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
 												photoUrl: profileImageUrl,
 											},
 											messages:
-												call.messages?.map((msg) => ({
+												chatWithCalls.calls[0]?.messages?.map((msg) => ({
 													id: msg.id,
 													createdAt: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
 													text: msg.text || "",
@@ -280,12 +401,9 @@ const TokenFeed: React.FC = () => {
 					})
 				);
 
-				// Filter out null values
+				// Filter out null values and update state
 				const validTokens = dexDataTokens.filter((token): token is NonNullable<typeof token> => token !== null) as TokenWithDexInfo[];
-
-				// Update hasMore based on whether we've loaded all tokens
 				setHasMore(validTokens.length < sortedTokenCalls.length);
-
 				setIsLoadingMore(false);
 				setProcessedTokens(validTokens);
 			};
@@ -294,8 +412,8 @@ const TokenFeed: React.FC = () => {
 		}
 	}, [tokenCallsData, photos, page]);
 
+	// Sort processed tokens
 	useEffect(() => {
-		// Sort the processed tokens
 		if (processedTokens.length > 0) {
 			const sortedTokens = [...processedTokens].sort((a, b) => {
 				let comparison = 0;
@@ -351,50 +469,6 @@ const TokenFeed: React.FC = () => {
 		}
 	}, [sortField, sortDirection, processedTokens]);
 
-	const handleSort = (field: SortField) => {
-		if (field === sortField) {
-			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-		} else {
-			setSortField(field);
-			if (field === "name" || field === "age") {
-				setSortDirection("asc");
-			} else {
-				setSortDirection("desc");
-			}
-		}
-	};
-
-	const getSortIcon = (field: SortField) => {
-		if (field !== sortField) return <FaSort className={styles.sortIcon} />;
-		return sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />;
-	};
-
-	const handleRowClick = (tokenId: string) => {
-		if (expandedTokenId === tokenId) {
-			// Start closing animation
-			setClosingTokenId(tokenId);
-
-			if (timeoutRef.current) {
-				clearTimeout(timeoutRef.current);
-			}
-
-			timeoutRef.current = setTimeout(() => {
-				setExpandedTokenId(null);
-				setClosingTokenId(null);
-			}, 200);
-		} else {
-			if (timeoutRef.current) {
-				clearTimeout(timeoutRef.current);
-			}
-
-			if (closingTokenId) {
-				setClosingTokenId(null);
-			}
-
-			setExpandedTokenId(tokenId);
-		}
-	};
-
 	// Clean up timeout on unmount
 	useEffect(() => {
 		return () => {
@@ -404,7 +478,62 @@ const TokenFeed: React.FC = () => {
 		};
 	}, []);
 
-	// Loading state component moved to the return statement
+	const handleSort = (field: SortField) => {
+		if (field === sortField) {
+			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+		} else {
+			setSortField(field);
+			setSortDirection(field === "name" || field === "age" ? "asc" : "desc");
+		}
+	};
+
+	const handleRowClick = (tokenId: string) => {
+		if (expandedTokenId === tokenId) {
+			setClosingTokenId(tokenId);
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+			timeoutRef.current = setTimeout(() => {
+				setExpandedTokenId(null);
+				setClosingTokenId(null);
+			}, 200);
+		} else {
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+			if (closingTokenId) {
+				setClosingTokenId(null);
+			}
+			setExpandedTokenId(tokenId);
+		}
+	};
+
+	if (!ready) {
+		return (
+			<div className={styles.initialLoading}>
+				<div className={styles.loadingSpinner}></div>
+				<p>Loading...</p>
+			</div>
+		);
+	}
+
+	if (!authenticated) {
+		return (
+			<div className={styles.container}>
+				<BlurredPreviewTable />
+				<div className={styles.authOverlay}>
+					<div className={styles.authContent}>
+						<h2 className={styles.authTitle}>Sign In to Access Token Feed</h2>
+						<p className={styles.authDescription}>Connect your wallet or sign in with your preferred social method to gain access to KiSignals!</p>
+						<button className={styles.authButton} onClick={login}>
+							Get Started
+						</button>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className={styles.container}>
 			<div className={styles.tableContainer}>
@@ -418,47 +547,55 @@ const TokenFeed: React.FC = () => {
 						<table className={styles.tokenTable}>
 							<thead>
 								<tr className={styles.tableHeader}>
-									<th className={` ${styles.headerCell} ${styles.narrowColumn} ${styles.centerHeader}`}>Rank</th>
-									<th className={` ${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned}`}>
+									<th className={`${styles.headerCell} ${styles.narrowColumn} ${styles.centerHeader}`}>
+										<div onClick={() => handleSort("rank")} className={styles.sortableHeader}>
+											# {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+										</div>
+									</th>
+									<th className={`${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned}`}>
 										<div onClick={() => handleSort("name")} className={styles.sortableHeader}>
-											Token {getSortIcon("name")}
+											Token {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
 										</div>
 									</th>
-									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
-										<div onClick={() => handleSort("age")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-											Age {getSortIcon("age")}
-										</div>
-									</th>
-									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
-										<div onClick={() => handleSort("price")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-											Price {getSortIcon("price")}
-										</div>
-									</th>
-									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
-										<div onClick={() => handleSort("liquidity")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-											Liquidity {getSortIcon("liquidity")}
-										</div>
-									</th>
-									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
-										<div onClick={() => handleSort("volume")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-											Volume {getSortIcon("volume")}
-										</div>
-									</th>
-									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
-										<div onClick={() => handleSort("marketCap")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-											Market Cap {getSortIcon("marketCap")}
-										</div>
-									</th>
-									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
-										<div onClick={() => handleSort("change24h")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-											24H % {getSortIcon("change24h")}
-										</div>
-									</th>
+									{!isMobile && (
+										<>
+											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+												<div onClick={() => handleSort("age")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+													Age {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+												</div>
+											</th>
+											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+												<div onClick={() => handleSort("price")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+													Price {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+												</div>
+											</th>
+											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+												<div onClick={() => handleSort("liquidity")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+													Liquidity {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+												</div>
+											</th>
+											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+												<div onClick={() => handleSort("volume")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+													Volume {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+												</div>
+											</th>
+											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+												<div onClick={() => handleSort("marketCap")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+													Market Cap {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+												</div>
+											</th>
+											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+												<div onClick={() => handleSort("change24h")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+													24H % {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+												</div>
+											</th>
+										</>
+									)}
 									<th className={`${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
 										<div onClick={() => handleSort("callers")} className={styles.sortableHeader}>
 											<div className={styles.callersHeader}>
 												<FaTelegramPlane className={styles.telegramIcon} />
-												<span>Callers {getSortIcon("callers")}</span>
+												<span>Callers {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}</span>
 											</div>
 										</div>
 									</th>
@@ -479,7 +616,6 @@ const TokenFeed: React.FC = () => {
 															height={42}
 															className={styles.tokenImage}
 															onError={(e) => {
-																// Fallback to default image if the token image fails to load
 																const target = e.target as HTMLImageElement;
 																target.src = "/assets/coin.png";
 															}}
@@ -491,21 +627,25 @@ const TokenFeed: React.FC = () => {
 													</div>
 												</div>
 											</td>
-											<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? abbreviateAge(new Date(token.dexData.pairCreatedAt).toISOString()) : abbreviateAge(token.createdAt)}</td>
-											<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(parseFloat(token.dexData.priceUsd), 10, true) : formatCurrency(token.price, 10, true)}</td>
-											<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.liquidity || 0)}</td>
-											<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(token.dexData.volume.h24) : token.volume ? formatCurrency(token.volume) : "-"}</td>
-											<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(token.dexData.marketCap) : formatCurrency(token.marketCap)}</td>
-											<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup} ${token.dexData ? (token.dexData.priceChange.h24 >= 0 ? styles.positive : styles.negative) : token.change24h >= 0 ? styles.positive : styles.negative}`}>
-												{token.dexData ? (token.dexData.priceChange.h24 >= 0 ? "+" : "") : token.change24h >= 0 ? "+" : ""}
-												{token.dexData ? formatPercentage(token.dexData.priceChange.h24) : formatPercentage(token.change24h)}
-											</td>
+											{!isMobile && (
+												<>
+													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? abbreviateAge(new Date(token.dexData.pairCreatedAt).toISOString()) : abbreviateAge(token.createdAt)}</td>
+													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(parseFloat(token.dexData.priceUsd), 10, true) : formatCurrency(token.price, 10, true)}</td>
+													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.liquidity || 0)}</td>
+													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(token.dexData.volume.h24) : token.volume ? formatCurrency(token.volume) : "-"}</td>
+													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(token.dexData.marketCap) : formatCurrency(token.marketCap)}</td>
+													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup} ${token.dexData ? (token.dexData.priceChange.h24 >= 0 ? styles.positive : styles.negative) : token.change24h >= 0 ? styles.positive : styles.negative}`}>
+														{token.dexData ? (token.dexData.priceChange.h24 >= 0 ? "+" : "") : token.change24h >= 0 ? "+" : ""}
+														{token.dexData ? formatPercentage(token.dexData.priceChange.h24) : formatPercentage(token.change24h)}
+													</td>
+												</>
+											)}
 											<td className={`${styles.cell} ${styles.callersCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
 												<div className={styles.callersContainer}>
 													{token.callers && token.callers.length > 0 ? (
 														<>
-															{token.callers.slice(0, 5).map((caller, i) => (
-																<div key={caller.id} className={styles.callerImageWrapper} style={{ zIndex: 5 - i }}>
+															{token.callers.slice(0, isMobile ? 3 : 5).map((caller, i) => (
+																<div key={caller.id} className={styles.callerImageWrapper} style={{ zIndex: (isMobile ? 3 : 5) - i }}>
 																	<Image
 																		src={caller.profileImageUrl}
 																		alt={caller.name || "Caller"}
@@ -513,14 +653,13 @@ const TokenFeed: React.FC = () => {
 																		height={42}
 																		className={styles.callerImage}
 																		onError={(e) => {
-																			// Fallback to default image if the profile image fails to load
 																			const target = e.target as HTMLImageElement;
 																			target.src = "/assets/KiFi_LOGO.jpg";
 																		}}
 																	/>
 																</div>
 															))}
-															{token.callers.length > 5 && <div className={styles.extraCallersCount}>+{token.callers.length - 5}</div>}
+															{token.callers.length > (isMobile ? 3 : 5) && <div className={styles.extraCallersCount}>+{token.callers.length - (isMobile ? 3 : 5)}</div>}
 														</>
 													) : (
 														<span className={styles.noCallers}>-</span>
@@ -530,7 +669,7 @@ const TokenFeed: React.FC = () => {
 										</tr>
 										{(expandedTokenId === token.id || closingTokenId === token.id) && (
 											<tr className={`${styles.expandedContent} ${closingTokenId === token.id ? styles.closing : ""}`}>
-												<td colSpan={9}>
+												<td colSpan={isMobile ? 3 : 9}>
 													<div className={`${styles.expandedModules} ${closingTokenId === token.id ? styles.closing : ""}`}>
 														<div className={styles.moduleRow}>
 															<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>

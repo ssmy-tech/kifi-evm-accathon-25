@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import styles from "./AuthModal.module.css";
 import { TelegramSetup } from "./telegram/TelegramSetup";
+import { useGetUserSettingsQuery, useUpdateUserSettingsMutation } from "../generated/graphql";
 
 interface AuthModalProps {
 	isOpen: boolean;
@@ -14,6 +15,8 @@ type OnboardingStep = "welcome" | "preferences" | "telegram" | "complete";
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 	const { ready, authenticated, login, user } = usePrivy();
+	const [updateUserSettings] = useUpdateUserSettingsMutation();
+	const { data: userSettings } = useGetUserSettingsQuery();
 	const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
 	const [showOnboarding, setShowOnboarding] = useState(false);
 	const [animatingStep, setAnimatingStep] = useState(false);
@@ -34,15 +37,29 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		},
 	});
 
+	const validateBuyAmount = (amount: string): number | null => {
+		const parsed = parseFloat(amount);
+		if (isNaN(parsed) || parsed <= 0) return null;
+		// Round to 4 decimal places to avoid floating point issues
+		return Math.round(parsed * 10000) / 10000;
+	};
+
+	const validateGroupThreshold = (threshold: string): number | null => {
+		const parsed = parseInt(threshold);
+		if (isNaN(parsed) || parsed < 1 || parsed > 10) return null;
+		return parsed;
+	};
+
 	const isFormValid = () => {
-		// Check if number inputs are filled
-		const hasQuickBuyAmount = formValues.quickBuyAmount.trim() !== "";
-		const hasMinGroups = formValues.minGroupsIndicator.trim() !== "";
+		// Validate number inputs with proper type checking
+		const buyAmount = validateBuyAmount(formValues.quickBuyAmount);
+		const groupThreshold = validateGroupThreshold(formValues.minGroupsIndicator);
+		const hasValidNumbers = buyAmount !== null && groupThreshold !== null;
 
 		// Check if at least one market cap is selected
 		const hasMarketCap = Object.values(formValues.marketCaps).some((value) => value);
 
-		return hasQuickBuyAmount && hasMinGroups && hasMarketCap;
+		return hasValidNumbers && hasMarketCap;
 	};
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,6 +74,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 				},
 			}));
 		} else {
+			// For number inputs, allow empty string for UX but validate on save
 			setFormValues((prev) => ({
 				...prev,
 				[id]: value,
@@ -133,14 +151,56 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		}, 200);
 	};
 
-	// Function to handle continue button click
-	const handleContinue = () => {
+	const handleContinue = async () => {
 		setSubmitAttempted(true);
 
 		if (isFormValid()) {
-			changeStep("telegram");
+			try {
+				const buyAmount = validateBuyAmount(formValues.quickBuyAmount);
+				const groupThreshold = validateGroupThreshold(formValues.minGroupsIndicator);
+
+				if (buyAmount === null || groupThreshold === null) {
+					console.error("Invalid form values detected");
+					return;
+				}
+
+				await updateUserSettings({
+					variables: {
+						input: {
+							buyAmount,
+							groupCallThreshold: groupThreshold,
+							// Preserve other existing settings if they exist
+							...(userSettings?.getUserSettings?.enableAutoAlpha !== undefined && {
+								enableAutoAlpha: userSettings.getUserSettings.enableAutoAlpha,
+							}),
+							...(userSettings?.getUserSettings?.slippage !== undefined && {
+								slippage: userSettings.getUserSettings.slippage,
+							}),
+							...(userSettings?.getUserSettings?.selectedChatsIds && {
+								selectedChatsIds: userSettings.getUserSettings.selectedChatsIds,
+							}),
+						},
+					},
+				});
+				changeStep("telegram");
+			} catch (error) {
+				console.error("Failed to update user settings:", error);
+			}
 		}
 	};
+
+	// Initialize form values from user settings with validation
+	useEffect(() => {
+		if (userSettings?.getUserSettings) {
+			const { buyAmount, groupCallThreshold } = userSettings.getUserSettings;
+
+			setFormValues((prev) => ({
+				...prev,
+				quickBuyAmount: buyAmount > 0 ? buyAmount.toString() : "",
+				minGroupsIndicator: groupCallThreshold >= 1 ? groupCallThreshold.toString() : "",
+			}));
+		}
+	}, [userSettings]);
 
 	if (!ready || !isOpen) return null;
 

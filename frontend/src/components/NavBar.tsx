@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./NavBar.module.css";
-import { FaSun, FaMoon } from "react-icons/fa";
+import { FaSun, FaMoon, FaBars, FaTimes } from "react-icons/fa";
 import AuthModal from "./AuthModal";
 import { usePrivy } from "@privy-io/react-auth";
 import Avatar from "./Avatar";
@@ -16,8 +16,14 @@ const NavBar: React.FC = () => {
 	const pathname = usePathname();
 	const [isDarkMode, setIsDarkMode] = useState(true);
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const { ready, authenticated, logout } = usePrivy();
 	const [privyLoginMutation] = usePrivyLoginMutation({});
+
+	// Close mobile menu when route changes
+	useEffect(() => {
+		setIsMobileMenuOpen(false);
+	}, [pathname]);
 
 	// Track authentication state changes to display onboarding after authentication (OAuth)
 	useEffect(() => {
@@ -89,7 +95,7 @@ const NavBar: React.FC = () => {
 					</Link>
 				</div>
 
-				<div className={styles.navLinks}>
+				<div className={`${styles.navLinks} ${isMobileMenuOpen ? styles.navLinksOpen : ""}`}>
 					<Link href="/" className={`${styles.navLink} ${isActive("/") ? styles.activeLink : ""}`}>
 						Calls
 					</Link>
@@ -112,6 +118,9 @@ const NavBar: React.FC = () => {
 						))}
 					<button className={styles.themeSwitcher} onClick={toggleTheme} aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}>
 						{isDarkMode ? <FaSun /> : <FaMoon />}
+					</button>
+					<button className={styles.mobileMenuButton} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Toggle mobile menu">
+						{isMobileMenuOpen ? <FaTimes /> : <FaBars />}
 					</button>
 				</div>
 			</nav>

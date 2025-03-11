@@ -5,7 +5,7 @@ import styles from "./AutoAlphaConfig.module.css";
 import { Switch } from "@headlessui/react";
 import Image from "next/image";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
-import { useGetUserSavedChatsQuery, useGetChatPhotoLazyQuery } from "@/generated/graphql";
+import { useGetUserSavedChatsQuery, useGetChatPhotoLazyQuery, useGetUserSettingsQuery, useUpdateUserSettingsMutation } from "@/generated/graphql";
 import { getPhoto, savePhoto } from "@/utils/localStorage";
 
 interface AutoAlphaConfigProps {
@@ -16,22 +16,55 @@ interface AutoAlphaSettings {
 	isEnabled: boolean;
 	buyAmount: number;
 	groupThreshold: number;
-	maxSlippage: number;
-	useMev: boolean;
-	gasLimit: number;
+	maxSlippage: number; // Stored as whole number (e.g., 2 for 2%)
 	selectedCallers: string[];
 }
 
 export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
+	const [updateUserSettings] = useUpdateUserSettingsMutation();
+	const { data: userSettings, loading: loadingSettings } = useGetUserSettingsQuery();
 	const [settings, setSettings] = useState<AutoAlphaSettings>({
 		isEnabled: false,
-		buyAmount: 0.1,
+		buyAmount: 0.05,
 		groupThreshold: 3,
-		maxSlippage: 2,
-		useMev: false,
-		gasLimit: 300000,
+		maxSlippage: 10,
 		selectedCallers: [],
 	});
+
+	// Import user settings when available
+	useEffect(() => {
+		if (userSettings) {
+			setSettings(() => ({
+				isEnabled: userSettings.getUserSettings.enableAutoAlpha,
+				buyAmount: userSettings.getUserSettings.buyAmount,
+				groupThreshold: userSettings.getUserSettings.groupCallThreshold,
+				maxSlippage: userSettings.getUserSettings.slippage * 100,
+				selectedCallers: userSettings.getUserSettings.selectedChatsIds,
+			}));
+		}
+	}, [userSettings]);
+
+	// Debounced settings update
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			if (!loadingSettings) {
+				updateUserSettings({
+					variables: {
+						input: {
+							enableAutoAlpha: settings.isEnabled,
+							buyAmount: settings.buyAmount,
+							groupCallThreshold: settings.groupThreshold,
+							slippage: settings.maxSlippage / 100,
+							selectedChatsIds: settings.selectedCallers,
+						},
+					},
+				});
+			}
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [settings, loadingSettings, updateUserSettings]);
+
 	const [isCallerDropdownOpen, setIsCallerDropdownOpen] = useState(false);
 	const [chatPhotos, setChatPhotos] = useState<Record<string, string>>({});
 
@@ -90,7 +123,7 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 	function handleSettingChange<K extends keyof AutoAlphaSettings>(key: K, value: AutoAlphaSettings[K]) {
 		const newSettings = { ...settings, [key]: value };
 		setSettings(newSettings);
-		onConfigChange(newSettings);
+		onConfigChange?.(newSettings);
 	}
 
 	function toggleCaller(callerId: string) {
@@ -124,7 +157,7 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 
 					<div className={styles.configGroup}>
 						<label className={styles.label}>Slippage %</label>
-						<input type="number" min="0.1" max="100" step="0.1" value={settings.maxSlippage} onChange={(e) => handleSettingChange("maxSlippage", parseFloat(e.target.value))} className={styles.input} />
+						<input type="number" min="1" max="100" step="1" value={settings.maxSlippage} onChange={(e) => handleSettingChange("maxSlippage", Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))} className={styles.input} />
 					</div>
 				</div>
 			</div>

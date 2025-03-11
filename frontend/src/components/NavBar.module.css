@@ -2,15 +2,14 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	height: 80px;
-	padding: 0 20px;
-	position: relative;
-	width: 100%;
-	background-color: var(--forest);
+	height: 5rem;
+	padding: 0 2rem;
 	position: fixed;
 	top: 0;
 	left: 0;
-	z-index: 1000;
+	width: 100%;
+	background-color: var(--forest);
+	z-index: 1002;
 	box-sizing: border-box;
 }
 
@@ -18,12 +17,14 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	position: relative;
+	z-index: 1002;
 }
 
 .logoLink {
 	display: flex;
 	align-items: center;
-	padding: 0;
+	padding: 0.5rem 0;
 	gap: 0.8rem;
 }
 
@@ -34,7 +35,7 @@
 }
 
 .logoText {
-	font-size: 1.8rem;
+	font-size: clamp(1.2rem, 2vw, 1.8rem);
 	font-weight: 600;
 	color: var(--cream);
 	display: flex;
@@ -44,7 +45,7 @@
 
 .navLinks {
 	display: flex;
-	gap: 4rem;
+	gap: clamp(2rem, 4vw, 4rem);
 	position: absolute;
 	left: 50%;
 	transform: translateX(-50%);
@@ -54,10 +55,10 @@
 	text-decoration: none;
 	color: var(--cream);
 	font-weight: 600;
-	font-size: 1.5rem;
+	font-size: clamp(1rem, 1.5vw, 1.5rem);
 	transition: color 0.3s ease;
 	position: relative;
-	padding-bottom: 0.2rem;
+	padding: 0.5rem 0;
 }
 
 .navLink:hover {
@@ -71,7 +72,7 @@
 .activeLink::after {
 	content: "";
 	position: absolute;
-	bottom: -4px;
+	bottom: -1px;
 	left: 0;
 	width: 100%;
 	height: 3px;
@@ -82,7 +83,9 @@
 .authContainer {
 	display: flex;
 	align-items: center;
-	gap: 1rem;
+	gap: 1.2rem;
+	position: relative;
+	z-index: 1002;
 }
 
 .themeSwitcher {
@@ -94,7 +97,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: 0.5rem;
+	padding: 0.6rem;
 	border-radius: 50%;
 	transition: background-color 0.3s ease;
 }
@@ -108,8 +111,8 @@
 	color: var(--forest);
 	border: none;
 	border-radius: 8px;
-	padding: 0.5rem 1.3rem;
-	font-size: 1.3rem;
+	padding: 0.4rem 1rem;
+	font-size: clamp(0.9rem, 1.2vw, 1.3rem);
 	font-weight: 500;
 	cursor: pointer;
 	transition: background-color 0.3s ease;
@@ -123,18 +126,100 @@
 	font-weight: 600;
 }
 
+.mobileMenuButton {
+	display: none;
+	background: none;
+	border: none;
+	color: var(--cream);
+	font-size: 1.5rem;
+	cursor: pointer;
+	padding: 0.6rem;
+	margin-left: 0.8rem;
+	position: relative;
+	z-index: 1002;
+}
+
 @media (max-width: 768px) {
+	.themeSwitcher {
+		display: none;
+	}
+
 	.navbar {
-		flex-direction: column;
-		padding: 1rem;
-		height: auto;
-		min-height: 4.5rem;
+		padding: 0 1.5rem;
+		height: 4rem;
+	}
+
+	.mobileMenuButton {
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.navLinks {
-		position: static;
-		transform: none;
-		margin: 1rem 0;
+		position: fixed;
+		top: 4rem;
+		left: 0;
+		right: 0;
+		background-color: var(--forest);
+		flex-direction: column;
+		align-items: center;
+		padding: 1.5rem;
+		gap: 2rem;
+		transform: translateY(-100%);
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		margin: 0;
+		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		z-index: 1001;
+		visibility: hidden;
+		opacity: 0;
+	}
+
+	.navLinksOpen {
+		transform: translateY(0);
+		visibility: visible;
+		opacity: 1;
+	}
+
+	.navLink {
+		font-size: 1.4rem;
+		padding: 0.8rem 0;
+	}
+
+	.authContainer {
+		gap: 0.8rem;
+	}
+
+	.themeSwitcher {
+		padding: 0.4rem;
+	}
+
+	.mobileMenuButton {
+		padding: 0.4rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.navbar {
+		padding: 0 1rem;
+		height: 4rem;
+	}
+
+	.logoLink {
+		gap: 0.6rem;
+		padding: 0.4rem 0;
+	}
+
+	.authContainer {
+		gap: 0.6rem;
+	}
+
+	.authButton {
+		padding: 0.3rem 0.8rem;
+	}
+
+	.themeSwitcher,
+	.mobileMenuButton {
+		padding: 0.3rem;
 	}
 }
 

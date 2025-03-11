@@ -64,12 +64,6 @@ function TokenInput({ type, value, token, onValueChange }: TokenInputProps) {
 	);
 }
 
-interface TradeSettings {
-	mevProtect: boolean;
-	slippage: number;
-	estimatedGas: string;
-}
-
 export default function TradeModule() {
 	const [sellAmount, setSellAmount] = React.useState("");
 	const [buyAmount, setBuyAmount] = React.useState("");
@@ -84,11 +78,6 @@ export default function TradeModule() {
 		icon: "/assets/coin.png",
 		maxAmount: 0,
 		price: 0.107,
-	});
-	const [settings, setSettings] = React.useState<TradeSettings>({
-		mevProtect: true,
-		slippage: 10,
-		estimatedGas: "0.000123",
 	});
 	// Swap Tokens
 	const handleSwap = () => {
@@ -130,18 +119,6 @@ export default function TradeModule() {
 				</div>
 				<TokenInput type="buy" value={buyAmount} token={buyToken} onValueChange={setBuyAmount} />
 				<div className={styles.tradeInfo}>
-					<div className={styles.tradeSettings}>
-						<div className={styles.settingItem}>
-							<span>MEV Protect</span>
-							<span className={settings.mevProtect ? styles.settingEnabled : styles.settingDisabled} onClick={() => setSettings((prev) => ({ ...prev, mevProtect: !prev.mevProtect }))} style={{ cursor: "pointer" }}>
-								{settings.mevProtect ? "ON" : "OFF"}
-							</span>
-						</div>
-						<div className={styles.settingItem}>
-							<span>Slippage</span>
-							<span>{settings.slippage}%</span>
-						</div>
-					</div>
 					<div className={styles.tradeActions}>
 						<button className={`${styles.reviewButton} ${!isValidTrade ? styles.reviewButtonDisabled : ""}`} disabled={!isValidTrade}>
 							{getButtonText()}
