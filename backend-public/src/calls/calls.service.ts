@@ -55,7 +55,15 @@ export class CallsService {
       const calls = await this.prisma.calls.findMany({
         where: whereClause,
         include: {
-          chat: true,
+          chat: {
+            include: {
+              calls: {
+                orderBy: {
+                  createdAt: 'desc'
+                }
+              }
+            }
+          },
           messages: {
             orderBy: {
               createdAt: 'asc',
@@ -126,6 +134,8 @@ export class CallsService {
               name: call.chat.tgChatName || '',
               type: call.chat.tgChatType,
               photoUrl: call.chat.tgChatImageUrl || undefined,
+              callCount: call.chat.calls.length,
+              lastCallTimestamp: call.chat.calls[0]?.createdAt || undefined
             },
             callCount: 1,
             messages,

@@ -7,10 +7,24 @@ export const CHAT_FIELDS = gql`
     name
     type
     photoUrl
+    callCount
+    lastCallTimestamp
   }
 `;
 
 // Queries
+export const GET_USER_SETTINGS = gql`
+  query GetUserSettings {
+    getUserSettings {
+      enableAutoAlpha
+      selectedChatsIds
+      groupCallThreshold
+      slippage
+      buyAmount
+    }
+  }
+`;
+
 export const GET_USER_SAVED_CHATS = gql`
   query GetUserSavedChats {
     getUserSavedChats {
@@ -143,6 +157,18 @@ export const GET_CALLS_BY_TOKEN = gql`
 `;
 
 // Mutations
+export const UPDATE_USER_SETTINGS = gql`
+  mutation UpdateUserSettings($input: UpdateUserSettingsInput!) {
+    updateUserSettings(input: $input) {
+      enableAutoAlpha
+      selectedChatsIds
+      groupCallThreshold
+      slippage
+      buyAmount
+    }
+  }
+`;
+
 export const SAVE_USER_CHATS = gql`
   mutation SaveUserChats($input: SaveChatsInput!) {
     saveUserChats(input: $input) {

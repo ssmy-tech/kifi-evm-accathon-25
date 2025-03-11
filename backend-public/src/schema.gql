@@ -52,6 +52,7 @@ type Mutation {
   privyLogin: AuthPayload!
   saveUserChats(input: SaveChatsInput!): ChatsResponse!
   updateTelegramApiLink(apiLink: String!): Boolean!
+  updateUserSettings(input: UpdateUserSettingsInput!): UserSettings!
 }
 
 type NextStep {
@@ -68,8 +69,8 @@ type Query {
   getTelegramContractAnalytics(input: TelegramContractAnalyticsInput!): TelegramAnalyticsResponse!
   getTwitterContractAnalytics(input: TwitterContractAnalyticsInput!): TwitterAnalyticsResponse!
   getUserSavedChats: ChatsResponse!
+  getUserSettings: UserSettings!
   user: User
-  users: [User!]!
   whoAmI: String!
 }
 
@@ -93,7 +94,9 @@ type TelegramAnalyticsResponse {
 }
 
 type TelegramChat {
+  callCount: Float!
   id: String!
+  lastCallTimestamp: DateTime
   name: String!
   photoUrl: String
   type: String!
@@ -142,9 +145,25 @@ input TwitterContractAnalyticsInput {
   contractAddress: String!
 }
 
+input UpdateUserSettingsInput {
+  buyAmount: Float
+  enableAutoAlpha: Boolean
+  groupCallThreshold: Int
+  selectedChatsIds: [String!]
+  slippage: Float
+}
+
 type User {
   createdAt: DateTime!
   privyId: String!
   tgApiLink: String
   updatedAt: DateTime!
+}
+
+type UserSettings {
+  buyAmount: Float!
+  enableAutoAlpha: Boolean!
+  groupCallThreshold: Int!
+  selectedChatsIds: [String!]!
+  slippage: Float!
 }

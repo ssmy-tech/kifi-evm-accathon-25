@@ -4,8 +4,9 @@ import { PrismaService } from '../prisma.service';
 import { ChatType } from '@prisma/client';
 import { S3Service } from '../s3/s3.service';
 import axios from 'axios';
+import { TelegramChat, ChatsResponse, SaveChatsInput } from './dto/telegram.types';
 
-interface TelegramChat {
+interface TelegramChatResponse {
   id: string;
   name: string;
   type: string; // 'channel' | 'group' | 'user'
@@ -19,10 +20,6 @@ interface TelegramChatsResponse {
     unreadCount: number;
     avatar: string;
   }>;
-}
-
-interface SaveChatsInput {
-  chatIds: string[];
 }
 
 @Injectable()
@@ -168,20 +165,52 @@ export class TelegramService {
           },
         }
       );
+
+      // Get call information for each chat
+      const chatIds = response.data.data.map(chat => chat.id);
+      const chatCalls = await this.prisma.chats.findMany({
+        where: {
+          tgChatId: {
+            in: chatIds
+          }
+        },
+        include: {
+          calls: {
+            orderBy: {
+              createdAt: 'desc'
+            }
+          }
+        }
+      });
+
+      // Create a map of chat ID to call information
+      const callInfoMap = new Map(
+        chatCalls.map(chat => [
+          chat.tgChatId,
+          {
+            callCount: chat.calls.length,
+            lastCallTimestamp: chat.calls[0]?.createdAt || undefined
+          }
+        ])
+      );
+
       return {
         chats: response.data.data.map(chat => ({
           id: chat.id,
           name: chat.name,
           type: chat.type,
-          photoUrl: chat.avatar
+          photoUrl: chat.avatar || undefined,
+          callCount: callInfoMap.get(chat.id)?.callCount || 0,
+          lastCallTimestamp: callInfoMap.get(chat.id)?.lastCallTimestamp
         }))
       };
     } catch (error) {
-      throw new Error(`Failed to fetch chats: ${error.message}`);
+      // Return empty array instead of throwing error
+      return { chats: [] };
     }
   }
 
-  private async getChatDetails(user: any, chatId: string): Promise<TelegramChat | null> {
+  private async getChatDetails(user: any, chatId: string): Promise<TelegramChatResponse | null> {
     try {
       await this.rateLimit();
       const response = await axios.get<TelegramChatsResponse>(
@@ -226,7 +255,7 @@ export class TelegramService {
 
       // Filter out null values
       const validChats = chatDetails.filter(
-        (chat): chat is TelegramChat => chat !== null,
+        (chat): chat is TelegramChatResponse => chat !== null,
       );
 
       // First, disconnect all existing chats from the user
@@ -285,45 +314,74 @@ export class TelegramService {
         }),
       );
 
+      // Get the updated chats with call information
+      const updatedChats = await this.prisma.chats.findMany({
+        where: {
+          tgChatId: {
+            in: savedChats.map(chat => chat.tgChatId)
+          }
+        },
+        include: {
+          calls: {
+            orderBy: {
+              createdAt: 'desc'
+            }
+          }
+        }
+      });
+
       return {
-        chats: savedChats.map((chat) => ({
+        chats: updatedChats.map((chat) => ({
           id: chat.tgChatId,
           name: chat.tgChatName || '',
-          type: chat.tgChatType,
-          photoUrl: chat.tgChatImageUrl,
-        })),
+          type: chat.tgChatType.toLowerCase(),
+          photoUrl: chat.tgChatImageUrl || undefined,
+          callCount: chat.calls.length,
+          lastCallTimestamp: chat.calls[0]?.createdAt || undefined
+        }))
       };
     } catch (error) {
       console.error('Error saving user chats:', error);
-      throw new Error(`Failed to save user chats: ${error.message}`);
+      // Return empty array instead of null when there's an error
+      return { chats: [] };
     }
   }
 
-  async getUserSavedChats(privyId: string) {
-    const user = await this.usersService.findByPrivyUserIdFull(privyId);
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    const savedChats = await this.prisma.chats.findMany({
+  async getUserSavedChats(privyId: string): Promise<ChatsResponse> {
+    const chats = await this.prisma.chats.findMany({
       where: {
         users: {
           some: {
-            privyId
+            privyId: privyId
           }
         }
       },
       include: {
-        users: true
+        calls: {
+          where: {
+            chat: {
+              users: {
+                some: {
+                  privyId: privyId
+                }
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        }
       }
     });
 
     return {
-      chats: savedChats.map(chat => ({
+      chats: chats.map(chat => ({
         id: chat.tgChatId,
         name: chat.tgChatName || '',
         type: chat.tgChatType.toLowerCase(),
-        photoUrl: chat.tgChatImageUrl
+        photoUrl: chat.tgChatImageUrl || undefined,
+        callCount: chat.calls.length,
+        lastCallTimestamp: chat.calls[0]?.createdAt || undefined
       }))
     };
   }

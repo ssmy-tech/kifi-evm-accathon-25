@@ -16,7 +16,7 @@ export class TelegramResolver {
   ): Promise<boolean> {
     const privyId = context.req?.user?.claims?.userId;
     
-    return await this.telegramService.updateApiLink(privyId, apiLink);;
+    return await this.telegramService.updateApiLink(privyId, apiLink);
   }
 
   @Query(() => ApiSecretResponse)
@@ -55,7 +55,7 @@ export class TelegramResolver {
   async saveUserChats(
     @Context() context: any,
     @Args('input') input: SaveChatsInput
-  ) {
+  ): Promise<ChatsResponse> {
     const privyId = context.req?.user?.claims?.userId;
     await this.telegramService.createUserSavedChats(privyId, input);
     return this.telegramService.getUserSavedChats(privyId);
@@ -63,7 +63,7 @@ export class TelegramResolver {
 
   @Query(() => ChatsResponse)
   @UseGuards(PrivyAuthGuard)
-  async getUserSavedChats(@Context() context: any) {
+  async getUserSavedChats(@Context() context: any): Promise<ChatsResponse> {
     const privyId = context.req?.user?.claims?.userId;
     return this.telegramService.getUserSavedChats(privyId);
   }

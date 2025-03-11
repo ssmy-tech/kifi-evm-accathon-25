@@ -64,6 +64,7 @@ export type Mutation = {
   privyLogin: AuthPayload;
   saveUserChats: ChatsResponse;
   updateTelegramApiLink: Scalars['Boolean']['output'];
+  updateUserSettings: UserSettings;
 };
 
 
@@ -74,6 +75,11 @@ export type MutationSaveUserChatsArgs = {
 
 export type MutationUpdateTelegramApiLinkArgs = {
   apiLink: Scalars['String']['input'];
+};
+
+
+export type MutationUpdateUserSettingsArgs = {
+  input: UpdateUserSettingsInput;
 };
 
 export type NextStep = {
@@ -90,8 +96,8 @@ export type Query = {
   getTelegramContractAnalytics: TelegramAnalyticsResponse;
   getTwitterContractAnalytics: TwitterAnalyticsResponse;
   getUserSavedChats: ChatsResponse;
+  getUserSettings: UserSettings;
   user: Maybe<User>;
-  users: Array<User>;
   whoAmI: Scalars['String']['output'];
 };
 
@@ -135,7 +141,9 @@ export type TelegramAnalyticsResponse = {
 };
 
 export type TelegramChat = {
+  callCount: Scalars['Float']['output'];
   id: Scalars['String']['output'];
+  lastCallTimestamp: Maybe<Scalars['DateTime']['output']>;
   name: Scalars['String']['output'];
   photoUrl: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
@@ -184,11 +192,27 @@ export type TwitterContractAnalyticsInput = {
   contractAddress: Scalars['String']['input'];
 };
 
+export type UpdateUserSettingsInput = {
+  buyAmount?: InputMaybe<Scalars['Float']['input']>;
+  enableAutoAlpha?: InputMaybe<Scalars['Boolean']['input']>;
+  groupCallThreshold?: InputMaybe<Scalars['Int']['input']>;
+  selectedChatsIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  slippage?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export type User = {
   createdAt: Scalars['DateTime']['output'];
   privyId: Scalars['String']['output'];
   tgApiLink: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
+};
+
+export type UserSettings = {
+  buyAmount: Scalars['Float']['output'];
+  enableAutoAlpha: Scalars['Boolean']['output'];
+  groupCallThreshold: Scalars['Int']['output'];
+  selectedChatsIds: Array<Scalars['String']['output']>;
+  slippage: Scalars['Float']['output'];
 };
 
 export type WithIndex<TObject> = TObject & Record<string, any>;
@@ -272,6 +296,7 @@ export type ResolversTypes = ResolversObject<{
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   GetCallsInput: GetCallsInput;
+  Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   KeyTopic: ResolverTypeWrapper<KeyTopic>;
   Message: ResolverTypeWrapper<Message>;
   Mutation: ResolverTypeWrapper<{}>;
@@ -289,7 +314,9 @@ export type ResolversTypes = ResolversObject<{
   TweetEngagement: ResolverTypeWrapper<TweetEngagement>;
   TwitterAnalyticsResponse: ResolverTypeWrapper<TwitterAnalyticsResponse>;
   TwitterContractAnalyticsInput: TwitterContractAnalyticsInput;
+  UpdateUserSettingsInput: UpdateUserSettingsInput;
   User: ResolverTypeWrapper<User>;
+  UserSettings: ResolverTypeWrapper<UserSettings>;
 }>;
 
 /** Mapping between all available schema types and the resolvers parents */
@@ -303,6 +330,7 @@ export type ResolversParentTypes = ResolversObject<{
   DateTime: Scalars['DateTime']['output'];
   Float: Scalars['Float']['output'];
   GetCallsInput: GetCallsInput;
+  Int: Scalars['Int']['output'];
   KeyTopic: KeyTopic;
   Message: Message;
   Mutation: {};
@@ -320,7 +348,9 @@ export type ResolversParentTypes = ResolversObject<{
   TweetEngagement: TweetEngagement;
   TwitterAnalyticsResponse: TwitterAnalyticsResponse;
   TwitterContractAnalyticsInput: TwitterContractAnalyticsInput;
+  UpdateUserSettingsInput: UpdateUserSettingsInput;
   User: User;
+  UserSettings: UserSettings;
 }>;
 
 export type ApiHealthResponseResolvers<ContextType = Context, ParentType extends ResolversParentTypes['ApiHealthResponse'] = ResolversParentTypes['ApiHealthResponse']> = ResolversObject<{
@@ -374,6 +404,7 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   privyLogin?: Resolver<ResolversTypes['AuthPayload'], ParentType, ContextType>;
   saveUserChats?: Resolver<ResolversTypes['ChatsResponse'], ParentType, ContextType, RequireFields<MutationSaveUserChatsArgs, 'input'>>;
   updateTelegramApiLink?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdateTelegramApiLinkArgs, 'apiLink'>>;
+  updateUserSettings?: Resolver<ResolversTypes['UserSettings'], ParentType, ContextType, RequireFields<MutationUpdateUserSettingsArgs, 'input'>>;
 }>;
 
 export type NextStepResolvers<ContextType = Context, ParentType extends ResolversParentTypes['NextStep'] = ResolversParentTypes['NextStep']> = ResolversObject<{
@@ -391,8 +422,8 @@ export type QueryResolvers<ContextType = Context, ParentType extends ResolversPa
   getTelegramContractAnalytics?: Resolver<ResolversTypes['TelegramAnalyticsResponse'], ParentType, ContextType, RequireFields<QueryGetTelegramContractAnalyticsArgs, 'input'>>;
   getTwitterContractAnalytics?: Resolver<ResolversTypes['TwitterAnalyticsResponse'], ParentType, ContextType, RequireFields<QueryGetTwitterContractAnalyticsArgs, 'input'>>;
   getUserSavedChats?: Resolver<ResolversTypes['ChatsResponse'], ParentType, ContextType>;
+  getUserSettings?: Resolver<ResolversTypes['UserSettings'], ParentType, ContextType>;
   user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
-  users?: Resolver<Array<ResolversTypes['User']>, ParentType, ContextType>;
   whoAmI?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
 
@@ -414,7 +445,9 @@ export type TelegramAnalyticsResponseResolvers<ContextType = Context, ParentType
 }>;
 
 export type TelegramChatResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TelegramChat'] = ResolversParentTypes['TelegramChat']> = ResolversObject<{
+  callCount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  lastCallTimestamp?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   photoUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -469,6 +502,15 @@ export type UserResolvers<ContextType = Context, ParentType extends ResolversPar
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type UserSettingsResolvers<ContextType = Context, ParentType extends ResolversParentTypes['UserSettings'] = ResolversParentTypes['UserSettings']> = ResolversObject<{
+  buyAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  enableAutoAlpha?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  groupCallThreshold?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  selectedChatsIds?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  slippage?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type Resolvers<ContextType = Context> = ResolversObject<{
   ApiHealthResponse?: ApiHealthResponseResolvers<ContextType>;
   ApiSecretResponse?: ApiSecretResponseResolvers<ContextType>;
@@ -490,5 +532,6 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   TweetEngagement?: TweetEngagementResolvers<ContextType>;
   TwitterAnalyticsResponse?: TwitterAnalyticsResponseResolvers<ContextType>;
   User?: UserResolvers<ContextType>;
+  UserSettings?: UserSettingsResolvers<ContextType>;
 }>;
 

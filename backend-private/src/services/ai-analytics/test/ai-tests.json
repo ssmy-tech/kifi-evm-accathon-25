@@ -1,0 +1,471 @@
+{
+  "callId": "102e2402-fd6d-4937-b55c-169ba70394b0",
+  "token": {
+    "address": "9BbPisLUgX7vVBJnsKi7DK1ewM9q3Vfj5hhmWY3Spump",
+    "name": "Crypto Czar Sued",
+    "ticker": "CZARSUIT",
+    "chain": "SOLANA"
+  },
+  "contextType": "initial",
+  "callMessage": {
+    "id": 114540,
+    "text": "9BbPisLUgX7vVBJnsKi7DK1ewM9q3Vfj5hhmWY3Spump",
+    "fromId": {
+      "_": "peerUser",
+      "userId": "5743817518"
+    },
+    "date": "2025-03-10T23:06:10.000Z",
+    "messageType": "call"
+  },
+  "messages": [
+    {
+      "id": 114529,
+      "text": "bah",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:06:59.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114530,
+      "text": "bah\nbah",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:07:00.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114531,
+      "text": "bah",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:07:02.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114532,
+      "text": "bah",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:07:03.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114533,
+      "text": "bah",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:07:04.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114534,
+      "text": "bah",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:07:05.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114535,
+      "text": "bah\nbah",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:07:06.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114536,
+      "text": "9BbPisLUgX7vVBJnsKi7DK1ewM9q3Vfj5hhmWY3Spump",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:08:24.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114537,
+      "text": "9BbPisLUgX7vVBJnsKi7DK1ewM9q3Vfj5hhmWY3Spump",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:09:25.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114538,
+      "text": "9BbPisLUgX7vVBJnsKi7DK1ewM9q3Vfj5hhmWY3Spump",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T22:40:05.000Z",
+      "messageType": "previous"
+    }
+  ]
+}
+
+{
+  "callId": "0fbb61a0-bf77-42b1-bba5-c4421eb38a7e",
+  "token": {
+    "address": "PL6n1ci9Hmqx5GnCZAYnbda6cfQqHzbZBAN3bbHpump",
+    "name": "Spurdo Spärde",
+    "ticker": "SPURDO",
+    "chain": "SOLANA"
+  },
+  "contextType": "initial",
+  "callMessage": {
+    "id": 114561,
+    "text": "PL6n1ci9Hmqx5GnCZAYnbda6cfQqHzbZBAN3bbHpump",
+    "fromId": {
+      "_": "peerUser",
+      "userId": "5743817518"
+    },
+    "date": "2025-03-10T23:58:15.000Z",
+    "messageType": "call"
+  },
+  "messages": [
+    {
+      "id": 114549,
+      "text": "WE WILL ALL MAKE IT FROM THIS TOKEN",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T23:49:40.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114550,
+      "text": "I KNOW THE DEVS AND THEY ARE GIGABRAIN",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T23:49:48.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114551,
+      "text": "GMONAD",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T23:49:52.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114552,
+      "text": "I want this token",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "6084392141"
+      },
+      "date": "2025-03-10T23:50:19.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114553,
+      "text": "where is this token",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "6084392141"
+      },
+      "date": "2025-03-10T23:50:21.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114554,
+      "text": "PL6n1ci9Hmqx5GnCZAYnbda6cfQqHzbZBAN3bbHpump",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T23:50:26.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114555,
+      "text": "tomato juice is red",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "6084392141"
+      },
+      "date": "2025-03-10T23:50:27.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114556,
+      "text": "there is the token",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T23:50:30.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114557,
+      "text": "thank you",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "6084392141"
+      },
+      "date": "2025-03-10T23:50:33.000Z",
+      "messageType": "previous"
+    },
+    {
+      "id": 114558,
+      "text": "give me all of your token and i will burn it",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-10T23:50:45.000Z",
+      "messageType": "previous"
+    }
+  ]
+}
+
+{
+  "callId": "19be7566-8a7d-476b-a4ad-08c39698552f",
+  "token": {
+    "address": "PL6n1ci9Hmqx5GnCZAYnbda6cfQqHzbZBAN3bbHpump",
+    "name": "Spurdo Spärde",
+    "ticker": "SPURDO",
+    "chain": "SOLANA"
+  },
+  "contextType": "future",
+  "callMessage": {
+    "id": 114674,
+    "text": "PL6n1ci9Hmqx5GnCZAYnbda6cfQqHzbZBAN3bbHpump",
+    "fromId": {
+      "_": "peerUser",
+      "userId": "5743817518"
+    },
+    "date": "2025-03-11T00:36:08.815Z",
+    "messageType": "call"
+  },
+  "messages": [
+    {
+      "id": 114675,
+      "text": "this token is so cool",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:36.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114676,
+      "text": "yap yap",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:39.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114677,
+      "text": "yap yap yap",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:41.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114678,
+      "text": "this is cool",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:45.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114679,
+      "text": "wagmi off of this one",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:50.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114680,
+      "text": "a",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:51.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114681,
+      "text": "b",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:51.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114682,
+      "text": "c",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:52.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114683,
+      "text": "d",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:52.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114684,
+      "text": "e",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:53.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114685,
+      "text": "f",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:53.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114686,
+      "text": "g",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:53.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114687,
+      "text": "h",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:54.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114688,
+      "text": "i",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:55.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114689,
+      "text": "j",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:55.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114690,
+      "text": "k",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:56.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114691,
+      "text": "l",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:56.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114692,
+      "text": "m",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:57.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114693,
+      "text": "n",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:58.000Z",
+      "messageType": "future"
+    },
+    {
+      "id": 114694,
+      "text": "o",
+      "fromId": {
+        "_": "peerUser",
+        "userId": "5743817518"
+      },
+      "date": "2025-03-11T00:35:59.000Z",
+      "messageType": "future"
+    }
+  ]
+}
+
+
+

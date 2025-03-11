@@ -15,6 +15,11 @@ model User {
   tgApiLink String?
   tgApiSecret String
   dataStatus DataStatus
+  enableAutoAlpha Boolean @default(false)
+  selectedChatsIds String[]
+  groupCallThreshold Int @default(0)
+  slippage Float @default(0.1)
+  buyAmount Float @default(0.05)
 }
 
 model Chats {

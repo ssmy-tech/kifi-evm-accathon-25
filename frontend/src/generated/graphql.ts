@@ -72,6 +72,7 @@ export type Mutation = {
   privyLogin: AuthPayload;
   saveUserChats: ChatsResponse;
   updateTelegramApiLink: Scalars['Boolean']['output'];
+  updateUserSettings: UserSettings;
 };
 
 
@@ -82,6 +83,11 @@ export type MutationSaveUserChatsArgs = {
 
 export type MutationUpdateTelegramApiLinkArgs = {
   apiLink: Scalars['String']['input'];
+};
+
+
+export type MutationUpdateUserSettingsArgs = {
+  input: UpdateUserSettingsInput;
 };
 
 export type NextStep = {
@@ -100,8 +106,8 @@ export type Query = {
   getTelegramContractAnalytics: TelegramAnalyticsResponse;
   getTwitterContractAnalytics: TwitterAnalyticsResponse;
   getUserSavedChats: ChatsResponse;
+  getUserSettings: UserSettings;
   user?: Maybe<User>;
-  users: Array<User>;
   whoAmI: Scalars['String']['output'];
 };
 
@@ -148,7 +154,9 @@ export type TelegramAnalyticsResponse = {
 
 export type TelegramChat = {
   __typename?: 'TelegramChat';
+  callCount: Scalars['Float']['output'];
   id: Scalars['String']['output'];
+  lastCallTimestamp?: Maybe<Scalars['DateTime']['output']>;
   name: Scalars['String']['output'];
   photoUrl?: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
@@ -202,6 +210,14 @@ export type TwitterContractAnalyticsInput = {
   contractAddress: Scalars['String']['input'];
 };
 
+export type UpdateUserSettingsInput = {
+  buyAmount?: InputMaybe<Scalars['Float']['input']>;
+  enableAutoAlpha?: InputMaybe<Scalars['Boolean']['input']>;
+  groupCallThreshold?: InputMaybe<Scalars['Int']['input']>;
+  selectedChatsIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  slippage?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export type User = {
   __typename?: 'User';
   createdAt: Scalars['DateTime']['output'];
@@ -210,17 +226,31 @@ export type User = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
-export type ChatFieldsFragment = { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null };
+export type UserSettings = {
+  __typename?: 'UserSettings';
+  buyAmount: Scalars['Float']['output'];
+  enableAutoAlpha: Scalars['Boolean']['output'];
+  groupCallThreshold: Scalars['Int']['output'];
+  selectedChatsIds: Array<Scalars['String']['output']>;
+  slippage: Scalars['Float']['output'];
+};
+
+export type ChatFieldsFragment = { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null, callCount: number, lastCallTimestamp?: string | null };
+
+export type GetUserSettingsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetUserSettingsQuery = { __typename?: 'Query', getUserSettings: { __typename?: 'UserSettings', enableAutoAlpha: boolean, selectedChatsIds: Array<string>, groupCallThreshold: number, slippage: number, buyAmount: number } };
 
 export type GetUserSavedChatsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetUserSavedChatsQuery = { __typename?: 'Query', getUserSavedChats: { __typename?: 'ChatsResponse', chats: Array<{ __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null }> } };
+export type GetUserSavedChatsQuery = { __typename?: 'Query', getUserSavedChats: { __typename?: 'ChatsResponse', chats: Array<{ __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null, callCount: number, lastCallTimestamp?: string | null }> } };
 
 export type GetTelegramChatsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetTelegramChatsQuery = { __typename?: 'Query', getTelegramChats: { __typename?: 'ChatsResponse', chats: Array<{ __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null }> } };
+export type GetTelegramChatsQuery = { __typename?: 'Query', getTelegramChats: { __typename?: 'ChatsResponse', chats: Array<{ __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null, callCount: number, lastCallTimestamp?: string | null }> } };
 
 export type GetTelegramApiSecretQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -260,12 +290,19 @@ export type GetCallsByTokenQueryVariables = Exact<{
 
 export type GetCallsByTokenQuery = { __typename?: 'Query', getCallsByToken: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, calls: Array<{ __typename?: 'CallWithChat', callCount: number, chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null }, messages?: Array<{ __typename?: 'Message', id: string, createdAt: string, text?: string | null, fromId?: string | null }> | null }> }> } };
 
+export type UpdateUserSettingsMutationVariables = Exact<{
+  input: UpdateUserSettingsInput;
+}>;
+
+
+export type UpdateUserSettingsMutation = { __typename?: 'Mutation', updateUserSettings: { __typename?: 'UserSettings', enableAutoAlpha: boolean, selectedChatsIds: Array<string>, groupCallThreshold: number, slippage: number, buyAmount: number } };
+
 export type SaveUserChatsMutationVariables = Exact<{
   input: SaveChatsInput;
 }>;
 
 
-export type SaveUserChatsMutation = { __typename?: 'Mutation', saveUserChats: { __typename?: 'ChatsResponse', chats: Array<{ __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null }> } };
+export type SaveUserChatsMutation = { __typename?: 'Mutation', saveUserChats: { __typename?: 'ChatsResponse', chats: Array<{ __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null, callCount: number, lastCallTimestamp?: string | null }> } };
 
 export type UpdateTelegramApiLinkMutationVariables = Exact<{
   apiLink: Scalars['String']['input'];
@@ -285,8 +322,56 @@ export const ChatFieldsFragmentDoc = /*#__PURE__*/ gql`
   name
   type
   photoUrl
+  callCount
+  lastCallTimestamp
 }
     `;
+export const GetUserSettingsDocument = /*#__PURE__*/ gql`
+    query GetUserSettings {
+  getUserSettings {
+    enableAutoAlpha
+    selectedChatsIds
+    groupCallThreshold
+    slippage
+    buyAmount
+  }
+}
+    `;
+
+/**
+ * __useGetUserSettingsQuery__
+ *
+ * To run a query within a React component, call `useGetUserSettingsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetUserSettingsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetUserSettingsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetUserSettingsQuery(baseOptions?: Apollo.QueryHookOptions<GetUserSettingsQuery, GetUserSettingsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetUserSettingsQuery, GetUserSettingsQueryVariables>(GetUserSettingsDocument, options);
+      }
+export function useGetUserSettingsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetUserSettingsQuery, GetUserSettingsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetUserSettingsQuery, GetUserSettingsQueryVariables>(GetUserSettingsDocument, options);
+        }
+export function useGetUserSettingsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetUserSettingsQuery, GetUserSettingsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetUserSettingsQuery, GetUserSettingsQueryVariables>(GetUserSettingsDocument, options);
+        }
+export type GetUserSettingsQueryHookResult = ReturnType<typeof useGetUserSettingsQuery>;
+export type GetUserSettingsLazyQueryHookResult = ReturnType<typeof useGetUserSettingsLazyQuery>;
+export type GetUserSettingsSuspenseQueryHookResult = ReturnType<typeof useGetUserSettingsSuspenseQuery>;
+export type GetUserSettingsQueryResult = Apollo.QueryResult<GetUserSettingsQuery, GetUserSettingsQueryVariables>;
+export function refetchGetUserSettingsQuery(variables?: GetUserSettingsQueryVariables) {
+      return { query: GetUserSettingsDocument, variables: variables }
+    }
 export const GetUserSavedChatsDocument = /*#__PURE__*/ gql`
     query GetUserSavedChats {
   getUserSavedChats {
@@ -692,6 +777,43 @@ export type GetCallsByTokenQueryResult = Apollo.QueryResult<GetCallsByTokenQuery
 export function refetchGetCallsByTokenQuery(variables?: GetCallsByTokenQueryVariables) {
       return { query: GetCallsByTokenDocument, variables: variables }
     }
+export const UpdateUserSettingsDocument = /*#__PURE__*/ gql`
+    mutation UpdateUserSettings($input: UpdateUserSettingsInput!) {
+  updateUserSettings(input: $input) {
+    enableAutoAlpha
+    selectedChatsIds
+    groupCallThreshold
+    slippage
+    buyAmount
+  }
+}
+    `;
+export type UpdateUserSettingsMutationFn = Apollo.MutationFunction<UpdateUserSettingsMutation, UpdateUserSettingsMutationVariables>;
+
+/**
+ * __useUpdateUserSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateUserSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateUserSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateUserSettingsMutation, { data, loading, error }] = useUpdateUserSettingsMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateUserSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateUserSettingsMutation, UpdateUserSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateUserSettingsMutation, UpdateUserSettingsMutationVariables>(UpdateUserSettingsDocument, options);
+      }
+export type UpdateUserSettingsMutationHookResult = ReturnType<typeof useUpdateUserSettingsMutation>;
+export type UpdateUserSettingsMutationResult = Apollo.MutationResult<UpdateUserSettingsMutation>;
+export type UpdateUserSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateUserSettingsMutation, UpdateUserSettingsMutationVariables>;
 export const SaveUserChatsDocument = /*#__PURE__*/ gql`
     mutation SaveUserChats($input: SaveChatsInput!) {
   saveUserChats(input: $input) {

@@ -28,6 +28,12 @@ export class TelegramChat {
 
   @Field({ nullable: true })
   photoUrl?: string;
+
+  @Field()
+  callCount: number;
+
+  @Field({ nullable: true })
+  lastCallTimestamp?: Date;
 }
 
 @ObjectType()
