@@ -1,14 +1,33 @@
 /**
+ * Interface representing a message in the system
+ */
+export interface Message {
+	id: string;
+	createdAt: string;
+	text: string;
+	fromId: string | null;
+}
+
+/**
+ * Interface representing a chat in the system
+ */
+export interface Chat {
+	id: string;
+	name: string;
+	type: "Group" | "Channel" | "Private";
+	photoUrl: string | "no-photo";
+}
+
+/**
  * Interface representing a caller in the system
  */
 export interface Caller {
 	id: string;
 	name: string;
 	profileImageUrl: string;
-	address?: string;
 	timestamp: number;
-	callCount?: number;
-	lastCallTimestamp?: number;
+	callCount: number;
 	winRate: number;
-	message?: string;
+	chat: Chat;
+	messages: Message[];
 }

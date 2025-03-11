@@ -1,18 +1,19 @@
 .container {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 16px;
+	padding: clamp(12px, 3vw, 24px);
 	height: 100%;
 	width: 100%;
 	background-color: var(--background);
 	border-radius: 12px;
+	gap: 16px;
 }
 
 .header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	flex-shrink: 0;
 }
 
 .titleGroup {
@@ -22,7 +23,7 @@
 }
 
 .titleGroup h3 {
-	font-size: 1.6rem;
+	font-size: clamp(1.125rem, 1.5vw, 1.5rem);
 	font-weight: 600;
 	color: var(--text-primary);
 }
@@ -35,38 +36,35 @@
 
 .icon {
 	color: var(--text-primary);
-	height: 30px;
-	width: 30px;
-	margin-right: 10px;
+	height: clamp(20px, 4vw, 30px);
+	width: clamp(20px, 4vw, 30px);
+	margin-right: 8px;
 }
 
 .contentWrapper {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
-	padding: 16px;
-	border-radius: 12px;
-	height: 100%;
+	gap: 8px;
 	position: relative;
+	width: 100%;
+	margin: 0 auto;
+	flex: 1;
 }
 
 .tokenInput {
 	display: flex;
+	flex: 1;
 	flex-direction: column;
-	gap: 8px;
-	padding: 1.5rem;
+	padding: clamp(0.75rem, 2vw, 1.5rem);
 	background-color: var(--border-color);
 	border-radius: 12px;
-	flex: 1;
-	min-height: 120px;
 	justify-content: space-between;
 }
 
 .inputLabel {
-	font-size: 1.5rem;
+	font-size: clamp(0.875rem, 1.25vw, 1.125rem);
 	font-weight: 600;
 	color: var(--text-primary);
-	margin-bottom: auto;
 }
 
 .inputContainer {
@@ -74,13 +72,14 @@
 	justify-content: space-between;
 	align-items: center;
 	width: 100%;
+	gap: 12px;
 }
 
 .amountInput {
 	flex: 1;
 	background: none;
 	border: none;
-	font-size: clamp(1.5rem, 4vw, 2.5rem);
+	font-size: clamp(1.25rem, 2vw, 2rem);
 	color: var(--text-primary);
 	outline: none;
 	width: 100%;
@@ -91,15 +90,15 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 0.5rem 1rem;
+	padding: 8px 12px;
 	background-color: var(--border-color);
-	border-radius: 0.5rem;
+	border-radius: 8px;
 	cursor: pointer;
 	white-space: nowrap;
 }
 
 .tokenSelector span {
-	font-size: 1rem;
+	font-size: clamp(0.875rem, 1.25vw, 1.125rem);
 	font-weight: 600;
 	color: var(--text-primary);
 }
@@ -109,7 +108,7 @@
 	width: 100%;
 	align-items: center;
 	justify-content: space-between;
-	gap: 8px;
+	padding-top: 0.5rem;
 }
 
 .balanceInfo {
@@ -118,15 +117,13 @@
 	gap: 8px;
 }
 
-.usdValue {
-	font-size: 1rem;
+.usdValue,
+.maxAmount {
+	font-size: clamp(0.75rem, 1vw, 0.875rem);
 	color: var(--text-secondary);
-	opacity: 0.8;
 }
 
 .maxAmount {
-	font-size: 1.2rem;
-	color: var(--text-secondary);
 	cursor: pointer;
 	transition: opacity 0.2s;
 }
@@ -137,7 +134,7 @@
 
 .maxButton {
 	padding: 4px 8px;
-	font-size: 0.9rem;
+	font-size: clamp(0.75rem, 1vw, 0.875rem);
 	font-weight: 600;
 	color: var(--cream);
 	background-color: var(--forest);
@@ -152,20 +149,17 @@
 }
 
 .swapIcon {
-	position: absolute;
-	left: 50%;
-	top: calc(50% - 3rem);
-	transform: translate(-50%, -50%);
+	margin: -20px auto;
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	width: 48px;
-	height: 48px;
+	width: 40px;
+	height: 40px;
 	border-radius: 50%;
 	background-color: var(--background);
 	cursor: pointer;
 	z-index: 1;
-	font-size: 3rem;
+	font-size: 2.5rem;
 	box-shadow: 0 0 0 6px var(--background);
 }
 
@@ -180,21 +174,27 @@
 
 .tradeInfo {
 	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 12px;
 	width: 100%;
-	gap: 16px;
+	flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+	.tradeInfo {
+		flex-direction: row;
+		align-items: center;
+		gap: 16px;
+	}
 }
 
 .tradeSettings {
 	display: flex;
-	flex-direction: row;
 	align-items: center;
 	justify-content: space-evenly;
-	gap: 16px;
-	padding: 12px 16px;
-	height: 64px;
-	background-color: var(--forest);
+	padding: 12px;
+	background-color: var(--border-color);
 	border-radius: 8px;
 	flex: 1;
 }
@@ -204,47 +204,59 @@
 	flex-direction: column;
 	align-items: flex-start;
 	gap: 2px;
-	font-size: 1.1rem;
-	color: white;
-	min-width: 80px;
 }
 
 .settingItem span:first-child {
+	font-size: clamp(0.75rem, 1vw, 0.875rem);
+	color: var(--text-secondary);
 	opacity: 0.8;
-	color: var(--cream);
-	font-size: 0.9rem;
+}
+
+.settingItem span:last-child {
+	font-size: clamp(0.875rem, 1.25vw, 1rem);
+	font-weight: 500;
+	color: var(--text-primary);
 }
 
 .settingEnabled {
-	color: var(--tint);
+	color: var(--tint) !important;
 	font-weight: 700;
 }
 
 .settingDisabled {
-	color: var(--error);
+	color: var(--error) !important;
 	font-weight: 700;
 }
 
 .tradeActions {
 	display: flex;
 	flex-direction: column;
-	align-items: flex-end;
+	align-items: stretch;
 	gap: 8px;
-	min-width: 50%;
+	height: 100%;
+	width: 100%;
+}
+
+@media (min-width: 640px) {
+	.tradeActions {
+		width: auto;
+		flex: 0.6;
+	}
 }
 
 .reviewButton {
 	width: 100%;
-	height: 64px;
+	height: 100%;
 	padding: 0 16px;
 	background-color: var(--tint);
 	color: var(--text-primary);
 	border: none;
 	border-radius: 8px;
-	font-size: 1.4rem;
+	font-size: clamp(0.875rem, 1.25vw, 1.125rem);
 	font-weight: 600;
 	cursor: pointer;
 	transition: all 0.2s;
+	white-space: nowrap;
 }
 
 .reviewButtonDisabled {
@@ -258,6 +270,14 @@
 }
 
 .exchangeRate {
-	font-size: 1rem;
+	font-size: clamp(0.75rem, 1vw, 0.875rem);
 	color: var(--text-secondary);
+	text-align: center;
+	padding: 0 8px;
+}
+
+@media (min-width: 640px) {
+	.exchangeRate {
+		text-align: right;
+	}
 }

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaUsers } from "react-icons/fa";
+import { FaUsers, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import styles from "./CallerFeed.module.css";
 import { formatTimestamp } from "@/utils/formatters";
 import Image from "next/image";
@@ -10,6 +10,8 @@ import { useGetChatPhotoLazyQuery } from "@/generated/graphql";
 // Storage key for caller photos in CallerFeed
 const CALLER_FEED_PHOTOS_KEY = "caller-feed-photos";
 
+const MESSAGES_PER_PAGE = 1;
+
 interface CallerFeedProps {
 	callers: Caller[];
 	title?: string;
@@ -17,10 +19,11 @@ interface CallerFeedProps {
 }
 
 export default function CallerFeed({ callers, title = "Token Callers", isLoading = false }: CallerFeedProps) {
-	const [sortField, setSortField] = useState<keyof Caller>("timestamp");
+	const [sortField, setSortField] = useState<"callCount" | "timestamp">("timestamp");
 	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 	const [expandedCallerId, setExpandedCallerId] = useState<string | null>(null);
 	const [closingCallerId, setClosingCallerId] = useState<string | null>(null);
+	const [currentPage, setCurrentPage] = useState<Record<string, number>>({});
 	const tableContainerRef = useRef<HTMLDivElement>(null);
 
 	// Initialize local photo cache from localStorage
@@ -50,21 +53,22 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 	useEffect(() => {
 		if (callers && callers.length > 0) {
 			callers.forEach((caller) => {
+				const chatId = caller.chat.id;
 				// Only fetch if we don't already have the photo in local state
-				if (!callerPhotos[caller.id]) {
+				if (!callerPhotos[chatId]) {
 					// First try to get from global caller photos cache
-					const cachedPhoto = getCallerPhoto(caller.id);
+					const cachedPhoto = getCallerPhoto(chatId);
 
 					if (cachedPhoto) {
 						// If found in global cache, use it and update local state
 						setCallerPhotos((prev) => ({
 							...prev,
-							[caller.id]: cachedPhoto,
+							[chatId]: cachedPhoto,
 						}));
-					} else if (caller.profileImageUrl === "/assets/KiFi_LOGO.jpg") {
+					} else if (caller.chat.photoUrl === "no-photo") {
 						// If using default image, try to fetch from API
 						getChatPhoto({
-							variables: { chatId: caller.id },
+							variables: { chatId },
 							onCompleted: (data) => {
 								if (data.getChatPhoto) {
 									const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? "/assets/KiFi_LOGO.jpg" : data.getChatPhoto;
@@ -72,12 +76,12 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 									// Update local state
 									setCallerPhotos((prev) => ({
 										...prev,
-										[caller.id]: photoUrl,
+										[chatId]: photoUrl,
 									}));
 
 									// Also save to global cache if it's not the default image
 									if (photoUrl !== "/assets/KiFi_LOGO.jpg") {
-										saveCallerPhoto(caller.id, photoUrl);
+										saveCallerPhoto(chatId, photoUrl);
 									}
 								}
 							},
@@ -86,24 +90,24 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 								// Set default image on error
 								setCallerPhotos((prev) => ({
 									...prev,
-									[caller.id]: "/assets/KiFi_LOGO.jpg",
+									[chatId]: "/assets/KiFi_LOGO.jpg",
 								}));
 							},
 						});
-					} else if (caller.profileImageUrl && caller.profileImageUrl !== "/assets/KiFi_LOGO.jpg") {
+					} else if (caller.chat.photoUrl && caller.chat.photoUrl !== "no-photo") {
 						// If caller already has a non-default photo, save it to both caches
 						setCallerPhotos((prev) => ({
 							...prev,
-							[caller.id]: caller.profileImageUrl,
+							[chatId]: caller.chat.photoUrl,
 						}));
-						saveCallerPhoto(caller.id, caller.profileImageUrl);
+						saveCallerPhoto(chatId, caller.chat.photoUrl);
 					}
 				}
 			});
 		}
 	}, [callers, getChatPhoto, callerPhotos]);
 
-	const handleSort = (field: keyof Caller) => {
+	const handleSort = (field: "callCount" | "timestamp") => {
 		if (field === sortField) {
 			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
 		} else {
@@ -134,35 +138,24 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 	}, [expandedCallerId]);
 
 	const sortedCallers = [...(callers || [])].sort((a, b) => {
-		// Special case for message field - sort by presence of message first, then by timestamp
-		if (sortField === "message") {
-			// If one has a message and the other doesn't
-			if (Boolean(a.message) !== Boolean(b.message)) {
-				// If descending, messages first; if ascending, non-messages first
-				return sortDirection === "desc" ? (a.message ? -1 : 1) : a.message ? 1 : -1;
-			}
-
-			// If both have messages or both don't, sort by timestamp as secondary criteria
-			const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-			const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-			return sortDirection === "desc" ? aTime - bTime : bTime - aTime;
+		if (sortField === "timestamp") {
+			const aTime = a.messages?.[0]?.createdAt ? new Date(a.messages[0].createdAt).getTime() : 0;
+			const bTime = b.messages?.[0]?.createdAt ? new Date(b.messages[0].createdAt).getTime() : 0;
+			return sortDirection === "desc" ? bTime - aTime : aTime - bTime;
 		}
 
-		const aValue = a[sortField];
-		const bValue = b[sortField];
-
-		if (!aValue && !bValue) return 0;
-		if (!aValue) return sortDirection === "asc" ? -1 : 1;
-		if (!bValue) return sortDirection === "asc" ? 1 : -1;
-
-		if (typeof aValue === "number" && typeof bValue === "number") {
-			return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-		}
-
-		const aString = String(aValue);
-		const bString = String(bValue);
-		return sortDirection === "asc" ? aString.localeCompare(bString) : bString.localeCompare(aString);
+		// Sort by callCount
+		return sortDirection === "desc" ? b.callCount - a.callCount : a.callCount - b.callCount;
 	});
+
+	const handlePageChange = (chatId: string, newPage: number, totalPages: number) => {
+		if (newPage >= 0 && newPage < totalPages) {
+			setCurrentPage((prev) => ({
+				...prev,
+				[chatId]: newPage,
+			}));
+		}
+	};
 
 	return (
 		<div className={`${styles.container} ${styles.callerFeedContainer}`}>
@@ -181,69 +174,100 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 						<table className={styles.table}>
 							<thead>
 								<tr>
-									<th className={styles.imageHeader}></th>
-									{callers?.some((caller) => caller.name) && (
-										<th onClick={() => handleSort("name")} className={`${styles.sortable} ${styles.nameColumn}`}>
-											Caller
-											{sortField === "name" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
-										</th>
-									)}
-									{callers?.some((caller) => caller.timestamp) && (
-										<th onClick={() => handleSort("timestamp")} className={`${styles.sortable} ${styles.timestampColumn}`}>
-											Timestamp
-											{sortField === "timestamp" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
-										</th>
-									)}
-									{callers?.some((caller) => caller.winRate !== undefined) && (
-										<th onClick={() => handleSort("winRate")} className={`${styles.sortable} ${styles.rateColumn}`}>
-											Win Rate
-											{sortField === "winRate" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
-										</th>
-									)}
-									{callers?.some((caller) => caller.message) && (
-										<th onClick={() => handleSort("message")} className={`${styles.sortable} ${styles.messageHeader}`}>
-											Message(s)
-											{sortField === "message" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
-										</th>
-									)}
+									<th className={`${styles.sortable} ${styles.nameColumn}`}>Chat</th>
+									<th onClick={() => handleSort("timestamp")} className={`${styles.sortable} ${styles.timestampColumn}`}>
+										Timestamp
+										{sortField === "timestamp" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
+									</th>
+									<th onClick={() => handleSort("callCount")} className={`${styles.sortable} ${styles.callColumn}`}>
+										Calls
+										{sortField === "callCount" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
+									</th>
+									<th className={`${styles.sortable} ${styles.messageHeader}`}>Message(s)</th>
 								</tr>
 							</thead>
 							<tbody className={styles.tableBody}>
 								{sortedCallers.map((caller) => {
-									// Get the best available photo for this caller
-									// Priority: 1. Local cache, 2. Caller object, 3. Global cache, 4. Default
-									const profileImageUrl = callerPhotos[caller.id] || (caller.profileImageUrl !== "/assets/KiFi_LOGO.jpg" ? caller.profileImageUrl : getCallerPhoto(caller.id) || "/assets/KiFi_LOGO.jpg");
+									const chatId = caller.chat.id;
+									const profileImageUrl = callerPhotos[chatId] || "/assets/KiFi_LOGO.jpg";
+									const latestMessage = caller.messages[0];
 
 									return (
-										<React.Fragment key={caller.id}>
-											<tr className={`${styles.callerRow} ${caller.message ? styles.hasMessage : ""}`} onClick={() => caller.message && toggleExpandCaller(caller.id)} style={caller.message ? { cursor: "pointer" } : {}}>
-												<td className={styles.imageCell}>
+										<React.Fragment key={chatId}>
+											<tr className={`${styles.callerRow} ${caller.messages.length ? styles.hasMessage : ""}`} onClick={() => caller.messages.length && toggleExpandCaller(chatId)} style={caller.messages.length ? { cursor: "pointer" } : {}}>
+												<td className={styles.nameColumn}>
 													<div className={styles.profileImage}>
 														<Image
 															src={profileImageUrl}
-															alt={`Caller ${caller.id}`}
-															width={32}
-															height={32}
+															alt={`Chat ${caller.chat.name}`}
+															width={38}
+															height={38}
 															className={styles.avatar}
 															onError={(e) => {
-																// Fallback to default image if the profile image fails to load
 																const target = e.target as HTMLImageElement;
 																target.src = "/assets/KiFi_LOGO.jpg";
 															}}
 														/>
 													</div>
+													<div className={styles.nameText}>{caller.chat.name}</div>
 												</td>
-												{callers?.some((caller) => caller.name) && <td className={styles.nameColumn}>{caller.name || "-"}</td>}
-												{callers?.some((caller) => caller.timestamp) && <td className={styles.timestampColumn}>{caller.timestamp ? <span className={styles.timestamp}>{formatTimestamp(caller.timestamp, false, true)}</span> : "-"}</td>}
-												{callers?.some((caller) => caller.winRate !== undefined) && <td className={styles.rateColumn}>{caller.winRate !== undefined ? `${caller.winRate}%` : "-"}</td>}
-												{callers?.some((caller) => caller.message) && <td className={styles.messageCell}>{caller.message ? <div className={styles.viewButton}>{expandedCallerId === caller.id ? "Hide" : "View"}</div> : "None"}</td>}
+												<td className={styles.timestampColumn}>{latestMessage ? <span className={styles.timestamp}>{formatTimestamp(new Date(latestMessage.createdAt).getTime(), false, true)}</span> : "-"}</td>
+												<td className={styles.callColumn}>{caller.callCount}</td>
+												<td className={styles.messageCell}>{caller.messages.length ? <div className={styles.viewButton}>{expandedCallerId === chatId ? "Hide" : "View"}</div> : "None"}</td>
 											</tr>
-											{expandedCallerId === caller.id && caller.message && (
-												<tr className={`${styles.messageRow} ${closingCallerId === caller.id ? styles.closing : ""}`} data-caller-id={caller.id}>
-													<td colSpan={5}>
-														<div className={styles.messageContentWrapper}>
-															<div className={styles.messageContent}>{caller.message}</div>
-														</div>
+											{expandedCallerId === chatId && caller.messages.length > 0 && (
+												<tr className={`${styles.messageRow} ${closingCallerId === chatId ? styles.closing : ""}`} data-caller-id={chatId}>
+													<td colSpan={4}>
+														{(() => {
+															const totalPages = Math.ceil(caller.messages.length / MESSAGES_PER_PAGE);
+															const currentPageIndex = currentPage[chatId] || 0;
+															const startIndex = currentPageIndex * MESSAGES_PER_PAGE;
+															const visibleMessages = caller.messages.slice(startIndex, startIndex + MESSAGES_PER_PAGE);
+
+															return (
+																<div className={styles.messageContentWrapper}>
+																	{totalPages > 1 && (
+																		<div className={styles.paginationControls}>
+																			<button
+																				onClick={(e) => {
+																					e.stopPropagation();
+																					handlePageChange(chatId, currentPageIndex - 1, totalPages);
+																				}}
+																				disabled={currentPageIndex === 0}
+																				className={styles.pageButton}
+																				title="Previous message"
+																			>
+																				<FaChevronLeft />
+																			</button>
+																			<span className={styles.pageInfo}>
+																				Message {currentPageIndex + 1} of {totalPages}
+																			</span>
+																			<button
+																				onClick={(e) => {
+																					e.stopPropagation();
+																					handlePageChange(chatId, currentPageIndex + 1, totalPages);
+																				}}
+																				disabled={currentPageIndex === totalPages - 1}
+																				className={styles.pageButton}
+																				title="Next message"
+																			>
+																				<FaChevronRight />
+																			</button>
+																		</div>
+																	)}
+																	<div className={styles.messageContent}>
+																		<div className={styles.messagesContainer}>
+																			{visibleMessages.map((msg) => (
+																				<div key={msg.id} className={styles.messageItem}>
+																					<div>{msg.text}</div>
+																					<div className={styles.messageTimestamp}>{formatTimestamp(new Date(msg.createdAt).getTime(), true, true)}</div>
+																				</div>
+																			))}
+																		</div>
+																	</div>
+																</div>
+															);
+														})()}
 													</td>
 												</tr>
 											)}

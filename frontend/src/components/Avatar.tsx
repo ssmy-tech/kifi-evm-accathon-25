@@ -118,25 +118,7 @@ const Avatar = () => {
 
 			{isTelegramModalOpen && (
 				<div className={styles.telegramModalOverlay}>
-					<div className={styles.telegramModalContainer} ref={telegramModalRef}>
-						<div className={styles.telegramModalHeader}>
-							<div className={styles.telegramModalHeaderContent}>
-								<h2 className={styles.telegramModalTitle}>Telegram Setup</h2>
-
-								{healthCheck && (
-									<div className={styles.statusSection}>
-										<div className={`${styles.statusIndicator} ${isHealthy ? styles.statusHealthy : styles.statusUnhealthy}`}>API Status: {healthCheck.checkTelegramApiHealth.status}</div>
-									</div>
-								)}
-							</div>
-							<button className={styles.telegramModalCloseButton} onClick={closeTelegramModal}>
-								<X size={20} />
-							</button>
-						</div>
-						<div className={styles.telegramModalContent}>
-							<TelegramSetup onSetupComplete={handleSetupComplete} initialApiLink="" showManagerAfterSetup={true} />
-						</div>
-					</div>
+					<TelegramSetup onSetupComplete={handleSetupComplete} initialApiLink="" showManagerAfterSetup={true} onClose={closeTelegramModal} />
 				</div>
 			)}
 		</div>

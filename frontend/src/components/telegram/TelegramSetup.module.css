@@ -1,11 +1,49 @@
 .container {
-	padding: 1.5rem;
 	display: flex;
+	flex-direction: column;
+	width: 85vw;
+	max-width: 1400px;
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+	overflow: hidden;
+}
+
+.containerWithManager {
+	height: 90vh;
+}
+
+.modalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem;
+	border-bottom: 1px solid #e5e7eb;
+	background-color: white;
+}
+
+.modalHeaderContent {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+}
+
+.modalTitle {
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: black;
+	margin: 0;
+}
+
+.modalContent {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
 	justify-content: center;
 	align-items: center;
-	width: 100%;
-	max-height: 80vh;
-	overflow-y: auto;
 }
 
 .setupCard {
@@ -13,7 +51,8 @@
 	border-radius: 0.5rem;
 	padding: 2rem;
 	width: 80%;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	align-self: center;
+	justify-content: center;
 }
 
 .title {
@@ -27,10 +66,6 @@
 	margin-bottom: 1.5rem;
 	color: #4b5563;
 	line-height: 1.5;
-}
-
-.statusSection {
-	margin-bottom: 1.5rem;
 }
 
 .statusIndicator {
@@ -88,8 +123,8 @@
 
 .input:focus {
 	outline: none;
-	border-color: #3b82f6;
-	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	border-color: var(--tint);
+	box-shadow: 0 0 0 3px var(--forest);
 }
 
 .errorMessage {
@@ -156,7 +191,6 @@
 	display: flex;
 	flex-direction: column;
 	height: 100%;
-	max-height: 80vh;
 	overflow: hidden;
 	position: relative;
 	padding: 0;
@@ -198,9 +232,9 @@
 .loadingSpinner {
 	width: 40px;
 	height: 40px;
-	border: 3px solid rgba(59, 130, 246, 0.2);
+	border: 3px solid var(--forest);
 	border-radius: 50%;
-	border-top-color: #3b82f6;
+	border-top-color: var(--tint);
 	animation: spin 1s ease-in-out infinite;
 	margin-bottom: 1rem;
 }
@@ -220,6 +254,14 @@
 
 @media (max-width: 768px) {
 	.container {
+		height: 80vh;
+	}
+
+	.modalHeader {
+		border-radius: 0;
+	}
+
+	.modalContent {
 		padding: 0.75rem;
 	}
 
@@ -227,8 +269,21 @@
 		padding: 1.5rem;
 		width: 90%;
 	}
+}
 
-	.managerContainer {
-		max-height: 80vh;
-	}
+.closeButton {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: #6b7280;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.25rem;
+	border-radius: 0.25rem;
+}
+
+.closeButton:hover {
+	background-color: #f3f4f6;
+	color: #1f2937;
 }

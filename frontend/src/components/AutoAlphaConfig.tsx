@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "./AutoAlphaConfig.module.css";
 import { Switch } from "@headlessui/react";
-import { mockCallers } from "@/data/mockData";
 import { Caller } from "@/types/caller.types";
 import Image from "next/image";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { useGetUserSavedChatsQuery, useGetChatPhotoLazyQuery } from "@/generated/graphql";
+import { getCallerPhoto, saveCallerPhoto } from "@/utils/localStorage";
 
 interface AutoAlphaConfigProps {
 	onConfigChange: (config: AutoAlphaSettings) => void;
@@ -30,9 +31,62 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 		maxSlippage: 2,
 		useMev: false,
 		gasLimit: 300000,
-		selectedCallers: mockCallers.slice(0, 2).map((caller: Caller) => caller.name),
+		selectedCallers: [],
 	});
 	const [isCallerDropdownOpen, setIsCallerDropdownOpen] = useState(false);
+	const [chatPhotos, setChatPhotos] = useState<Record<string, string>>({});
+
+	// Get saved chats and photo query
+	const { data: savedChats, loading: loadingSaved } = useGetUserSavedChatsQuery();
+	const [getChatPhoto] = useGetChatPhotoLazyQuery();
+
+	// Fetch photos for saved chats
+	useEffect(() => {
+		if (savedChats?.getUserSavedChats.chats) {
+			savedChats.getUserSavedChats.chats.forEach((chat) => {
+				if (!chatPhotos[chat.id]) {
+					// First try to get from localStorage
+					const cachedPhoto = getCallerPhoto(chat.id);
+
+					if (cachedPhoto) {
+						// If found in cache, use it
+						setChatPhotos((prev) => ({
+							...prev,
+							[chat.id]: cachedPhoto,
+						}));
+					} else {
+						// If not in cache, fetch from API
+						getChatPhoto({
+							variables: { chatId: chat.id },
+							onCompleted: (data) => {
+								if (data.getChatPhoto) {
+									const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? "/assets/KiFi_LOGO.jpg" : data.getChatPhoto;
+
+									// Update local state
+									setChatPhotos((prev) => ({
+										...prev,
+										[chat.id]: photoUrl,
+									}));
+
+									// Save to localStorage if it's not the default image
+									if (photoUrl !== "/assets/KiFi_LOGO.jpg") {
+										saveCallerPhoto(chat.id, photoUrl);
+									}
+								}
+							},
+							onError: () => {
+								const defaultImage = "/assets/KiFi_LOGO.jpg";
+								setChatPhotos((prev) => ({
+									...prev,
+									[chat.id]: defaultImage,
+								}));
+							},
+						});
+					}
+				}
+			});
+		}
+	}, [savedChats, getChatPhoto, chatPhotos]);
 
 	function handleSettingChange<K extends keyof AutoAlphaSettings>(key: K, value: AutoAlphaSettings[K]) {
 		const newSettings = { ...settings, [key]: value };
@@ -40,8 +94,8 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 		onConfigChange(newSettings);
 	}
 
-	function toggleCaller(callerName: string) {
-		const newSelectedCallers = settings.selectedCallers.includes(callerName) ? settings.selectedCallers.filter((c) => c !== callerName) : [...settings.selectedCallers, callerName];
+	function toggleCaller(callerId: string) {
+		const newSelectedCallers = settings.selectedCallers.includes(callerId) ? settings.selectedCallers.filter((c) => c !== callerId) : [...settings.selectedCallers, callerId];
 		handleSettingChange("selectedCallers", newSelectedCallers);
 	}
 
@@ -49,7 +103,16 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 		setIsCallerDropdownOpen(!isCallerDropdownOpen);
 	}
 
-	const selectedCallerObjects = mockCallers.filter((caller) => settings.selectedCallers.includes(caller.name));
+	const selectedCallerObjects = savedChats?.getUserSavedChats.chats.filter((chat) => settings.selectedCallers.includes(chat.id)) || [];
+
+	if (loadingSaved) {
+		return (
+			<div className={styles.loadingContainer}>
+				<div className={styles.loadingSpinner}></div>
+				<p className={styles.loadingText}>Loading callers...</p>
+			</div>
+		);
+	}
 
 	return (
 		<div className={styles.container}>
@@ -77,7 +140,7 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 						<label className={styles.label}>
 							Call Group Selector
 							<span className={styles.callerCount}>
-								{settings.selectedCallers.length}/{mockCallers.length}
+								{settings.selectedCallers.length}/{savedChats?.getUserSavedChats.chats.length || 0}
 							</span>
 						</label>
 						<div className={styles.callerSelectContainer}>
@@ -85,9 +148,9 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 								<div className={styles.callersContainer}>
 									{selectedCallerObjects.length > 0 ? (
 										<>
-											{selectedCallerObjects.slice(0, 10).map((caller, i) => (
-												<div key={caller.id} className={styles.callerImageWrapper} style={{ zIndex: 10 - i }}>
-													<Image src={caller.profileImageUrl} alt={caller.name} width={32} height={32} className={styles.callerImage} />
+											{selectedCallerObjects.slice(0, 10).map((chat, i) => (
+												<div key={chat.id} className={styles.callerImageWrapper} style={{ zIndex: 10 - i }}>
+													<Image src={chatPhotos[chat.id] || "/assets/KiFi_LOGO.jpg"} alt={chat.name} width={32} height={32} className={styles.callerImage} />
 												</div>
 											))}
 											{selectedCallerObjects.length > 10 && <div className={styles.extraCallersCount}>+{selectedCallerObjects.length - 10}</div>}
@@ -101,15 +164,15 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 
 							{isCallerDropdownOpen && (
 								<div className={styles.callerDropdown}>
-									{mockCallers.map((caller) => (
-										<div key={caller.id} className={styles.callerItem} onClick={() => toggleCaller(caller.name)}>
+									{savedChats?.getUserSavedChats.chats.map((chat) => (
+										<div key={chat.id} className={styles.callerItem} onClick={() => toggleCaller(chat.id)}>
 											<div className={styles.callerInfo}>
-												<div className={styles.callerImageContainer}>
-													<Image src={caller.profileImageUrl} alt={caller.name} width={32} height={32} className={styles.callerImage} />
+												<div className={styles.callerImageWrapper}>
+													<Image src={chatPhotos[chat.id] || "/assets/KiFi_LOGO.jpg"} alt={chat.name} width={32} height={32} className={styles.callerImage} />
 												</div>
-												<span className={styles.callerName}>{caller.name}</span>
+												<span className={styles.callerName}>{chat.name}</span>
 											</div>
-											<input type="checkbox" id={`caller-${caller.id}`} checked={settings.selectedCallers.includes(caller.name)} onChange={(e) => e.stopPropagation()} className={styles.checkbox} />
+											<input type="checkbox" checked={settings.selectedCallers.includes(chat.id)} onChange={(e) => e.stopPropagation()} className={styles.checkbox} />
 										</div>
 									))}
 								</div>

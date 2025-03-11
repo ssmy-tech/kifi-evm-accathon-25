@@ -23,7 +23,7 @@
 .table th,
 .table td {
 	padding: 1.5rem 2rem;
-	text-align: left;
+	text-align: center;
 	border-bottom: 1px solid var(--border-color);
 	font-weight: 500;
 	vertical-align: middle;
@@ -32,33 +32,73 @@
 }
 
 .table th {
-	background: var(--card-background);
+	padding: clamp(8px, 0.5vw + 6px, 16px);
 	font-weight: 600;
+	font-size: clamp(0.8rem, 0.6vw + 0.65rem, 1.1rem);
 	color: var(--text-secondary);
-	font-size: 1.2rem;
+	border-bottom: 1px solid var(--border-color);
+	position: sticky;
+	top: 0;
+	background-color: var(--background);
+	z-index: 10;
+	transition: box-shadow 0.3s ease;
+	text-align: center;
+	vertical-align: middle;
+	height: clamp(60px, 4vh + 25px, 80px);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 }
 
 .table th:nth-child(1),
 .table td:nth-child(1) {
-	width: 200px;
+	width: 5%;
+	min-width: 80px;
 	text-align: center;
 }
 
 .table th:nth-child(2),
 .table td:nth-child(2) {
-	width: 180px;
+	width: 5%;
+	min-width: 80px;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+	width: 15%;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+	width: 5%;
+	min-width: 80px;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+	width: 30%;
+	min-width: 240px;
 }
 
 .table th:nth-child(6),
 .table td:nth-child(6) {
-	width: 230px;
+	width: 12%;
 }
 
 .table th:nth-child(7),
 .table td:nth-child(7) {
-	width: 240px;
+	width: 5%;
+	min-width: 80px;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4),
+.table th:nth-child(5),
+.table td:nth-child(5),
+.table th:nth-child(6),
+.table td:nth-child(6),
+.table th:nth-child(7),
+.table td:nth-child(7) {
+	text-align: right;
 }
 
 .table td:nth-child(3) {
@@ -91,6 +131,7 @@
 	font-size: 1.2rem;
 	display: flex;
 	align-items: center;
+	justify-content: flex-end;
 	gap: 0.6rem;
 }
 
@@ -128,13 +169,16 @@
 	border-radius: 1rem;
 	font-size: 1.1rem;
 	font-weight: 600;
-	display: inline-block;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .autoAlphaContainer {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
+	justify-content: flex-end;
 	gap: 1rem;
 }
 
@@ -154,7 +198,9 @@
 	font-size: 1.2rem;
 	font-weight: 600;
 	text-transform: capitalize;
-	display: inline-block;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .buy {
@@ -177,7 +223,8 @@
 	position: absolute;
 	color: var(--text-primary);
 	display: inline-block;
-	min-width: 200px;
+	width: 100%;
+	min-width: unset;
 	cursor: pointer;
 	text-align: center;
 	left: 50%;
@@ -239,6 +286,7 @@
 .callersContainer {
 	display: flex;
 	align-items: center;
+	margin-right: 1rem;
 }
 
 .callerImageWrapper {
@@ -272,4 +320,39 @@
 
 .table td:nth-child(5) {
 	min-width: 240px;
+}
+
+.sortableHeader {
+	cursor: pointer;
+	user-select: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.8rem;
+	transition: color 0.2s ease;
+	white-space: nowrap;
+	width: 100%;
+	padding: 0 1rem;
+	height: 100%;
+}
+
+.sortableHeader span {
+	display: inline-block;
+	text-align: center;
+}
+
+.sortIcon {
+	font-size: 1.4rem;
+	opacity: 0.6;
+	transition: opacity 0.2s ease;
+	display: inline-flex;
+	align-items: center;
+}
+
+.sortableHeader:hover .sortIcon {
+	opacity: 1;
+}
+
+.sortableHeader.rightAlign {
+	justify-content: flex-end;
 }

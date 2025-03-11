@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import styles from "./TokenFeed.module.css";
-import { FaTelegramPlane } from "react-icons/fa";
+import { FaTelegramPlane, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import { formatCurrency, formatPercentage, abbreviateAge } from "../utils/formatters";
 import { SortField, SortDirection, TokenWithDexInfo } from "../types/token.types";
 import { TradingView } from "./TradingView";
@@ -10,12 +10,12 @@ import CallerFeed from "./CallerFeed";
 import TwitterSentiment from "./TwitterSentiment";
 import TelegramSentiment from "./TelegramSentiment";
 import TradeModule from "./TradeModule";
-import { saveCallerPhoto, getCallerPhoto, cleanupCallerPhotos } from "../utils/localStorage";
+import { getCallerPhoto, saveCallerPhoto } from "../utils/localStorage";
 
 import { useGetCallsByTokenQuery, useGetChatPhotoLazyQuery } from "@/generated/graphql";
 
-// Storage key for chat photos in TokenFeed
-const CHAT_PHOTOS_STORAGE_KEY = "token-feed-chat-photos";
+const TOKENS_PER_PAGE = 50;
+const LOAD_MORE_COOLDOWN = 5000;
 
 const TokenFeed: React.FC = () => {
 	const [sortField, setSortField] = useState<SortField>("callers");
@@ -25,81 +25,113 @@ const TokenFeed: React.FC = () => {
 	const [closingTokenId, setClosingTokenId] = useState<string | null>(null);
 	const [processedTokens, setProcessedTokens] = useState<TokenWithDexInfo[]>([]);
 	const [processingTokens, setProcessingTokens] = useState(false);
+	const [page, setPage] = useState(1);
+	const [hasMore, setHasMore] = useState(true);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [isLoadingCooldown, setIsLoadingCooldown] = useState(false);
+	const observerTarget = useRef<HTMLDivElement>(null);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const [chatPhotos, setChatPhotos] = useState<Record<string, string>>({});
 
-	// Initialize chatPhotos from localStorage if available
-	const [chatPhotos, setChatPhotos] = useState<Record<string, string>>(() => {
-		const storedPhotos = localStorage.getItem(CHAT_PHOTOS_STORAGE_KEY);
-		return storedPhotos ? JSON.parse(storedPhotos) : {};
-	});
-
-	const { data: callsByTokenData, loading: callsByTokenLoading, error: callsByTokenError } = useGetCallsByTokenQuery({});
+	const { data: callsByTokenData, loading: callsByTokenLoading } = useGetCallsByTokenQuery({});
 	const [getChatPhoto] = useGetChatPhotoLazyQuery();
 
-	// Save chat photos to localStorage whenever they change
-	useEffect(() => {
-		localStorage.setItem(CHAT_PHOTOS_STORAGE_KEY, JSON.stringify(chatPhotos));
-	}, [chatPhotos]);
-
-	// Fetch chat photos for callers
+	// Fetch photos for callers
 	useEffect(() => {
 		if (callsByTokenData?.getCallsByToken?.tokenCalls) {
+			const chatIdsToFetch = new Set<string>();
+
 			callsByTokenData.getCallsByToken.tokenCalls.forEach((tokenCall) => {
 				tokenCall.calls.forEach((call) => {
-					if (!chatPhotos[call.chat.id]) {
-						// First try to get from our global caller photos cache
-						const cachedPhoto = getCallerPhoto(call.chat.id);
-
-						if (cachedPhoto) {
-							// If found in global cache, use it and update local state
-							setChatPhotos((prev) => ({
-								...prev,
-								[call.chat.id]: cachedPhoto,
-							}));
-						} else {
-							// If not in global cache, fetch from API
-							getChatPhoto({
-								variables: { chatId: call.chat.id },
-								onCompleted: (data) => {
-									if (data.getChatPhoto) {
-										const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? "/assets/KiFi_LOGO.jpg" : data.getChatPhoto;
-
-										setChatPhotos((prev) => ({
-											...prev,
-											[call.chat.id]: photoUrl,
-										}));
-
-										if (photoUrl !== "/assets/KiFi_LOGO.jpg") {
-											saveCallerPhoto(call.chat.id, photoUrl);
-										}
-									}
-								},
-								onError: (error) => {
-									console.error("Error fetching chat photo:", error);
-									// Set default image on error
-									setChatPhotos((prev) => ({
-										...prev,
-										[call.chat.id]: "/assets/KiFi_LOGO.jpg",
-									}));
-								},
-							});
-						}
+					const cachedPhoto = getCallerPhoto(call.chat.id);
+					if (cachedPhoto) {
+						setChatPhotos((prev) => ({
+							...prev,
+							[call.chat.id]: cachedPhoto,
+						}));
+					} else {
+						chatIdsToFetch.add(call.chat.id);
 					}
 				});
 			});
-		}
-	}, [callsByTokenData, getChatPhoto, chatPhotos]);
 
-	// Process token calls data
+			if (chatIdsToFetch.size > 0) {
+				Array.from(chatIdsToFetch).forEach((chatId) => {
+					getChatPhoto({
+						variables: { chatId },
+						onCompleted: (data) => {
+							if (data.getChatPhoto) {
+								const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? "/assets/KiFi_LOGO.jpg" : data.getChatPhoto;
+								setChatPhotos((prev) => ({
+									...prev,
+									[chatId]: photoUrl,
+								}));
+								if (photoUrl !== "/assets/KiFi_LOGO.jpg") {
+									saveCallerPhoto(chatId, photoUrl);
+								}
+							}
+						},
+						onError: (error) => {
+							console.error("Error fetching chat photo:", error);
+							setChatPhotos((prev) => ({
+								...prev,
+								[chatId]: "/assets/KiFi_LOGO.jpg",
+							}));
+						},
+					});
+				});
+			}
+		}
+	}, [callsByTokenData, getChatPhoto]);
+
+	// Intersection Observer for infinite scroll
+	useEffect(() => {
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoadingCooldown) {
+					setPage((prevPage) => prevPage + 1);
+					setIsLoadingCooldown(true);
+					setTimeout(() => {
+						setIsLoadingCooldown(false);
+					}, LOAD_MORE_COOLDOWN);
+				}
+			},
+			{ threshold: 0.1 }
+		);
+
+		if (observerTarget.current) {
+			observer.observe(observerTarget.current);
+		}
+
+		return () => {
+			if (observerTarget.current) {
+				observer.unobserve(observerTarget.current);
+			}
+		};
+	}, [hasMore, isLoadingMore, isLoadingCooldown]);
+
 	useEffect(() => {
 		if (callsByTokenData?.getCallsByToken?.tokenCalls) {
 			const tokenCalls = callsByTokenData.getCallsByToken.tokenCalls;
 			console.log("Token calls data:", tokenCalls);
 
 			const fetchTokenInfo = async () => {
-				setProcessingTokens(true);
-				const enrichedTokens = await Promise.all(
-					tokenCalls.map(async (tokenCall) => {
+				setIsLoadingMore(true);
+
+				// Sort token calls by call count before processing
+				const sortedTokenCalls = [...tokenCalls].sort((a, b) => {
+					const aCallCount = a.calls.reduce((sum, call) => sum + call.callCount, 0);
+					const bCallCount = b.calls.reduce((sum, call) => sum + call.callCount, 0);
+					return bCallCount - aCallCount;
+				});
+
+				// Calculate start and end indices for the current page
+				const startIndex = 0;
+				const endIndex = page * TOKENS_PER_PAGE;
+				const currentPageTokenCalls = sortedTokenCalls.slice(startIndex, endIndex);
+
+				const dexDataTokens = await Promise.all(
+					currentPageTokenCalls.map(async (tokenCall) => {
 						const address = tokenCall.address;
 						let dexAPI = "";
 
@@ -117,13 +149,30 @@ const TokenFeed: React.FC = () => {
 						try {
 							const response = await fetch(dexAPI);
 							const data = await response.json();
-							console.log("DexScreener data:", data);
+							// console.log("DexScreener data:", data);
 
 							if (data) {
 								const dexData = data[0];
 
 								if (!dexData?.baseToken) {
 									return null;
+								}
+
+								// Check liquidity threshold
+								const liquidity = dexData.liquidity?.usd || 0;
+								if (liquidity < 1000) {
+									return null;
+								}
+
+								// Only use the date if it's valid, otherwise omit it
+								let validCreatedAt: string | undefined;
+								if (dexData.pairCreatedAt) {
+									const pairCreatedAt = new Date(dexData.pairCreatedAt);
+									if (!isNaN(pairCreatedAt.getTime())) {
+										validCreatedAt = pairCreatedAt.toISOString();
+									} else {
+										return null;
+									}
 								}
 
 								// Create a token object from the DexScreener data
@@ -137,37 +186,36 @@ const TokenFeed: React.FC = () => {
 									volume: dexData.volume.h24,
 									liquidity: dexData.liquidity?.usd || 0,
 									imageUrl: dexData.info?.imageUrl || "/assets/coin.png",
-									createdAt: new Date(dexData.pairCreatedAt).toISOString(),
+									createdAt: validCreatedAt || "",
 									callers: tokenCall.calls.map((call) => {
-										// Use the photo from chatPhotos if available, otherwise use default
 										const profileImageUrl = chatPhotos[call.chat.id] || "/assets/KiFi_LOGO.jpg";
-
 										return {
 											id: call.chat.id,
 											name: call.chat.name,
 											profileImageUrl,
 											timestamp: Date.now(),
 											callCount: call.callCount,
-											winRate: 0, // Default value
+											winRate: 0,
+											chat: {
+												...call.chat,
+												type: call.chat.type as "Group" | "Channel" | "Private",
+												photoUrl: profileImageUrl,
+											},
+											messages: (call.messages || []).map((msg) => {
+												const msgCreatedAt = msg.createdAt ? new Date(msg.createdAt) : null;
+												const validMsgCreatedAt = msgCreatedAt && !isNaN(msgCreatedAt.getTime()) ? msgCreatedAt.toISOString() : new Date().toISOString();
+
+												return {
+													id: msg.id,
+													createdAt: validMsgCreatedAt,
+													text: msg.text || "",
+													fromId: msg.fromId || null,
+												};
+											}),
 										};
 									}),
 									tokenCallsData: tokenCall,
 									dexData,
-									// Default sentiment values
-									twitterSentiment: {
-										summary: "No sentiment data available",
-										sentiment: "neutral",
-										count: 0,
-										positiveSplit: 0,
-										negativeSplit: 0,
-									},
-									telegramSentiment: {
-										summary: "No sentiment data available",
-										sentiment: "neutral",
-										count: 0,
-										positiveSplit: 0,
-										negativeSplit: 0,
-									},
 								};
 
 								return token;
@@ -182,18 +230,18 @@ const TokenFeed: React.FC = () => {
 				);
 
 				// Filter out null values
-				const validTokens = enrichedTokens.filter((token): token is NonNullable<typeof token> => token !== null) as TokenWithDexInfo[];
+				const validTokens = dexDataTokens.filter((token): token is NonNullable<typeof token> => token !== null) as TokenWithDexInfo[];
 
-				// Clean up old photo entries once a day (only do this once per session)
-				cleanupCallerPhotos();
+				// Update hasMore based on whether we've loaded all tokens
+				setHasMore(validTokens.length < sortedTokenCalls.length);
 
-				setProcessingTokens(false);
+				setIsLoadingMore(false);
 				setProcessedTokens(validTokens);
 			};
 
 			fetchTokenInfo();
 		}
-	}, [callsByTokenData, chatPhotos]);
+	}, [callsByTokenData, chatPhotos, page]);
 
 	useEffect(() => {
 		// Sort the processed tokens
@@ -203,8 +251,8 @@ const TokenFeed: React.FC = () => {
 
 				switch (sortField) {
 					case "age":
-						const dateA = new Date(a.createdAt).getTime();
-						const dateB = new Date(b.createdAt).getTime();
+						const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+						const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 						comparison = dateA - dateB;
 						break;
 					case "name":
@@ -229,10 +277,16 @@ const TokenFeed: React.FC = () => {
 						const aCallers = a.callers?.length || 0;
 						const bCallers = b.callers?.length || 0;
 						comparison = aCallers - bCallers;
+						// If caller counts are equal, use volume as tiebreaker
+						if (comparison === 0) {
+							const aVolume = a.dexData?.volume?.h24 || a.volume || 0;
+							const bVolume = b.dexData?.volume?.h24 || b.volume || 0;
+							comparison = aVolume - bVolume;
+						}
 						break;
 					case "createdAt":
-						const createdA = new Date(a.createdAt).getTime();
-						const createdB = new Date(b.createdAt).getTime();
+						const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+						const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 						comparison = createdA - createdB;
 						break;
 					default:
@@ -259,11 +313,9 @@ const TokenFeed: React.FC = () => {
 		}
 	};
 
-	const getSortIndicator = (field: SortField) => {
-		if (field === sortField) {
-			return sortDirection === "asc" ? "↑" : "↓";
-		}
-		return null;
+	const getSortIcon = (field: SortField) => {
+		if (field !== sortField) return <FaSort className={styles.sortIcon} />;
+		return sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />;
 	};
 
 	const handleRowClick = (tokenId: string) => {
@@ -301,165 +353,178 @@ const TokenFeed: React.FC = () => {
 		};
 	}, []);
 
-	// Loading state component
-	const LoadingState = () => (
-		<div className={styles.loadingContainer}>
-			<div className={styles.loadingSpinner}></div>
-			<p className={styles.loadingText}>Loading token data...</p>
-		</div>
-	);
-
-	if (callsByTokenLoading || processingTokens) {
-		return <LoadingState />;
-	}
-
-	if (callsByTokenError) {
-		console.error("Error fetching token data:", callsByTokenError);
-	}
-
+	// Loading state component moved to the return statement
 	return (
 		<div className={styles.container}>
 			<div className={styles.tableContainer}>
-				<table className={styles.tokenTable}>
-					<thead>
-						<tr className={styles.tableHeader}>
-							<th className={` ${styles.headerCell} ${styles.narrowColumn} ${styles.centerAligned}`}>Rank</th>
-							<th className={` ${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.sortableHeader}`} onClick={() => handleSort("name")}>
-								Token {getSortIndicator("name")}
-							</th>
-							<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup} ${styles.sortableHeader}`} onClick={() => handleSort("age")}>
-								Age {getSortIndicator("age")}
-							</th>
-							<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup} ${styles.sortableHeader}`} onClick={() => handleSort("price")}>
-								Price {getSortIndicator("price")}
-							</th>
-							<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup} ${styles.sortableHeader}`} onClick={() => handleSort("liquidity")}>
-								Liquidity {getSortIndicator("liquidity")}
-							</th>
-							<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup} ${styles.sortableHeader}`} onClick={() => handleSort("volume")}>
-								Volume {getSortIndicator("volume")}
-							</th>
-							<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup} ${styles.sortableHeader}`} onClick={() => handleSort("marketCap")}>
-								Market Cap {getSortIndicator("marketCap")}
-							</th>
-							<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup} ${styles.sortableHeader}`} onClick={() => handleSort("change24h")}>
-								24H % {getSortIndicator("change24h")}
-							</th>
-							<th className={`${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup} ${styles.sortableHeader}`} onClick={() => handleSort("callers")}>
-								<div className={styles.callersHeader}>
-									<FaTelegramPlane className={styles.telegramIcon} />
-									<span>Callers {getSortIndicator("callers")}</span>
-								</div>
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						{sortedTokens.map((token, index) => (
-							<React.Fragment key={token.id}>
-								<tr className={`${styles.tokenRow} ${expandedTokenId === token.id ? styles.expanded : ""}`} onClick={() => handleRowClick(token.id)}>
-									<td className={`${styles.cell} ${styles.indexCell} ${styles.narrowColumn} ${styles.centerAligned}`}>{index + 1}</td>
-									<td className={`${styles.cell} ${styles.tokenCell} ${styles.wideColumn} ${styles.leftAligned}`}>
-										<div className={styles.tokenInfo}>
-											<div className={styles.imageContainer}>
-												<Image
-													src={token.dexData?.info?.imageUrl || token.imageUrl}
-													alt={token.name}
-													width={42}
-													height={42}
-													className={styles.tokenImage}
-													onError={(e) => {
-														// Fallback to default image if the token image fails to load
-														const target = e.target as HTMLImageElement;
-														target.src = "/default-token.png";
-													}}
-												/>
-											</div>
-											<div className={styles.nameContainer}>
-												<div className={styles.tokenName}>{token.dexData ? token.dexData.baseToken.name : token.name}</div>
-												<div className={styles.tokenTicker}>{token.dexData ? token.dexData.baseToken.symbol : token.ticker}</div>
+				{(callsByTokenLoading || (!callsByTokenData && !processedTokens.length) || isLoadingMore) && !sortedTokens.length ? (
+					<div className={styles.initialLoading}>
+						<div className={styles.loadingSpinner}></div>
+						<p>Loading tokens...</p>
+					</div>
+				) : (
+					<>
+						<table className={styles.tokenTable}>
+							<thead>
+								<tr className={styles.tableHeader}>
+									<th className={` ${styles.headerCell} ${styles.narrowColumn} ${styles.centerHeader}`}>Rank</th>
+									<th className={` ${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned}`}>
+										<div onClick={() => handleSort("name")} className={styles.sortableHeader}>
+											Token {getSortIcon("name")}
+										</div>
+									</th>
+									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+										<div onClick={() => handleSort("age")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+											Age {getSortIcon("age")}
+										</div>
+									</th>
+									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+										<div onClick={() => handleSort("price")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+											Price {getSortIcon("price")}
+										</div>
+									</th>
+									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+										<div onClick={() => handleSort("liquidity")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+											Liquidity {getSortIcon("liquidity")}
+										</div>
+									</th>
+									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+										<div onClick={() => handleSort("volume")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+											Volume {getSortIcon("volume")}
+										</div>
+									</th>
+									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+										<div onClick={() => handleSort("marketCap")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+											Market Cap {getSortIcon("marketCap")}
+										</div>
+									</th>
+									<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+										<div onClick={() => handleSort("change24h")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
+											24H % {getSortIcon("change24h")}
+										</div>
+									</th>
+									<th className={`${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
+										<div onClick={() => handleSort("callers")} className={styles.sortableHeader}>
+											<div className={styles.callersHeader}>
+												<FaTelegramPlane className={styles.telegramIcon} />
+												<span>Callers {getSortIcon("callers")}</span>
 											</div>
 										</div>
-									</td>
-									<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? abbreviateAge(new Date(token.dexData.pairCreatedAt).toISOString()) : abbreviateAge(token.createdAt)}</td>
-									<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(parseFloat(token.dexData.priceUsd)) : formatCurrency(token.price)}</td>
-									<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.liquidity || 0)}</td>
-									<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(token.dexData.volume.h24) : token.volume ? formatCurrency(token.volume) : "-"}</td>
-									<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(token.dexData.marketCap) : formatCurrency(token.marketCap)}</td>
-									<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup} ${token.dexData ? (token.dexData.priceChange.h24 >= 0 ? styles.positive : styles.negative) : token.change24h >= 0 ? styles.positive : styles.negative}`}>
-										{token.dexData ? (token.dexData.priceChange.h24 >= 0 ? "+" : "") : token.change24h >= 0 ? "+" : ""}
-										{token.dexData ? formatPercentage(token.dexData.priceChange.h24) : formatPercentage(token.change24h)}
-									</td>
-									<td className={`${styles.cell} ${styles.callersCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
-										<div className={styles.callersContainer}>
-											{token.callers && token.callers.length > 0 ? (
-												<>
-													{token.callers.slice(0, 5).map((caller, i) => (
-														<div key={caller.id} className={styles.callerImageWrapper} style={{ zIndex: 5 - i }}>
-															<Image
-																src={caller.profileImageUrl}
-																alt={caller.name || "Caller"}
-																width={42}
-																height={42}
-																className={styles.callerImage}
-																onError={(e) => {
-																	// Fallback to default image if the profile image fails to load
-																	const target = e.target as HTMLImageElement;
-																	target.src = "/default-profile.png";
-																}}
-															/>
-														</div>
-													))}
-													{token.callers.length > 5 && <div className={styles.extraCallersCount}>+{token.callers.length - 5}</div>}
-												</>
-											) : (
-												<span className={styles.noCallers}>-</span>
-											)}
-										</div>
-									</td>
+									</th>
 								</tr>
-								{(expandedTokenId === token.id || closingTokenId === token.id) && (
-									<tr className={`${styles.expandedContent} ${closingTokenId === token.id ? styles.closing : ""}`}>
-										<td colSpan={9}>
-											<div className={`${styles.expandedModules} ${closingTokenId === token.id ? styles.closing : ""}`}>
-												<div className={styles.moduleRow}>
-													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-														<TradingView symbol={token.dexData ? `${token.dexData.baseToken.symbol}USD` : `${token.ticker}USD`} />
-													</div>
-													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-														<CallerFeed callers={token.callers || []} />
-													</div>
-													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-														<TradeModule />
-													</div>
-												</div>
-												<div className={styles.moduleRow}>
-													<div className={`${styles.module} ${styles.wideModule} ${closingTokenId === token.id ? styles.closing : ""}`}>
-														<TwitterSentiment
-															summary={token.twitterSentiment?.summary || "No sentiment data available"}
-															sentiment={token.twitterSentiment?.sentiment || "neutral"}
-															count={token.twitterSentiment?.count || 0}
-															positiveSplit={token.twitterSentiment?.positiveSplit || 0}
-															negativeSplit={token.twitterSentiment?.negativeSplit || 0}
+							</thead>
+							<tbody>
+								{sortedTokens.map((token, index) => (
+									<React.Fragment key={token.id}>
+										<tr className={`${styles.tokenRow} ${expandedTokenId === token.id ? styles.expanded : ""}`} onClick={() => handleRowClick(token.id)}>
+											<td className={`${styles.cell} ${styles.indexCell} ${styles.narrowColumn} ${styles.centerAligned}`}>{index + 1}</td>
+											<td className={`${styles.cell} ${styles.tokenCell} ${styles.wideColumn} ${styles.leftAligned}`}>
+												<div className={styles.tokenInfo}>
+													<div className={styles.imageContainer}>
+														<Image
+															src={token.dexData?.info?.imageUrl || token.imageUrl}
+															alt={token.name}
+															width={42}
+															height={42}
+															className={styles.tokenImage}
+															onError={(e) => {
+																// Fallback to default image if the token image fails to load
+																const target = e.target as HTMLImageElement;
+																target.src = "/assets/coin.png";
+															}}
 														/>
 													</div>
-													<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-														<TelegramSentiment
-															summary={token.telegramSentiment?.summary || "No sentiment data available"}
-															sentiment={token.telegramSentiment?.sentiment || "neutral"}
-															count={token.telegramSentiment?.count || 0}
-															positiveSplit={token.telegramSentiment?.positiveSplit || 0}
-															negativeSplit={token.telegramSentiment?.negativeSplit || 0}
-														/>
+													<div className={styles.nameContainer}>
+														<div className={styles.tokenName}>{token.dexData ? token.dexData.baseToken.name : token.name}</div>
+														<div className={styles.tokenTicker}>{token.dexData ? token.dexData.baseToken.symbol : token.ticker}</div>
 													</div>
 												</div>
-											</div>
-										</td>
-									</tr>
-								)}
-							</React.Fragment>
-						))}
-					</tbody>
-				</table>
+											</td>
+											<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? abbreviateAge(new Date(token.dexData.pairCreatedAt).toISOString()) : abbreviateAge(token.createdAt)}</td>
+											<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(parseFloat(token.dexData.priceUsd), 10, true) : formatCurrency(token.price, 10, true)}</td>
+											<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.liquidity || 0)}</td>
+											<td className={`${styles.cell}  ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(token.dexData.volume.h24) : token.volume ? formatCurrency(token.volume) : "-"}</td>
+											<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(token.dexData.marketCap) : formatCurrency(token.marketCap)}</td>
+											<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup} ${token.dexData ? (token.dexData.priceChange.h24 >= 0 ? styles.positive : styles.negative) : token.change24h >= 0 ? styles.positive : styles.negative}`}>
+												{token.dexData ? (token.dexData.priceChange.h24 >= 0 ? "+" : "") : token.change24h >= 0 ? "+" : ""}
+												{token.dexData ? formatPercentage(token.dexData.priceChange.h24) : formatPercentage(token.change24h)}
+											</td>
+											<td className={`${styles.cell} ${styles.callersCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
+												<div className={styles.callersContainer}>
+													{token.callers && token.callers.length > 0 ? (
+														<>
+															{token.callers.slice(0, 5).map((caller, i) => (
+																<div key={caller.id} className={styles.callerImageWrapper} style={{ zIndex: 5 - i }}>
+																	<Image
+																		src={caller.profileImageUrl}
+																		alt={caller.name || "Caller"}
+																		width={42}
+																		height={42}
+																		className={styles.callerImage}
+																		onError={(e) => {
+																			// Fallback to default image if the profile image fails to load
+																			const target = e.target as HTMLImageElement;
+																			target.src = "/assets/KiFi_LOGO.jpg";
+																		}}
+																	/>
+																</div>
+															))}
+															{token.callers.length > 5 && <div className={styles.extraCallersCount}>+{token.callers.length - 5}</div>}
+														</>
+													) : (
+														<span className={styles.noCallers}>-</span>
+													)}
+												</div>
+											</td>
+										</tr>
+										{(expandedTokenId === token.id || closingTokenId === token.id) && (
+											<tr className={`${styles.expandedContent} ${closingTokenId === token.id ? styles.closing : ""}`}>
+												<td colSpan={9}>
+													<div className={`${styles.expandedModules} ${closingTokenId === token.id ? styles.closing : ""}`}>
+														<div className={styles.moduleRow}>
+															<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<TradingView symbol={token.dexData ? `${token.dexData.baseToken.symbol}USD` : `${token.ticker}USD`} />
+															</div>
+															<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<CallerFeed callers={token.callers || []} />
+															</div>
+															<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<TradeModule />
+															</div>
+														</div>
+														<div className={styles.moduleRow}>
+															<div className={`${styles.module} ${styles.wideModule} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<TwitterSentiment contractAddress={token.id} />
+															</div>
+															<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<TelegramSentiment contractAddress={token.id} />
+															</div>
+														</div>
+													</div>
+												</td>
+											</tr>
+										)}
+									</React.Fragment>
+								))}
+							</tbody>
+						</table>
+						{/* Loading indicator and intersection observer target */}
+						{hasMore && (
+							<div ref={observerTarget} className={styles.loadingTrigger}>
+								{isLoadingMore ? (
+									<div className={styles.loadingMore}>
+										<div className={styles.loadingSpinner}></div>
+										<p>Loading more tokens...</p>
+									</div>
+								) : isLoadingCooldown ? (
+									<div className={styles.loadingMore}>
+										<p>Please wait...</p>
+									</div>
+								) : null}
+							</div>
+						)}
+					</>
+				)}
 			</div>
 		</div>
 	);

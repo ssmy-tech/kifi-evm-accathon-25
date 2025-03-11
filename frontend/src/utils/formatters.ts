@@ -6,17 +6,47 @@
  * Formats a number as currency with appropriate suffix (K, M, B)
  * @param value - The number to format
  * @param decimals - Number of decimal places (default: 2)
+ * @param useSubscript - Whether to use subscript notation for small numbers (default: false)
  * @returns Formatted currency string
  */
-export const formatCurrency = (value: number, decimals: number = 2): string => {
+export const formatCurrency = (value: number, decimals: number = 2, useSubscript: boolean = false): string => {
 	if (!value && value !== 0) return "-";
 
+	// Handle very small numbers with subscript notation for zero count
+	if (useSubscript && value < 0.01) {
+		const str = value.toFixed(10); // Ensure we have enough precision
+		const match = str.match(/0\.0*/);
+		if (!match) return `$${value.toFixed(decimals)}`;
+
+		const zeroCount = match[0].length - 2; // Subtract "0."
+		const subscriptNums = {
+			"0": "₀",
+			"1": "₁",
+			"2": "₂",
+			"3": "₃",
+			"4": "₄",
+			"5": "₅",
+			"6": "₆",
+			"7": "₇",
+			"8": "₈",
+			"9": "₉",
+		};
+
+		const subscriptZeros = subscriptNums[zeroCount.toString() as keyof typeof subscriptNums];
+		const significantDigits = str.replace(/^0\.0+/, "").slice(0, 4);
+
+		return `$0.0${subscriptZeros}${significantDigits}`;
+	}
+
+	// Handle regular numbers
 	if (value >= 1_000_000_000) {
 		return `$${(value / 1_000_000_000).toFixed(decimals)}B`;
 	} else if (value >= 1_000_000) {
 		return `$${(value / 1_000_000).toFixed(decimals)}M`;
 	} else if (value >= 1_000) {
 		return `$${(value / 1_000).toFixed(decimals)}K`;
+	} else if (value < 1_000) {
+		return `$${value.toFixed(3)}`;
 	}
 
 	return `$${value.toFixed(decimals)}`;
@@ -129,12 +159,8 @@ export function formatTimestamp(timestamp: string | number | Date, compact = fal
  * Helper function to format a date in mm/dd/yy hh:mm:ss format
  */
 function formatAbsoluteTimestamp(date: Date): string {
-	const dateStr = date.toLocaleDateString("en-US", {
-		month: "2-digit",
-		day: "2-digit",
-		year: "2-digit",
-	});
-
+	const month = (date.getMonth() + 1).toString(); // getMonth() returns 0-11
+	const day = date.getDate().toString().padStart(2, "0");
 	const timeStr = date.toLocaleTimeString("en-US", {
 		hour: "2-digit",
 		minute: "2-digit",
@@ -142,7 +168,7 @@ function formatAbsoluteTimestamp(date: Date): string {
 		hour12: false,
 	});
 
-	return `${dateStr} ${timeStr}`;
+	return `${month}/${day} ${timeStr}`;
 }
 
 export function truncateHash(hash: string): string {

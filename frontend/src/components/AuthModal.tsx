@@ -212,17 +212,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 			case "telegram":
 				return (
 					<div className={styles.step}>
-						{telegramStage === "setup" ? (
+						{telegramStage === "setup" || telegramStage === "manage" ? (
 							<TelegramSetup onSetupComplete={() => setTelegramStage("manage")} showManagerAfterSetup={true} onContinue={() => changeStep("complete")} />
-						) : telegramStage === "manage" ? (
-							<div className={styles.telegramManagerWrapper}>
-								<TelegramChatsManager />
-								<div className={styles.telegramButtons}>
-									<button className={styles.nextButton} onClick={() => changeStep("complete")}>
-										Continue
-									</button>
-								</div>
-							</div>
 						) : (
 							<>
 								<h2 className={styles.stepTitle}>Connect Your Telegram</h2>
@@ -267,7 +258,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
 	return authenticated && showOnboarding ? (
 		<div className={styles.overlay}>
-			<div ref={modalRef} className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ transition: "opacity 0.3s ease-out, transform 0.3s ease-out" }}>
+			<div ref={modalRef} className={`${styles.modal} ${onboardingStep === "telegram" && (telegramStage === "setup" || telegramStage === "manage") ? styles.telegramModal : ""}`} onClick={(e) => e.stopPropagation()} style={{ transition: "opacity 0.3s ease-out, transform 0.3s ease-out" }}>
 				<div
 					ref={contentRef}
 					className={styles.content}

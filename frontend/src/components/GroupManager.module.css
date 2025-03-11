@@ -1,0 +1,469 @@
+.container {
+	display: flex;
+	width: 100%;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+	gap: 1rem;
+}
+
+.tableContainer {
+	flex: 1;
+	width: 100%;
+	overflow: auto;
+	background: var(--card-background);
+	min-height: 0;
+}
+
+.table {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: auto;
+}
+
+.table th,
+.table td {
+	padding: 1.5rem 2rem;
+	text-align: left;
+	border-bottom: 1px solid var(--border-color);
+	font-weight: 500;
+	vertical-align: middle;
+	color: var(--text-primary);
+	font-size: 1.2rem;
+	white-space: nowrap;
+}
+
+.table th {
+	background: var(--card-background);
+	font-weight: 600;
+	color: var(--text-secondary);
+	font-size: 1.2rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 2rem 2rem;
+	position: sticky;
+	top: 0;
+	z-index: 1;
+}
+
+.centerHeader {
+	text-align: center !important;
+}
+
+.centerCell {
+	text-align: center !important;
+}
+
+.sortableHeader {
+	cursor: pointer;
+	user-select: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.8rem;
+	transition: color 0.2s ease;
+	white-space: nowrap;
+}
+
+.centerHeader.sortableHeader {
+	justify-content: center;
+	width: 100%;
+}
+
+.sortableHeader:hover {
+	color: var(--text-primary);
+}
+
+.sortIcon {
+	font-size: 1.4rem;
+	opacity: 0.6;
+	transition: opacity 0.2s ease;
+}
+
+.sortableHeader:hover .sortIcon {
+	opacity: 1;
+}
+
+/* Name cell styling */
+.nameCell {
+	display: flex;
+	align-items: center;
+	gap: 1.6rem;
+}
+
+.callerName {
+	font-weight: 600;
+	color: var(--text-primary);
+	font-size: 1.4rem;
+}
+
+/* Caller profile styling */
+.callerImageWrapper {
+	width: 55px;
+	height: 55px;
+	border-radius: 50%;
+	overflow: hidden;
+	border: 2px solid var(--tint);
+	position: relative;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: var(--background);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	flex-shrink: 0;
+}
+
+.callerImage {
+	object-fit: cover;
+	width: 100%;
+	height: 100%;
+}
+
+/* Column widths */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+	width: 300px;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2),
+.table th:nth-child(3),
+.table td:nth-child(3) {
+	width: 120px;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+	width: 150px;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+	width: 180px;
+	min-width: 180px;
+	max-width: 180px;
+	position: relative;
+	text-align: center;
+	padding: 1.5rem 0;
+}
+
+.table th:nth-child(6),
+.table td:nth-child(6) {
+	width: 200px;
+}
+
+/* Action button styling */
+.actionButton {
+	padding: 0.8rem 1.6rem;
+	border-radius: 0.8rem;
+	background: var(--border-color);
+	color: var(--text-primary);
+	font-weight: 600;
+	font-size: 1.2rem;
+	border: 2px solid transparent;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	min-width: 140px;
+	margin: 0 auto;
+	display: block;
+}
+
+.actionButton:hover {
+	background: var(--error-light);
+	color: var(--error-dark);
+	border-color: var(--error-dark);
+}
+
+.hashLink {
+	color: var(--text-secondary);
+	text-decoration: underline;
+	font-family: var(--font-mono);
+	font-size: 1.2rem;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.externalIcon {
+	font-size: 1.2rem;
+	opacity: 0.7;
+}
+
+.hashLink:hover .externalIcon {
+	opacity: 1;
+}
+
+.status {
+	border-radius: 1rem;
+	font-size: 1.3rem;
+	font-weight: 600;
+	text-transform: capitalize;
+	display: inline-block;
+}
+
+.pending {
+	color: var(--warning);
+}
+
+.completed {
+	color: var(--success);
+}
+
+.failed {
+	color: var(--error);
+}
+
+.condition {
+	padding: 0.6rem 1.2rem;
+	border-radius: 1rem;
+	font-size: 1.1rem;
+	font-weight: 600;
+	display: inline-block;
+}
+
+.autoAlphaContainer {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 1rem;
+}
+
+.autoAlpha {
+	background: var(--primary-light);
+	color: var(--primary-dark);
+}
+
+.manual {
+	background: var(--secondary-light);
+	color: var(--secondary-dark);
+}
+
+.type {
+	padding: 0.5rem 1rem;
+	border-radius: 1rem;
+	font-size: 1.2rem;
+	font-weight: 600;
+	text-transform: capitalize;
+	display: inline-block;
+}
+
+.buy {
+	background: var(--success-light);
+	color: var(--success-dark);
+}
+
+.sell {
+	background: var(--error-light);
+	color: var(--error-dark);
+}
+
+.timeCell {
+	text-align: center;
+	position: relative;
+	height: 84px;
+}
+
+.timestamp {
+	position: absolute;
+	color: var(--text-primary);
+	display: inline-block;
+	min-width: 200px;
+	cursor: pointer;
+	text-align: center;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	font-size: 1.2rem;
+}
+
+.relativeTime,
+.absoluteTime {
+	position: absolute;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	white-space: nowrap;
+	transition: opacity 0.2s ease;
+	width: 100%;
+	text-align: center;
+}
+
+.relativeTime {
+	opacity: 1;
+}
+
+.absoluteTime {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.showAbsolute .relativeTime {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.showAbsolute .absoluteTime {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.timestamp:not(.showAbsolute):hover .relativeTime {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.timestamp:not(.showAbsolute):hover .absoluteTime {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+/* Modify the table header to be sticky */
+.table thead {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: var(--card-background);
+}
+
+/* Caller profile pictures styling */
+.callersContainer {
+	display: flex;
+	align-items: center;
+}
+
+.extraCallersCount {
+	margin-left: 16px;
+	font-size: 1.1rem;
+	color: var(--text-secondary);
+	font-weight: 500;
+}
+
+.table td:nth-child(5) {
+	min-width: 240px;
+}
+
+/* Loading state */
+.loadingContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem 1rem;
+	min-height: 200px;
+	height: 100%;
+	width: 100%;
+	background-color: var(--card-background);
+	border-radius: 0.5rem;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 10;
+}
+
+.loadingSpinner {
+	width: 40px;
+	height: 40px;
+	border: 3px solid var(--border-color);
+	border-radius: 50%;
+	border-top-color: var(--tint);
+	animation: spin 1s ease-in-out infinite;
+	margin-bottom: 1rem;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.loadingText {
+	font-size: 1.4rem;
+	color: var(--text-secondary);
+	font-weight: 500;
+}
+
+.loadingOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9;
+}
+
+/* Action buttons */
+.actionButtonsContainer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 1.2rem;
+	padding: 1.6rem;
+	background: var(--card-background);
+	border-top: 1px solid var(--border-color);
+	border-radius: 0 0 0.8rem 0.8rem;
+}
+
+.button {
+	padding: 1rem 2rem;
+	border-radius: 0.8rem;
+	font-weight: 600;
+	font-size: 1.4rem;
+	border: 2px solid transparent;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	min-width: 120px;
+	box-sizing: border-box;
+}
+
+.buttonSecondary {
+	background: var(--border-color);
+	color: var(--text-primary);
+	border-color: transparent;
+}
+
+.buttonSecondary:hover {
+	background: var(--secondary-lighter);
+	border-color: var(--secondary);
+}
+
+.buttonSuccess {
+	background: var(--tint);
+	color: var(--success-dark);
+	border-color: 2px solid var(--tint);
+}
+
+.buttonSuccess:hover {
+	background: var(--forest);
+	color: var(--cream);
+	border-color: var(--forest);
+}
+
+/* Removal styles */
+.pendingRemoval {
+	background: var(--error-lighter);
+}
+
+.pendingRemoval td {
+	background-color: var(--error-light);
+	color: var(--error-dark);
+}
+
+.removeButton {
+	background: var(--error-light);
+	color: var(--error-dark);
+	border: 2px dashed var(--error);
+}
+
+.removeButton:hover {
+	background: var(--background);
+	color: var(--text-primary);
+	border-style: solid;
+	border-color: var(--border-color);
+}
+
+.removeButton:active {
+	background: var(--background);
+}

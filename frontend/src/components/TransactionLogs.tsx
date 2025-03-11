@@ -6,6 +6,15 @@ import { truncateHash, formatTimeAgo, formatTimestamp } from "@/utils/formatters
 import { FiExternalLink } from "react-icons/fi";
 import { useState } from "react";
 import Image from "next/image";
+import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+
+type SortField = "time" | "type" | "token" | "amount" | "condition" | "status" | "hash";
+type SortDirection = "asc" | "desc";
+
+interface SortConfig {
+	field: SortField;
+	direction: SortDirection;
+}
 
 interface TransactionLogsProps {
 	transactions: Transaction[];
@@ -13,6 +22,42 @@ interface TransactionLogsProps {
 
 export function TransactionLogs({ transactions }: TransactionLogsProps) {
 	const [showAbsoluteTime, setShowAbsoluteTime] = useState<string | null>(null);
+	const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "time", direction: "desc" });
+
+	const handleSort = (field: SortField) => {
+		setSortConfig((prevConfig) => ({
+			field,
+			direction: prevConfig.field === field && prevConfig.direction === "asc" ? "desc" : "asc",
+		}));
+	};
+
+	const getSortIcon = (field: SortField) => {
+		if (sortConfig.field !== field) return <FaSort className={styles.sortIcon} />;
+		return sortConfig.direction === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />;
+	};
+
+	const sortedTransactions = [...transactions].sort((a, b) => {
+		const direction = sortConfig.direction === "asc" ? 1 : -1;
+
+		switch (sortConfig.field) {
+			case "time":
+				return direction * (new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+			case "type":
+				return direction * a.type.localeCompare(b.type);
+			case "token":
+				return direction * a.token.localeCompare(b.token);
+			case "amount":
+				return direction * (parseFloat(a.amount) - parseFloat(b.amount));
+			case "condition":
+				return direction * a.condition.localeCompare(b.condition);
+			case "status":
+				return direction * a.status.localeCompare(b.status);
+			case "hash":
+				return direction * a.txHash.localeCompare(b.txHash);
+			default:
+				return 0;
+		}
+	});
 
 	return (
 		<div className={styles.container}>
@@ -20,17 +65,45 @@ export function TransactionLogs({ transactions }: TransactionLogsProps) {
 				<table className={styles.table}>
 					<thead>
 						<tr>
-							<th>Time</th>
-							<th>Type</th>
-							<th>Token</th>
-							<th>Amount</th>
-							<th>Condition</th>
-							<th>Status</th>
-							<th>TXN HASH</th>
+							<th>
+								<div onClick={() => handleSort("time")} className={styles.sortableHeader}>
+									<span>Time</span> {getSortIcon("time")}
+								</div>
+							</th>
+							<th>
+								<div onClick={() => handleSort("type")} className={styles.sortableHeader}>
+									<span>Type</span> {getSortIcon("type")}
+								</div>
+							</th>
+							<th>
+								<div onClick={() => handleSort("token")} className={styles.sortableHeader}>
+									<span>Token</span> {getSortIcon("token")}
+								</div>
+							</th>
+							<th>
+								<div onClick={() => handleSort("amount")} className={`${styles.sortableHeader} ${styles.rightAlign}`}>
+									<span>Amount</span> {getSortIcon("amount")}
+								</div>
+							</th>
+							<th>
+								<div onClick={() => handleSort("condition")} className={`${styles.sortableHeader} ${styles.rightAlign}`}>
+									<span>Condition</span> {getSortIcon("condition")}
+								</div>
+							</th>
+							<th>
+								<div onClick={() => handleSort("status")} className={`${styles.sortableHeader} ${styles.rightAlign}`}>
+									<span>Status</span> {getSortIcon("status")}
+								</div>
+							</th>
+							<th>
+								<div onClick={() => handleSort("hash")} className={`${styles.sortableHeader} ${styles.rightAlign}`}>
+									<span>TXN Hash</span> {getSortIcon("hash")}
+								</div>
+							</th>
 						</tr>
 					</thead>
 					<tbody>
-						{transactions.map((tx) => (
+						{sortedTransactions.map((tx) => (
 							<tr key={tx.txHash}>
 								<td className={styles.timeCell}>
 									<span className={`${styles.timestamp} ${showAbsoluteTime === tx.txHash ? styles.showAbsolute : ""}`} onClick={() => setShowAbsoluteTime(showAbsoluteTime === tx.txHash ? null : tx.txHash)}>
@@ -46,7 +119,6 @@ export function TransactionLogs({ transactions }: TransactionLogsProps) {
 								<td>
 									{tx.condition === "Auto Alpha Buy" ? (
 										<div className={styles.autoAlphaContainer}>
-											<span className={`${styles.condition} ${styles.autoAlpha}`}>{tx.condition}</span>
 											{tx.callers && tx.callers.length > 0 && (
 												<div className={styles.callersContainer}>
 													{tx.callers.slice(0, 5).map((caller, i) => (
@@ -57,6 +129,7 @@ export function TransactionLogs({ transactions }: TransactionLogsProps) {
 													{tx.callers.length > 5 && <div className={styles.extraCallersCount}>+{tx.callers.length - 5}</div>}
 												</div>
 											)}
+											<span className={`${styles.condition} ${styles.autoAlpha}`}>{tx.condition}</span>
 										</div>
 									) : (
 										<span className={`${styles.condition} ${styles.manual}`}>

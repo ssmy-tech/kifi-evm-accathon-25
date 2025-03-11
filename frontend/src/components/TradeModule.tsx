@@ -154,16 +154,11 @@ export default function TradeModule() {
 							<span>Slippage</span>
 							<span>{settings.slippage}%</span>
 						</div>
-						<div className={styles.settingItem}>
-							<span>Est. Gas</span>
-							<span>{settings.estimatedGas} ETH</span>
-						</div>
 					</div>
 					<div className={styles.tradeActions}>
 						<button className={`${styles.reviewButton} ${!isValidTrade ? styles.reviewButtonDisabled : ""}`} disabled={!isValidTrade}>
 							{getButtonText()}
 						</button>
-						<div className={styles.exchangeRate}>{exchangeRate}</div>
 					</div>
 				</div>
 			</div>
