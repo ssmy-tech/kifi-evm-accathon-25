@@ -6,10 +6,21 @@ import { ChatScraperConfigService } from './config.service';
 import { TelegramApiService } from './telegram-api.service';
 import { TelegramMessage } from './types/telegram.types';
 import { Chain } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 interface RateLimitInfo {
   lastRequest: Date;
   requestCount: number;
+}
+
+interface PendingContext {
+  callId: string;
+  messageId: number;
+  address: string;
+  chatId: string;
+  nextMessages: TelegramMessage[];
+  timeoutHandle: NodeJS.Timeout;
+  createdAt: Date;
 }
 
 @Injectable()
@@ -18,8 +29,10 @@ export class ChatScraperService implements OnModuleInit {
   private readonly logger = new Logger(ChatScraperService.name);
   private readonly prisma: PrismaClient;
   private readonly rateLimits: Map<string, RateLimitInfo> = new Map();
-  private readonly MAX_REQUESTS_PER_MINUTE = 200; // Adjust this based on API limits
+  private readonly pendingContexts: Map<string, PendingContext> = new Map();
+  private readonly MAX_REQUESTS_PER_MINUTE = 150; // Adjust this based on API limits
   private readonly RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+  private readonly CONTEXT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     private readonly blockchainService: BlockchainService,
@@ -82,7 +95,7 @@ export class ChatScraperService implements OnModuleInit {
     }
   }
 
-  @Cron('*/15 * * * * *') // Runs every 15 seconds
+  @Cron('*/30 * * * * *') // Runs every 15 seconds
   async handleChatScraping() {
     this.logger.log('Starting chat scraping');
     try {
@@ -146,16 +159,16 @@ export class ChatScraperService implements OnModuleInit {
           }
 
           const referenceTime = new Date(mostRecentMessage.date);
-          const oneHourBeforeReference = new Date(referenceTime.getTime() - 60 * 60 * 1000);
+          const oneDayBeforeReference = new Date(referenceTime.getTime() - 24 * 60 * 60 * 1000);
           
           let oldestMessageId = mostRecentMessage.id;
-          let reachedOneHourOld = false;
+          let reachedOneDayOld = false;
           let totalFetched = 0;
 
           messages.push(mostRecentMessage);
           totalFetched++;
 
-          while (!reachedOneHourOld && totalFetched < 1000) {
+          while (!reachedOneDayOld && totalFetched < 2000) {
             await this.waitForRateLimit(user.tgApiLink);
             const response = await this.telegramApi.getMessages(
               user.tgApiLink,
@@ -167,6 +180,7 @@ export class ChatScraperService implements OnModuleInit {
                 direction: 'before'
               }
             );
+            console.log(response.data);
 
             const batch = response.data;
             
@@ -179,11 +193,11 @@ export class ChatScraperService implements OnModuleInit {
               break;
             }
 
-            const oldMessages = validBatch.filter(msg => new Date(msg.date) < oneHourBeforeReference);
+            const oldMessages = validBatch.filter(msg => new Date(msg.date) < oneDayBeforeReference);
             if (oldMessages.length > 0) {
-              const newMessages = validBatch.filter(msg => new Date(msg.date) >= oneHourBeforeReference);
+              const newMessages = validBatch.filter(msg => new Date(msg.date) >= oneDayBeforeReference);
               messages.push(...newMessages);
-              reachedOneHourOld = true;
+              reachedOneDayOld = true;
             } else {
               messages.push(...validBatch);
               oldestMessageId = validBatch[validBatch.length - 1].id;
@@ -193,7 +207,7 @@ export class ChatScraperService implements OnModuleInit {
           
           // Sort messages by ID in ascending order
           messages.sort((a, b) => a.id - b.id);
-          this.logger.log(`Found ${messages.length} messages in the last hour for new chat ${chat.tgChatName || chat.tgChatId}`);
+          this.logger.log(`Found ${messages.length} messages in the last 24 hours for new chat ${chat.tgChatName || chat.tgChatId}`);
         } else {
           const response = await this.telegramApi.getNewMessages(
             user.tgApiLink,
@@ -237,6 +251,9 @@ export class ChatScraperService implements OnModuleInit {
   private async processMessages(messages: TelegramMessage[], chatId: string) {
     const contractAddressRegex = /\b(0x[a-fA-F0-9]{40})\b|\b([1-9A-HJ-NP-Za-km-z]{32,44})\b/g;
 
+    // Sort messages by ID to ensure correct order
+    messages.sort((a, b) => a.id - b.id);
+
     for (const message of messages) {
       const content = message.text || '';
       const matches = content.match(contractAddressRegex);
@@ -251,17 +268,34 @@ export class ChatScraperService implements OnModuleInit {
               this.logger.log(`Found valid contract: ${address} on chain: ${result.chain}`, `${message.id}_${address}`);
               
               try {
-                // Process fromId to ensure it's a valid JSON value
+                // Find the chat to get API credentials
+                const chat = await this.prisma.chats.findUnique({
+                  where: { tgChatId: chatId },
+                  include: { users: true }
+                });
+
+                if (!chat?.users?.[0]?.tgApiLink || !chat.users[0].tgApiSecret) {
+                  this.logger.error(`No valid API credentials found for chat ${chatId}`);
+                  continue;
+                }
+
+                const user = {
+                  tgApiLink: chat.users[0].tgApiLink as string,
+                  tgApiSecret: chat.users[0].tgApiSecret as string
+                };
+
                 const fromIdJson = message.fromId ? 
                   (typeof message.fromId === 'string' ? 
                     message.fromId : 
                     JSON.parse(JSON.stringify(message.fromId))) : 
                   null;
                 
-                // Create call record with metadata
+                const callId = randomUUID();
+                
+                // Create call record with metadata using UUID
                 await this.prisma.calls.create({
                   data: {
-                    telegramCallId: `${message.id}_${address}`,
+                    telegramCallId: callId,
                     address: address,
                     chain: result.chain,
                     ticker: result.symbol,
@@ -290,6 +324,41 @@ export class ChatScraperService implements OnModuleInit {
                     }
                   }
                 });
+
+                // Fetch previous 10 messages using the API
+                await this.waitForRateLimit(user.tgApiLink);
+                const previousResponse = await this.telegramApi.getMessages(
+                  user.tgApiLink,
+                  user.tgApiSecret,
+                  chatId,
+                  {
+                    limit: 10,
+                    fromMessageId: message.id,
+                    direction: 'before'
+                  }
+                );
+
+                const previousMessages = previousResponse.data;
+                
+                // Process the call message and previous context immediately
+                await this.processInitialContext(callId, message, previousMessages);
+
+                // Set up collection of future context
+                const timeoutHandle = setTimeout(
+                  () => this.processFutureContext(callId),
+                  this.CONTEXT_TIMEOUT_MS
+                );
+
+                this.pendingContexts.set(callId, {
+                  callId,
+                  messageId: message.id,
+                  address,
+                  chatId,
+                  nextMessages: [],
+                  timeoutHandle,
+                  createdAt: new Date()
+                });
+
               } catch (error) {
                 this.logger.error(`Failed to create call record: ${error.message}`);
               }
@@ -299,6 +368,174 @@ export class ChatScraperService implements OnModuleInit {
           }
         }
       }
+
+      // Check if this message should be added to any pending contexts
+      for (const [callId, context] of this.pendingContexts.entries()) {
+        if (context.chatId === chatId && message.id > context.messageId) {
+          context.nextMessages.push(message);
+          
+          // If we've collected enough next messages, process the future context
+          if (context.nextMessages.length >= 20) {
+            this.processFutureContext(callId);
+          }
+        }
+      }
+    }
+  }
+
+  private async processInitialContext(callId: string, callMessage: TelegramMessage, previousMessages: TelegramMessage[]) {
+    try {
+      this.logger.log(`Processing initial context for call ${callId} with ${previousMessages.length} previous messages`);
+
+      // Get the call details from the database
+      const call = await this.prisma.calls.findUnique({
+        where: { telegramCallId: callId }
+      });
+
+      if (!call) {
+        this.logger.error(`Call ${callId} not found when processing initial context`);
+        return;
+      }
+
+      // Format the payload that would be sent to AI endpoint
+      const aiPayload = {
+        callId,
+        token: {
+          address: call.address,
+          name: call.tokenName,
+          ticker: call.ticker,
+          chain: call.chain
+        },
+        contextType: 'initial',
+        callMessage: {
+          id: callMessage.id,
+          text: callMessage.text,
+          fromId: callMessage.fromId,
+          date: callMessage.date,
+          messageType: 'call'
+        },
+        messages: [
+          ...previousMessages.map(msg => ({
+            id: msg.id,
+            text: msg.text,
+            fromId: msg.fromId,
+            date: msg.date,
+            messageType: 'previous'
+          }))
+        ].sort((a, b) => a.id - b.id)
+      };
+
+      // Log what would be sent to AI
+      this.logger.log('Initial context AI payload:', {
+        endpoint: '/api/ai/analyze-context',
+        method: 'POST',
+        payload: aiPayload
+      });
+
+      // TODO: Send to AI endpoint for initial analysis
+      // const aiResponse = await this.aiService.processInitialContext(aiPayload);
+
+      // TODO: Store initial AI analysis in the database
+      // await this.prisma.calls.update({
+      //   where: { telegramCallId: callId },
+      //   data: {
+      //     initialAnalysis: aiResponse
+      //   }
+      // });
+
+    } catch (error) {
+      this.logger.error(`Failed to process initial context for call ${callId}: ${error.message}`);
+    }
+  }
+
+  private async processFutureContext(callId: string) {
+    const context = this.pendingContexts.get(callId);
+    if (!context) return;
+
+    // Clear the timeout since we're processing now
+    clearTimeout(context.timeoutHandle);
+    this.pendingContexts.delete(callId);
+
+    // Skip processing if there are no future messages
+    if (context.nextMessages.length === 0) {
+      this.logger.log(`No future messages to process for call ${callId}, skipping analysis`);
+      return;
+    }
+
+    try {
+      this.logger.log(`Processing future context for call ${callId} with ${context.nextMessages.length} next messages`);
+
+      // Get the call details and message from the database
+      const call = await this.prisma.calls.findUnique({
+        where: { telegramCallId: callId },
+        include: {
+          messages: {
+            where: {
+              telegramMessageId: context.messageId.toString()
+            }
+          }
+        }
+      });
+
+      if (!call) {
+        this.logger.error(`Call ${callId} not found when processing future context`);
+        return;
+      }
+
+      const callMessage = call.messages[0];
+      if (!callMessage) {
+        this.logger.error(`Original call message not found for call ${callId}`);
+        return;
+      }
+
+      // Format the payload that would be sent to AI endpoint
+      const aiPayload = {
+        callId,
+        token: {
+          address: call.address,
+          name: call.tokenName,
+          ticker: call.ticker,
+          chain: call.chain
+        },
+        contextType: 'future',
+        callMessage: {
+          id: parseInt(callMessage.telegramMessageId),
+          text: callMessage.text,
+          fromId: callMessage.fromId,
+          date: callMessage.createdAt.toISOString(),
+          messageType: 'call'
+        },
+        messages: context.nextMessages
+          .sort((a, b) => a.id - b.id)
+          .map(msg => ({
+            id: msg.id,
+            text: msg.text,
+            fromId: msg.fromId,
+            date: msg.date,
+            messageType: 'future'
+          }))
+      };
+
+      // Log what would be sent to AI
+      this.logger.log('Future context AI payload:', {
+        endpoint: '/api/ai/analyze-context',
+        method: 'POST',
+        payload: aiPayload
+      });
+
+      // TODO: Send to AI endpoint for future context analysis
+      // const aiResponse = await this.aiService.processFutureContext(aiPayload);
+
+      // TODO: Store future context AI analysis in the database
+      // await this.prisma.calls.update({
+      //   where: { telegramCallId: callId },
+      //   data: {
+      //     futureAnalysis: aiResponse
+      //   }
+      // });
+
+    } catch (error) {
+      this.logger.error(`Failed to process future context for call ${callId}: ${error.message}`);
     }
   }
 } 

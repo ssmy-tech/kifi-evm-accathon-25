@@ -1,6 +1,6 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Body } from '@nestjs/common';
 import { TelegramAnalyticsService } from './telegram-analytics.service';
-import { AnalysisResult } from './types';
+import { AnalysisResult, ContextCall, AnalyzeContextResponse } from './types';
 
 @Controller('telegram-analytics')
 export class TelegramAnalyticsController {
@@ -19,5 +19,12 @@ export class TelegramAnalyticsController {
       startDate,
       endDate,
     );
+  }
+
+  @Post('analyze-context')
+  async analyzeContext(
+    @Body() contextCall: ContextCall
+  ): Promise<AnalyzeContextResponse> {
+    return this.telegramAnalyticsService.analyzeContext(contextCall);
   }
 } 

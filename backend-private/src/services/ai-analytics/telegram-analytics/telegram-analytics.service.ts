@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Calls, Messages } from '@prisma/client';
 import axios from 'axios';
-import { TelegramMessage, TelegramCall, AnalysisResult } from './types';
+import { TelegramMessage, TelegramCall, AnalysisResult, AnalyzeContextRequest, AnalyzeContextResponse, MessageInfo, ContextCall } from './types';
 
 type CallWithMessages = Calls & {
   messages: Messages[];
@@ -412,6 +412,161 @@ export class TelegramAnalyticsService {
       throw new HttpException(
         error.message || 'Failed to analyze contract messages',
         error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Analyze context of a call
+   */
+  async analyzeContext(contextCall: ContextCall): Promise<AnalyzeContextResponse> {
+    this.logger.debug(`Analyzing context for call: ${contextCall.callId}`);
+
+    try {
+      // Validate request
+      if (!contextCall || !contextCall.messages) {
+        throw new HttpException('Call context and messages are required', HttpStatus.BAD_REQUEST);
+      }
+
+      if (!contextCall.callMessage) {
+        throw new HttpException('Call message is required for both initial and future contexts', HttpStatus.BAD_REQUEST);
+      }
+
+      const { token, callMessage, messages } = contextCall;
+      const callMessageId = callMessage.id;
+
+      // Create a set of valid message IDs for quick lookup
+      const validMessageIds = new Set(messages.map(m => m.id));
+
+      const nilaiApiUrl = this.configService.get<string>('NILAI_API_URL');
+      const nilaiApiKey = this.configService.get<string>('NILAI_API_KEY');
+      
+      if (!nilaiApiUrl || !nilaiApiKey) {
+        throw new Error('Missing Nilai API configuration');
+      }
+
+      // Format messages for analysis with clear message IDs
+      const formatMessagesForContext = (messages: MessageInfo[]) => 
+        messages.map(msg => {
+          const msgTime = new Date(msg.date);
+          return `Message ID ${msg.id}: [${msgTime.toLocaleString()}] User ${msg.fromId.userId}: ${msg.text}`;
+        }).join('\n');
+
+      // Create context about the token
+      const tokenContext = `Token Information:
+        Name: ${token.name}
+        Symbol: ${token.ticker}
+        Address: ${token.address}
+        Chain: ${token.chain}
+        Call Message (ID ${callMessage.id}): ${callMessage.text}`;
+
+      // Analyze messages for relevance
+      const aiResponse = await axios.post(
+        `${nilaiApiUrl}/v1/chat/completions`,
+        {
+          model: 'meta-llama/Llama-3.1-8B-Instruct',
+          messages: [
+            {
+              role: 'system',
+              content: `You are analyzing Telegram messages to find discussions related to a specific cryptocurrency token.
+              Your task is to identify ONLY messages that contain EXPLICIT discussions about the token.
+              
+              Consider ONLY messages that contain:
+              - Specific token price mentions (e.g., "token is at $5")
+              - Explicit volume or market cap numbers
+              - Clear technical analysis about the token
+              - Specific project announcements or developments
+              - Direct community feedback about the token
+              - Explicit mentions of the token name, symbol, or address
+              
+              CRITICAL INSTRUCTIONS:
+              1. Messages must contain EXPLICIT token-related content
+              2. Single letters, numbers, or generic text are NOT relevant
+              3. If no messages contain explicit token discussion, return an empty response
+              4. Never infer or assume relevance - the connection must be explicit
+              5. Each returned message must quote the specific token-related content
+              
+              ${tokenContext}`
+            },
+            {
+              role: 'user',
+              content: `Analyze these messages and identify ONLY those with EXPLICIT token-related content.
+              If a message doesn't explicitly discuss the token, omit it completely.
+              If no messages contain explicit token discussion, return an empty response.
+              
+              Format your response exactly like this, ONLY for messages with explicit token content:
+              Message ID 123: Contains price "$5.50 for TICKER"
+              Message ID 456: Discusses development "launching token staking next week"
+              
+              DO NOT include:
+              - Single letters or numbers
+              - Generic text without token context
+              - Messages that don't explicitly mention the token
+              - Assumed or inferred relationships
+              
+              Messages to analyze:
+              ${formatMessagesForContext(messages)}`
+            }
+          ],
+          temperature: 0.1,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${nilaiApiKey}`,
+          },
+        }
+      );
+
+      const analysis = aiResponse.data.choices[0].message.content;
+      this.logger.debug('AI Analysis:', analysis);
+      
+      // Parse the AI response to extract message IDs and reasons
+      const matches = messages
+        .filter(msg => {
+          // Exclude the call message
+          if (msg.id === callMessageId) return false;
+          
+          // Check if the message is mentioned in the AI analysis
+          return analysis.toLowerCase().includes(`message id ${msg.id}`) &&
+                 !analysis.toLowerCase().includes(`message id ${msg.id}:.*not related`, 'i');
+        })
+        .map(msg => {
+          // Extract the reason from the AI analysis
+          const reasonMatch = analysis.match(new RegExp(`Message ID ${msg.id}:([^\\n]*)`, 'i'));
+          const reason = reasonMatch ? reasonMatch[1].trim() : '';
+          
+          // Skip if no clear reason or if the message is just a single character
+          if (!reason || msg.text.trim().length <= 1) return null;
+          
+          // Skip if the reason doesn't contain a quote of the actual token-related content
+          if (!reason.includes('"')) return null;
+          
+          return {
+            messageId: msg.id,
+            reason: 'call_message_text' as const,
+            matchedTerm: reason
+          };
+        })
+        .filter((match): match is NonNullable<typeof match> => 
+          match !== null && validMessageIds.has(match.messageId)
+        ); // Final validation of message IDs
+
+      // Format response
+      const contextResponse: AnalyzeContextResponse = {
+        relatedMessageIds: [...new Set(matches.map(m => m.messageId))],
+        matchReason: matches
+      };
+
+      return contextResponse;
+    } catch (error) {
+      this.logger.error(`Error analyzing context: ${error.message}`, error.stack);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to analyze context: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }
