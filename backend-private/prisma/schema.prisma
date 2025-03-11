@@ -58,6 +58,8 @@ model Calls {
     messages Messages[]
     summaryId String?
     summary Summary? @relation(fields: [summaryId], references: [id])
+    initialAnalysis Json?
+    futureAnalysis Json?
 }
 
 model Summary {

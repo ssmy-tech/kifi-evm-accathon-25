@@ -11,8 +11,8 @@ async function bootstrap() {
   
   app.enableShutdownHooks();
 
-  // const port = process.env.PORT || 5001;
-  const port = 5001
+  const port = process.env.PORT || 5001;
+  // const port = 5001
   
   await app.listen(port, '0.0.0.0');
   logger.log(`AI Analytics service is running on port ${port}`);

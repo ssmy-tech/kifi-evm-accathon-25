@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { BlockchainService } from '../../common/blockchain/blockchain.service';
 import { ChatScraperConfigService } from './config.service';
 import { TelegramApiService } from './telegram-api.service';
+import { AiService } from './ai.service';
 import { TelegramMessage } from './types/telegram.types';
 import { Chain } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -38,6 +39,7 @@ export class ChatScraperService implements OnModuleInit {
     private readonly blockchainService: BlockchainService,
     private readonly config: ChatScraperConfigService,
     private readonly telegramApi: TelegramApiService,
+    private readonly aiService: AiService,
   ) {
     this.prisma = new PrismaClient({
       datasources: {
@@ -397,7 +399,7 @@ export class ChatScraperService implements OnModuleInit {
         return;
       }
 
-      // Format the payload that would be sent to AI endpoint
+      // Format the payload for AI analysis
       const aiPayload = {
         callId,
         token: {
@@ -406,42 +408,44 @@ export class ChatScraperService implements OnModuleInit {
           ticker: call.ticker,
           chain: call.chain
         },
-        contextType: 'initial',
+        contextType: 'initial' as const,
         callMessage: {
           id: callMessage.id,
-          text: callMessage.text,
+          text: callMessage.text || null,
           fromId: callMessage.fromId,
           date: callMessage.date,
-          messageType: 'call'
+          messageType: 'call' as const
         },
         messages: [
           ...previousMessages.map(msg => ({
             id: msg.id,
-            text: msg.text,
+            text: msg.text || null,
             fromId: msg.fromId,
             date: msg.date,
-            messageType: 'previous'
+            messageType: 'previous' as const
           }))
         ].sort((a, b) => a.id - b.id)
       };
 
-      // Log what would be sent to AI
+      // Log what will be sent to AI
       this.logger.log('Initial context AI payload:', {
-        endpoint: '/api/ai/analyze-context',
+        endpoint: '/telegram-analytics/analyze-context',
         method: 'POST',
         payload: aiPayload
       });
 
-      // TODO: Send to AI endpoint for initial analysis
-      // const aiResponse = await this.aiService.processInitialContext(aiPayload);
+      // Send to AI endpoint for analysis
+      const aiResponse = await this.aiService.analyzeContext(aiPayload);
 
-      // TODO: Store initial AI analysis in the database
-      // await this.prisma.calls.update({
-      //   where: { telegramCallId: callId },
-      //   data: {
-      //     initialAnalysis: aiResponse
-      //   }
-      // });
+      // Store initial AI analysis in the database
+      await this.prisma.calls.update({
+        where: { telegramCallId: callId },
+        data: {
+          initialAnalysis: JSON.stringify(aiResponse)
+        }
+      });
+
+      this.logger.log(`Stored initial analysis for call ${callId}`);
 
     } catch (error) {
       this.logger.error(`Failed to process initial context for call ${callId}: ${error.message}`);
@@ -488,7 +492,7 @@ export class ChatScraperService implements OnModuleInit {
         return;
       }
 
-      // Format the payload that would be sent to AI endpoint
+      // Format the payload for AI analysis
       const aiPayload = {
         callId,
         token: {
@@ -497,42 +501,44 @@ export class ChatScraperService implements OnModuleInit {
           ticker: call.ticker,
           chain: call.chain
         },
-        contextType: 'future',
+        contextType: 'future' as const,
         callMessage: {
           id: parseInt(callMessage.telegramMessageId),
-          text: callMessage.text,
+          text: callMessage.text || null,
           fromId: callMessage.fromId,
           date: callMessage.createdAt.toISOString(),
-          messageType: 'call'
+          messageType: 'call' as const
         },
         messages: context.nextMessages
           .sort((a, b) => a.id - b.id)
           .map(msg => ({
             id: msg.id,
-            text: msg.text,
+            text: msg.text || null,
             fromId: msg.fromId,
             date: msg.date,
-            messageType: 'future'
+            messageType: 'future' as const
           }))
       };
 
-      // Log what would be sent to AI
+      // Log what will be sent to AI
       this.logger.log('Future context AI payload:', {
-        endpoint: '/api/ai/analyze-context',
+        endpoint: '/telegram-analytics/analyze-context',
         method: 'POST',
         payload: aiPayload
       });
 
-      // TODO: Send to AI endpoint for future context analysis
-      // const aiResponse = await this.aiService.processFutureContext(aiPayload);
+      // Send to AI endpoint for analysis
+      const aiResponse = await this.aiService.analyzeContext(aiPayload);
 
-      // TODO: Store future context AI analysis in the database
-      // await this.prisma.calls.update({
-      //   where: { telegramCallId: callId },
-      //   data: {
-      //     futureAnalysis: aiResponse
-      //   }
-      // });
+      // Store future context AI analysis in the database
+      await this.prisma.calls.update({
+        where: { telegramCallId: callId },
+        data: {
+          futureAnalysis: JSON.stringify(aiResponse)
+        }
+      });
+
+      this.logger.log(`Stored future analysis for call ${callId}`);
 
     } catch (error) {
       this.logger.error(`Failed to process future context for call ${callId}: ${error.message}`);

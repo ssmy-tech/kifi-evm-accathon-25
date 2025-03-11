@@ -6,6 +6,7 @@ import { ChatScraperService } from './chat-scraper.service';
 import { ChatScraperConfigService } from './config.service';
 import { TelegramApiService } from './telegram-api.service';
 import { HealthController } from './health/health.controller';
+import { AiService } from './ai.service';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { HealthController } from './health/health.controller';
     ChatScraperService,
     ChatScraperConfigService,
     TelegramApiService,
+    AiService,
   ],
 })
 export class ChatScraperModule {} 

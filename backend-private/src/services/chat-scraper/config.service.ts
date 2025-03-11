@@ -16,4 +16,8 @@ export class ChatScraperConfigService {
   get maxMessagesPerScan(): number {
     return this.configService.get<number>('MAX_MESSAGES_PER_SCAN', 100);
   }
+
+  get aiApiUrl(): string {
+    return this.configService.get<string>('AI_API_URL', 'http://localhost:5001');
+  }
 } 
