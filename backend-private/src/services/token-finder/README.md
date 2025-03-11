@@ -1,4 +1,25 @@
-PostgreSQL Table Setup
+# Install PostgreSQL
+
+* sudo apt install postgresql
+* sudo -u postgres createuser kifiadmin
+* sudo -u postgres createdb kifitokens
+* sudo -u postgres psql
+    * alter user <database user> with encrypted password '<database password>';
+    * grant all privileges on database <database name> to <database user>;
+
+# Install libcurl
+
+* sudo apt install libcurl4-openssl-dev
+
+# Install libpqxx
+
+* sudo apt install libpqxx-dev
+
+# Install nlohmann-json3-dev
+
+* sudo apt install nlohmann-json3-dev
+
+# PostgreSQL Table Setup
 
 ```
 CREATE TABLE IF NOT EXISTS block_info (
@@ -30,7 +51,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE ON liquidity_pools to :user;
 
 ```
 
-Environment Variables
+# Environment Variables
 
 ```
 DB_HOST=<PostgreSQL Database Host Name or IP Address>
