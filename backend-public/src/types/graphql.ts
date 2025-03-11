@@ -32,12 +32,18 @@ export type AuthPayload = {
   createdUser: Scalars['Boolean']['output'];
 };
 
-export type CallWithChat = {
-  callCount: Scalars['Float']['output'];
-  chat: TelegramChat;
+export type Call = {
+  address: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
   hasFutureAnalysis: Scalars['Boolean']['output'];
   hasInitialAnalysis: Scalars['Boolean']['output'];
-  messages: Maybe<Array<Message>>;
+  id: Scalars['String']['output'];
+  messages: Array<Message>;
+};
+
+export type ChatWithCalls = {
+  calls: Array<Call>;
+  chat: TelegramChat;
 };
 
 export type ChatsResponse = {
@@ -165,8 +171,8 @@ export type TelegramContractAnalyticsInput = {
 
 export type TokenCalls = {
   address: Scalars['String']['output'];
-  calls: Array<CallWithChat>;
   chain: Scalars['String']['output'];
+  chats: Array<ChatWithCalls>;
 };
 
 export type TokenCallsResponse = {
@@ -301,7 +307,8 @@ export type ResolversTypes = ResolversObject<{
   ApiSecretResponse: ResolverTypeWrapper<ApiSecretResponse>;
   AuthPayload: ResolverTypeWrapper<AuthPayload>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
-  CallWithChat: ResolverTypeWrapper<CallWithChat>;
+  Call: ResolverTypeWrapper<Call>;
+  ChatWithCalls: ResolverTypeWrapper<ChatWithCalls>;
   ChatsResponse: ResolverTypeWrapper<ChatsResponse>;
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
@@ -336,7 +343,8 @@ export type ResolversParentTypes = ResolversObject<{
   ApiSecretResponse: ApiSecretResponse;
   AuthPayload: AuthPayload;
   Boolean: Scalars['Boolean']['output'];
-  CallWithChat: CallWithChat;
+  Call: Call;
+  ChatWithCalls: ChatWithCalls;
   ChatsResponse: ChatsResponse;
   DateTime: Scalars['DateTime']['output'];
   Float: Scalars['Float']['output'];
@@ -380,12 +388,19 @@ export type AuthPayloadResolvers<ContextType = Context, ParentType extends Resol
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
-export type CallWithChatResolvers<ContextType = Context, ParentType extends ResolversParentTypes['CallWithChat'] = ResolversParentTypes['CallWithChat']> = ResolversObject<{
-  callCount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
-  chat?: Resolver<ResolversTypes['TelegramChat'], ParentType, ContextType>;
+export type CallResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Call'] = ResolversParentTypes['Call']> = ResolversObject<{
+  address?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   hasFutureAnalysis?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   hasInitialAnalysis?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
-  messages?: Resolver<Maybe<Array<ResolversTypes['Message']>>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  messages?: Resolver<Array<ResolversTypes['Message']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ChatWithCallsResolvers<ContextType = Context, ParentType extends ResolversParentTypes['ChatWithCalls'] = ResolversParentTypes['ChatWithCalls']> = ResolversObject<{
+  calls?: Resolver<Array<ResolversTypes['Call']>, ParentType, ContextType>;
+  chat?: Resolver<ResolversTypes['TelegramChat'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -472,8 +487,8 @@ export type TelegramChatResolvers<ContextType = Context, ParentType extends Reso
 
 export type TokenCallsResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TokenCalls'] = ResolversParentTypes['TokenCalls']> = ResolversObject<{
   address?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  calls?: Resolver<Array<ResolversTypes['CallWithChat']>, ParentType, ContextType>;
   chain?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  chats?: Resolver<Array<ResolversTypes['ChatWithCalls']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -531,7 +546,8 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   ApiHealthResponse?: ApiHealthResponseResolvers<ContextType>;
   ApiSecretResponse?: ApiSecretResponseResolvers<ContextType>;
   AuthPayload?: AuthPayloadResolvers<ContextType>;
-  CallWithChat?: CallWithChatResolvers<ContextType>;
+  Call?: CallResolvers<ContextType>;
+  ChatWithCalls?: ChatWithCallsResolvers<ContextType>;
   ChatsResponse?: ChatsResponseResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   KeyTopic?: KeyTopicResolvers<ContextType>;

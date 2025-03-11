@@ -35,13 +35,20 @@ export type AuthPayload = {
   createdUser: Scalars['Boolean']['output'];
 };
 
-export type CallWithChat = {
-  __typename?: 'CallWithChat';
-  callCount: Scalars['Float']['output'];
-  chat: TelegramChat;
+export type Call = {
+  __typename?: 'Call';
+  address: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
   hasFutureAnalysis: Scalars['Boolean']['output'];
   hasInitialAnalysis: Scalars['Boolean']['output'];
-  messages?: Maybe<Array<Message>>;
+  id: Scalars['String']['output'];
+  messages: Array<Message>;
+};
+
+export type ChatWithCalls = {
+  __typename?: 'ChatWithCalls';
+  calls: Array<Call>;
+  chat: TelegramChat;
 };
 
 export type ChatsResponse = {
@@ -180,8 +187,8 @@ export type TelegramContractAnalyticsInput = {
 export type TokenCalls = {
   __typename?: 'TokenCalls';
   address: Scalars['String']['output'];
-  calls: Array<CallWithChat>;
   chain: Scalars['String']['output'];
+  chats: Array<ChatWithCalls>;
 };
 
 export type TokenCallsResponse = {
@@ -299,7 +306,7 @@ export type GetCallsByTokenQueryVariables = Exact<{
 }>;
 
 
-export type GetCallsByTokenQuery = { __typename?: 'Query', getCallsByToken: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, calls: Array<{ __typename?: 'CallWithChat', callCount: number, hasInitialAnalysis: boolean, hasFutureAnalysis: boolean, chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null }, messages?: Array<{ __typename?: 'Message', id: string, createdAt: string, text?: string | null, fromId?: string | null, messageType: MessageType, reason?: string | null, tgMessageId: string }> | null }> }> } };
+export type GetCallsByTokenQuery = { __typename?: 'Query', getCallsByToken: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, chats: Array<{ __typename?: 'ChatWithCalls', chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null, callCount: number, lastCallTimestamp?: string | null }, calls: Array<{ __typename?: 'Call', id: string, createdAt: string, address: string, hasInitialAnalysis: boolean, hasFutureAnalysis: boolean, messages: Array<{ __typename?: 'Message', id: string, createdAt: string, text?: string | null, fromId?: string | null, messageType: MessageType, reason?: string | null, tgMessageId: string }> }> }> }> } };
 
 export type UpdateUserSettingsMutationVariables = Exact<{
   input: UpdateUserSettingsInput;
@@ -733,24 +740,30 @@ export const GetCallsByTokenDocument = /*#__PURE__*/ gql`
     tokenCalls {
       chain
       address
-      calls {
+      chats {
         chat {
           id
           name
           type
           photoUrl
+          callCount
+          lastCallTimestamp
         }
-        callCount
-        hasInitialAnalysis
-        hasFutureAnalysis
-        messages {
+        calls {
           id
           createdAt
-          text
-          fromId
-          messageType
-          reason
-          tgMessageId
+          address
+          hasInitialAnalysis
+          hasFutureAnalysis
+          messages {
+            id
+            createdAt
+            text
+            fromId
+            messageType
+            reason
+            tgMessageId
+          }
         }
       }
     }

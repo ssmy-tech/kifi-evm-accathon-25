@@ -11,12 +11,18 @@ type AuthPayload {
   createdUser: Boolean!
 }
 
-type CallWithChat {
-  callCount: Float!
-  chat: TelegramChat!
+type Call {
+  address: String!
+  createdAt: DateTime!
   hasFutureAnalysis: Boolean!
   hasInitialAnalysis: Boolean!
-  messages: [Message!]
+  id: String!
+  messages: [Message!]!
+}
+
+type ChatWithCalls {
+  calls: [Call!]!
+  chat: TelegramChat!
 }
 
 type ChatsResponse {
@@ -115,8 +121,8 @@ input TelegramContractAnalyticsInput {
 
 type TokenCalls {
   address: String!
-  calls: [CallWithChat!]!
   chain: String!
+  chats: [ChatWithCalls!]!
 }
 
 type TokenCallsResponse {

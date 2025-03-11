@@ -15,6 +15,11 @@ model User {
   tgApiLink String?
   tgApiSecret String
   dataStatus DataStatus
+  enableAutoAlpha Boolean @default(false)
+  selectedChatsIds String[]
+  groupCallThreshold Int @default(0)
+  slippage Float @default(0.1)
+  buyAmount Float @default(0.05)
 }
 
 model Chats {
@@ -40,6 +45,9 @@ model Messages {
     tgChatId String
     text String?
     fromId Json?
+    messageType MessageType @default(Call)
+    reason String?
+    tgMessageId String
     chat Chats @relation(fields: [tgChatId], references: [tgChatId])
     callId String?
     call Calls? @relation(fields: [callId], references: [telegramCallId])
@@ -58,6 +66,8 @@ model Calls {
     messages Messages[]
     summaryId String?
     summary Summary? @relation(fields: [summaryId], references: [id])
+    hasInitialAnalysis Boolean @default(false)
+    hasFutureAnalysis Boolean @default(false)
 }
 
 model Summary {
@@ -92,4 +102,9 @@ enum ChatType {
     Channel
     Group
     User
+}
+
+enum MessageType {
+    Call
+    Context
 }
