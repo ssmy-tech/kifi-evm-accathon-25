@@ -18,6 +18,6 @@ export class ChatScraperConfigService {
   }
 
   get aiApiUrl(): string {
-    return this.configService.get<string>('AI_API_URL', 'http://localhost:5001');
+    return this.configService.getOrThrow<string>('AI_API_URL');
   }
 } 

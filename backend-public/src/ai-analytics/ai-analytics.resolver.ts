@@ -22,9 +22,6 @@ export class AiAnalyticsResolver {
     @Args('input') input: TelegramContractAnalyticsInput,
   ): Promise<TelegramAnalyticsResponse> {
     const privyId = context.req?.user?.claims?.userId;
-    return this.aiAnalyticsService.getTelegramContractAnalytics(
-      input.contractAddress,
-      privyId,
-    );
+    return this.aiAnalyticsService.getTelegramContractAnalytics(input, privyId);
   }
 } 

@@ -33,6 +33,10 @@
         {
           "name": "DATABASE_URL",
           "valueFrom": "arn:aws:ssm:${AWS_REGION}:${AWS_ACCOUNT_ID}:parameter/kifi/database-url"
+        },
+        {
+          "name": "AI_API_URL",
+          "valueFrom": "arn:aws:ssm:${AWS_REGION}:${AWS_ACCOUNT_ID}:parameter/kifi/ai-api-url"
         }
       ],
       "portMappings": [],

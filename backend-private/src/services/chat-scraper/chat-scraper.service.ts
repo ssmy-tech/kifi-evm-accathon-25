@@ -1,12 +1,11 @@
 import { Injectable, Logger, OnModuleInit, Controller, Get } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, MessageType, Chain } from '@prisma/client';
 import { BlockchainService } from '../../common/blockchain/blockchain.service';
 import { ChatScraperConfigService } from './config.service';
 import { TelegramApiService } from './telegram-api.service';
 import { AiService } from './ai.service';
 import { TelegramMessage } from './types/telegram.types';
-import { Chain } from '@prisma/client';
 import { randomUUID } from 'crypto';
 
 interface RateLimitInfo {
@@ -313,7 +312,8 @@ export class ChatScraperService implements OnModuleInit {
                           telegramMessageId: message.id.toString()
                         },
                         create: {
-                          telegramMessageId: message.id.toString(),
+                          telegramMessageId: randomUUID(),
+                          tgMessageId: message.id.toString(),
                           text: content,
                           fromId: fromIdJson,
                           chat: {
@@ -335,19 +335,29 @@ export class ChatScraperService implements OnModuleInit {
                   chatId,
                   {
                     limit: 10,
-                    fromMessageId: message.id,
+                    fromMessageId: message.id.toString(),
                     direction: 'before'
                   }
                 );
 
                 const previousMessages = previousResponse.data;
                 
-                // Process the call message and previous context immediately
-                await this.processInitialContext(callId, message, previousMessages);
+                // Process the call message and previous context asynchronously
+                Promise.resolve().then(() => {
+                  this.processInitialContext(callId, message, previousMessages).catch(error => {
+                    this.logger.error(`Async initial context processing failed for call ${callId}: ${error.message}`);
+                  });
+                });
 
                 // Set up collection of future context
                 const timeoutHandle = setTimeout(
-                  () => this.processFutureContext(callId),
+                  () => {
+                    Promise.resolve().then(() => {
+                      this.processFutureContext(callId).catch(error => {
+                        this.logger.error(`Async future context processing failed for call ${callId}: ${error.message}`);
+                      });
+                    });
+                  },
                   this.CONTEXT_TIMEOUT_MS
                 );
 
@@ -376,9 +386,13 @@ export class ChatScraperService implements OnModuleInit {
         if (context.chatId === chatId && message.id > context.messageId) {
           context.nextMessages.push(message);
           
-          // If we've collected enough next messages, process the future context
+          // If we've collected enough next messages, process the future context asynchronously
           if (context.nextMessages.length >= 20) {
-            this.processFutureContext(callId);
+            Promise.resolve().then(() => {
+              this.processFutureContext(callId).catch(error => {
+                this.logger.error(`Async future context processing failed for call ${callId}: ${error.message}`);
+              });
+            });
           }
         }
       }
@@ -428,24 +442,58 @@ export class ChatScraperService implements OnModuleInit {
       };
 
       // Log what will be sent to AI
-      this.logger.log('Initial context AI payload:', {
-        endpoint: '/telegram-analytics/analyze-context',
-        method: 'POST',
-        payload: aiPayload
-      });
+      // this.logger.log('Initial context AI payload:', {
+      //   endpoint: '/telegram-analytics/analyze-context',
+      //   method: 'POST',
+      //   payload: aiPayload
+      // });
 
       // Send to AI endpoint for analysis
       const aiResponse = await this.aiService.analyzeContext(aiPayload);
 
-      // Store initial AI analysis in the database
+      // Store context messages in the database
+      for (const messageId of aiResponse.relatedMessageIds) {
+        const contextMessage = previousMessages.find(msg => msg.id === messageId);
+        if (contextMessage) {
+          const matchReason = aiResponse.matchReason.find(reason => reason.messageId === messageId);
+          const fromIdJson = contextMessage.fromId ? 
+            (typeof contextMessage.fromId === 'string' ? 
+              contextMessage.fromId : 
+              JSON.parse(JSON.stringify(contextMessage.fromId))) : 
+            null;
+
+          await this.prisma.messages.create({
+            data: {
+              telegramMessageId: randomUUID(),
+              tgMessageId: contextMessage.id.toString(),
+              text: contextMessage.text,
+              fromId: fromIdJson,
+              messageType: MessageType.Context,
+              reason: matchReason?.matchedTerm,
+              chat: {
+                connect: {
+                  tgChatId: call.tgChatId
+                }
+              },
+              call: {
+                connect: {
+                  telegramCallId: callId
+                }
+              }
+            }
+          });
+        }
+      }
+
+      // Update call to mark initial analysis as complete
       await this.prisma.calls.update({
         where: { telegramCallId: callId },
         data: {
-          initialAnalysis: JSON.stringify(aiResponse)
+          hasInitialAnalysis: true
         }
       });
 
-      this.logger.log(`Stored initial analysis for call ${callId}`);
+      this.logger.log(`Stored initial context messages for call ${callId}`);
 
     } catch (error) {
       this.logger.error(`Failed to process initial context for call ${callId}: ${error.message}`);
@@ -463,6 +511,15 @@ export class ChatScraperService implements OnModuleInit {
     // Skip processing if there are no future messages
     if (context.nextMessages.length === 0) {
       this.logger.log(`No future messages to process for call ${callId}, skipping analysis`);
+      
+      // Even with no messages, mark the analysis as complete
+      await this.prisma.calls.update({
+        where: { telegramCallId: callId },
+        data: {
+          hasFutureAnalysis: true
+        }
+      });
+      
       return;
     }
 
@@ -475,7 +532,7 @@ export class ChatScraperService implements OnModuleInit {
         include: {
           messages: {
             where: {
-              telegramMessageId: context.messageId.toString()
+              tgMessageId: context.messageId.toString()
             }
           }
         }
@@ -486,7 +543,15 @@ export class ChatScraperService implements OnModuleInit {
         return;
       }
 
-      const callMessage = call.messages[0];
+      // Find the original call message
+      const callMessage = await this.prisma.messages.findFirst({
+        where: {
+          callId: callId,
+          tgMessageId: context.messageId.toString(),
+          messageType: MessageType.Call
+        }
+      });
+
       if (!callMessage) {
         this.logger.error(`Original call message not found for call ${callId}`);
         return;
@@ -503,7 +568,7 @@ export class ChatScraperService implements OnModuleInit {
         },
         contextType: 'future' as const,
         callMessage: {
-          id: parseInt(callMessage.telegramMessageId),
+          id: parseInt(callMessage.tgMessageId),
           text: callMessage.text || null,
           fromId: callMessage.fromId,
           date: callMessage.createdAt.toISOString(),
@@ -521,24 +586,58 @@ export class ChatScraperService implements OnModuleInit {
       };
 
       // Log what will be sent to AI
-      this.logger.log('Future context AI payload:', {
-        endpoint: '/telegram-analytics/analyze-context',
-        method: 'POST',
-        payload: aiPayload
-      });
+      // this.logger.log('Future context AI payload:', {
+      //   endpoint: '/telegram-analytics/analyze-context',
+      //   method: 'POST',
+      //   payload: aiPayload
+      // });
 
       // Send to AI endpoint for analysis
       const aiResponse = await this.aiService.analyzeContext(aiPayload);
 
-      // Store future context AI analysis in the database
+      // Store context messages in the database
+      for (const messageId of aiResponse.relatedMessageIds) {
+        const contextMessage = context.nextMessages.find(msg => msg.id === messageId);
+        if (contextMessage) {
+          const matchReason = aiResponse.matchReason.find(reason => reason.messageId === messageId);
+          const fromIdJson = contextMessage.fromId ? 
+            (typeof contextMessage.fromId === 'string' ? 
+              contextMessage.fromId : 
+              JSON.parse(JSON.stringify(contextMessage.fromId))) : 
+            null;
+
+          await this.prisma.messages.create({
+            data: {
+              telegramMessageId: randomUUID(),
+              tgMessageId: contextMessage.id.toString(),
+              text: contextMessage.text,
+              fromId: fromIdJson,
+              messageType: MessageType.Context,
+              reason: matchReason ? `${matchReason.reason} - ${matchReason.matchedTerm}` : undefined,
+              chat: {
+                connect: {
+                  tgChatId: call.tgChatId
+                }
+              },
+              call: {
+                connect: {
+                  telegramCallId: callId
+                }
+              }
+            }
+          });
+        }
+      }
+
+      // Update call to mark future analysis as complete
       await this.prisma.calls.update({
         where: { telegramCallId: callId },
         data: {
-          futureAnalysis: JSON.stringify(aiResponse)
+          hasFutureAnalysis: true
         }
       });
 
-      this.logger.log(`Stored future analysis for call ${callId}`);
+      this.logger.log(`Stored future context messages for call ${callId}`);
 
     } catch (error) {
       this.logger.error(`Failed to process future context for call ${callId}: ${error.message}`);

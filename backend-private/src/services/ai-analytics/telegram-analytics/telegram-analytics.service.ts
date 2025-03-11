@@ -438,10 +438,11 @@ export class TelegramAnalyticsService {
       // Create a set of valid message IDs for quick lookup
       const validMessageIds = new Set(messages.map(m => m.id));
 
-      const nilaiApiUrl = this.configService.get<string>('NILAI_API_URL');
-      const nilaiApiKey = this.configService.get<string>('NILAI_API_KEY');
+      const nilaiApiUrl2 = this.configService.get<string>('NILAI_API_URL_2');
+      const nilaiApiKey2 = this.configService.get<string>('NILAI_API_KEY_2');
+      const nillaiApiModel2 = this.configService.get<string>('NILAI_API_MODEL_2');
       
-      if (!nilaiApiUrl || !nilaiApiKey) {
+      if (!nilaiApiUrl2 || !nilaiApiKey2) {
         throw new Error('Missing Nilai API configuration');
       }
 
@@ -463,9 +464,9 @@ export class TelegramAnalyticsService {
 
       // Analyze messages for relevance
       const aiResponse = await axios.post(
-        `${nilaiApiUrl}/v1/chat/completions`,
+        `${nilaiApiUrl2}/v1/chat/completions`,
         {
-          model: 'meta-llama/Llama-3.1-8B-Instruct',
+          model: nillaiApiModel2,
           messages: [
             {
               role: 'system',
@@ -517,7 +518,7 @@ export class TelegramAnalyticsService {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${nilaiApiKey}`,
+            'Authorization': `Bearer ${nilaiApiKey2}`,
           },
         }
       );

@@ -12,7 +12,8 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   // Get port from environment variable or use default
-  const port = process.env.PORT || 5000;
+  // const port = process.env.PORT || 5000;
+  const port = 5001;
   
   await app.listen(port, '0.0.0.0');
   logger.log(`Chat Scraper service is running on port ${port}`);

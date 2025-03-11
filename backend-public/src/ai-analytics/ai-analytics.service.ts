@@ -6,7 +6,7 @@ import axios from 'axios';
 import { Chain, SummaryType, Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
-interface TelegramContractAnalyticsResponse {
+interface BaseAnalyticsResponse {
   summary: string;
   sentiment: {
     overall: string;
@@ -24,22 +24,7 @@ interface TelegramContractAnalyticsResponse {
   }>;
 }
 
-interface TwitterContractAnalyticsResponse {
-  summary: string;
-  sentiment: {
-    overall: string;
-    communityMood: string;
-    details: string[];
-  };
-  keyTopics: Array<{
-    topic: string;
-    frequency: number;
-    context: string;
-  }>;
-  nextSteps: Array<{
-    suggestion: string;
-    context: string;
-  }>;
+interface TwitterApiResponse extends BaseAnalyticsResponse {
   relevantTweets: Array<{
     url: string;
     text: string;
@@ -53,6 +38,8 @@ interface TwitterContractAnalyticsResponse {
     };
   }>;
 }
+
+interface TelegramApiResponse extends BaseAnalyticsResponse {}
 
 const GENERATION_COOLDOWN = 5 * 60 * 1000; // 5 minutes in milliseconds
 
@@ -93,13 +80,9 @@ export class AiAnalyticsService {
 
       // If we have a recent summary, return it
       if (existingSummary && timeUntilNext > 0) {
-        const parsedData = JSON.parse(existingSummary.summary);
+        const parsedData = JSON.parse(existingSummary.summary) as TwitterApiResponse;
         return {
-          summary: parsedData.summary,
-          sentiment: parsedData.sentiment,
-          keyTopics: parsedData.keyTopics,
-          nextSteps: parsedData.nextSteps,
-          relevantTweets: parsedData.relevantTweets,
+          ...parsedData,
           timeUntilNextGeneration: timeUntilNext,
           lastGeneratedAt: existingSummary.createdAt,
         };
@@ -107,7 +90,7 @@ export class AiAnalyticsService {
 
       // If no recent summary exists or it's expired, generate a new one
       const url = `${this.analyticsUrl}/twitter-analytics/contract/${input.contractAddress}`;
-      const response = await axios.get<TwitterContractAnalyticsResponse>(url);
+      const response = await axios.get<TwitterApiResponse>(url);
 
       // Store the new summary
       const summaryData: Prisma.SummaryCreateInput = {
@@ -115,9 +98,8 @@ export class AiAnalyticsService {
         privyId: '', // Twitter analytics doesn't require privyId
         address: input.contractAddress,
         summaryType: SummaryType.Twitter,
-        summary: JSON.stringify(response.data), // Store the entire response as JSON
-        createdAt: new Date(),
-        Blockchain: Chain.BASE, // Default to BASE chain
+        summary: JSON.stringify(response.data),
+        Blockchain: Chain.BASE, // Required field, using BASE as default
       };
 
       const newSummary = await this.prisma.summary.create({
@@ -125,12 +107,8 @@ export class AiAnalyticsService {
       });
 
       return {
-        summary: response.data.summary,
-        sentiment: response.data.sentiment,
-        keyTopics: response.data.keyTopics,
-        nextSteps: response.data.nextSteps,
-        relevantTweets: response.data.relevantTweets,
-        timeUntilNextGeneration: GENERATION_COOLDOWN / 1000, // Convert ms to seconds
+        ...response.data,
+        timeUntilNextGeneration: GENERATION_COOLDOWN / 1000,
         lastGeneratedAt: newSummary.createdAt,
       };
     } catch (error: any) {
@@ -145,13 +123,13 @@ export class AiAnalyticsService {
     }
   }
 
-  async getTelegramContractAnalytics(contractAddress: string, privyId: string): Promise<TelegramAnalyticsResponse> {
+  async getTelegramContractAnalytics(input: TelegramContractAnalyticsInput, privyId: string): Promise<TelegramAnalyticsResponse> {
     try {
       // Check for existing summary
       const existingSummary = await this.prisma.summary.findFirst({
         where: {
           privyId,
-          address: contractAddress,
+          address: input.contractAddress,
           summaryType: SummaryType.Telegram,
         },
         orderBy: {
@@ -163,30 +141,26 @@ export class AiAnalyticsService {
 
       // If we have a recent summary, return it
       if (existingSummary && timeUntilNext > 0) {
-        const parsedData = JSON.parse(existingSummary.summary);
+        const parsedData = JSON.parse(existingSummary.summary) as TelegramApiResponse;
         return {
-          summary: parsedData.summary,
-          sentiment: parsedData.sentiment,
-          keyTopics: parsedData.keyTopics,
-          nextSteps: parsedData.nextSteps,
+          ...parsedData,
           timeUntilNextGeneration: timeUntilNext,
           lastGeneratedAt: existingSummary.createdAt,
         };
       }
 
       // If no recent summary exists or it's expired, generate a new one
-      const url = `${this.analyticsUrl}/telegram-analytics/contract/${contractAddress}/privy/${privyId}`;
-      const response = await axios.get<TelegramContractAnalyticsResponse>(url);
+      const url = `${this.analyticsUrl}/telegram-analytics/contract/${input.contractAddress}/privy/${privyId}`;
+      const response = await axios.get<TelegramApiResponse>(url);
 
       // Store the new summary
       const summaryData: Prisma.SummaryCreateInput = {
         id: uuidv4(),
         privyId,
-        address: contractAddress,
+        address: input.contractAddress,
         summaryType: SummaryType.Telegram,
-        summary: JSON.stringify(response.data), // Store the entire response as JSON
-        createdAt: new Date(),
-        Blockchain: Chain.BASE, // Default to BASE chain
+        summary: JSON.stringify(response.data),
+        Blockchain: Chain.BASE, // Required field, using BASE as default
       };
 
       const newSummary = await this.prisma.summary.create({
@@ -194,18 +168,15 @@ export class AiAnalyticsService {
       });
 
       return {
-        summary: response.data.summary,
-        sentiment: response.data.sentiment,
-        keyTopics: response.data.keyTopics,
-        nextSteps: response.data.nextSteps,
-        timeUntilNextGeneration: GENERATION_COOLDOWN / 1000, // Convert ms to seconds
+        ...response.data,
+        timeUntilNextGeneration: GENERATION_COOLDOWN / 1000,
         lastGeneratedAt: newSummary.createdAt,
       };
     } catch (error: any) {
       console.error('Error getting telegram contract analytics:', error);
       if (error?.response?.status) {
         if (error.response.status === 404) {
-          throw new Error(`No Telegram data found for contract: ${contractAddress}`);
+          throw new Error(`No Telegram data found for contract: ${input.contractAddress}`);
         } else if (error.response.status === 401) {
           throw new Error('Unauthorized: Please check your Telegram API configuration');
         } else if (error.response.status === 403) {

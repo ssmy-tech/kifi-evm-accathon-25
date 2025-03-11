@@ -40,6 +40,9 @@ model Messages {
     tgChatId String
     text String?
     fromId Json?
+    messageType MessageType @default(Call)
+    reason String?
+    tgMessageId String
     chat Chats @relation(fields: [tgChatId], references: [tgChatId])
     callId String?
     call Calls? @relation(fields: [callId], references: [telegramCallId])
@@ -58,8 +61,8 @@ model Calls {
     messages Messages[]
     summaryId String?
     summary Summary? @relation(fields: [summaryId], references: [id])
-    initialAnalysis Json?
-    futureAnalysis Json?
+    hasInitialAnalysis Boolean @default(false)
+    hasFutureAnalysis Boolean @default(false)
 }
 
 model Summary {
@@ -94,4 +97,9 @@ enum ChatType {
     Channel
     Group
     User
+}
+
+enum MessageType {
+    Call
+    Context
 }

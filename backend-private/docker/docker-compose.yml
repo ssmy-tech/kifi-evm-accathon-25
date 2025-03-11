@@ -12,6 +12,7 @@ services:
       - BASE_RPC_URL=${BASE_RPC_URL}
       - MONAD_RPC_URL=${MONAD_RPC_URL}
       - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+      - AI_API_URL=${AI_API_URL:-http://localhost:5001}
     ports:
       - "9000:9000"
     healthcheck:
