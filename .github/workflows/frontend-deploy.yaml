@@ -41,7 +41,7 @@ jobs:
       - name: Build Docker Image
         working-directory: ./frontend
         run: |
-          docker build -t ${{ secrets.FRONTEND_ECR_REPOSITORY }}:${{ github.sha }} .
+          docker build --build-arg NEXT_PUBLIC_PRIVY_ID=${{ secrets.PRIVY_ID }} -t ${{ secrets.FRONTEND_ECR_REPOSITORY }}:${{ github.sha }} .
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3

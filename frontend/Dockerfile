@@ -9,7 +9,7 @@ RUN npm ci
 # Copy rest of the application code
 COPY . .
 
-ARG NEXT_PUBLIC_PRIVY_ID=placeholder_value
+ARG NEXT_PUBLIC_PRIVY_ID
 
 ENV NEXT_PUBLIC_PRIVY_ID=$NEXT_PUBLIC_PRIVY_ID
 
