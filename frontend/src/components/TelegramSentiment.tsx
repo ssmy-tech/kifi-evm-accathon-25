@@ -9,7 +9,6 @@ interface TelegramSentimentProps {
 }
 
 export default function TelegramSentiment({ contractAddress }: TelegramSentimentProps) {
-	const [messageCount, setMessageCount] = useState(0);
 	const [summary, setSummary] = useState("");
 
 	const { data, loading, error } = useGetTelegramContractAnalyticsQuery({
@@ -60,7 +59,6 @@ export default function TelegramSentiment({ contractAddress }: TelegramSentiment
 			</div>
 		);
 	}
-	console.log(data?.getTelegramContractAnalytics);
 
 	return (
 		<div className={styles.container}>

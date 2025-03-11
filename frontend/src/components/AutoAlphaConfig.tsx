@@ -3,11 +3,10 @@
 import { useState, useEffect } from "react";
 import styles from "./AutoAlphaConfig.module.css";
 import { Switch } from "@headlessui/react";
-import { Caller } from "@/types/caller.types";
 import Image from "next/image";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { useGetUserSavedChatsQuery, useGetChatPhotoLazyQuery } from "@/generated/graphql";
-import { getCallerPhoto, saveCallerPhoto } from "@/utils/localStorage";
+import { getPhoto, savePhoto } from "@/utils/localStorage";
 
 interface AutoAlphaConfigProps {
 	onConfigChange: (config: AutoAlphaSettings) => void;
@@ -46,7 +45,7 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 			savedChats.getUserSavedChats.chats.forEach((chat) => {
 				if (!chatPhotos[chat.id]) {
 					// First try to get from localStorage
-					const cachedPhoto = getCallerPhoto(chat.id);
+					const cachedPhoto = getPhoto(chat.id);
 
 					if (cachedPhoto) {
 						// If found in cache, use it
@@ -70,7 +69,7 @@ export function AutoAlphaConfig({ onConfigChange }: AutoAlphaConfigProps) {
 
 									// Save to localStorage if it's not the default image
 									if (photoUrl !== "/assets/KiFi_LOGO.jpg") {
-										saveCallerPhoto(chat.id, photoUrl);
+										savePhoto(chat.id, photoUrl);
 									}
 								}
 							},

@@ -5,13 +5,6 @@ import { FaChevronLeft, FaChevronRight } from "react-icons/fa6";
 
 import { useGetTwitterContractAnalyticsQuery } from "@/generated/graphql";
 
-interface Tweet {
-	url: string;
-	text: string;
-	author: string;
-	timestamp: string;
-}
-
 interface TwitterSentimentProps {
 	contractAddress: string;
 }

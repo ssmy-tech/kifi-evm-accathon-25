@@ -26,6 +26,7 @@ export interface Caller {
 	name: string;
 	profileImageUrl: string;
 	timestamp: number;
+	lastCallTimestamp?: number;
 	callCount: number;
 	winRate: number;
 	chat: Chat;

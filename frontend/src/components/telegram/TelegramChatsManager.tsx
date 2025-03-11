@@ -1,113 +1,77 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useGetTelegramChatsQuery, useGetUserSavedChatsQuery, useSaveUserChatsMutation, useUpdateTelegramApiLinkMutation, useGetChatPhotoLazyQuery } from "../../generated/graphql";
 import styles from "./TelegramChatsManager.module.css";
 import { FaSearch } from "react-icons/fa";
+import { savePhoto, getAllPhotos } from "../../utils/localStorage";
 
-// Storage key for chat photos
-const CHAT_PHOTOS_STORAGE_KEY = "global-chat-photos-cache";
-
-// Maximum number of saved chats allowed
+// Constants
 const MAX_SAVED_CHATS = 20;
+const DEFAULT_PHOTO = "/assets/KiFi_LOGO.jpg";
 
-// Helper function to check if we need to fetch the photo
-function needsPhotoFetch(photoUrl: string | undefined | null) {
-	return photoUrl && photoUrl.startsWith("/api/telegram/photo/");
+// Photo management types
+interface PhotoState {
+	url: string;
+	isLoading: boolean;
+	error?: string;
 }
 
-// Helper to check if we already tried to fetch this photo
-function hasPhotoBeenFetched(chatId: string, photos: Record<string, string>) {
-	return photos[chatId] !== undefined;
-}
+type PhotoCache = Record<string, PhotoState>;
 
-// Add a helper function to validate photo URL
-const getValidPhotoUrl = (url: string | undefined | null): string => {
-	if (!url || url === "" || url.startsWith("/api/telegram/photo/")) {
-		return "/assets/KiFi_LOGO.jpg";
-	}
-	return url;
+// Helper to manage photo cache in localStorage
+const photoCache = {
+	get: (): PhotoCache => {
+		try {
+			const photos: PhotoCache = {};
+			const cached = getAllPhotos();
+
+			Object.entries(cached).forEach(([id, data]) => {
+				if (data && typeof data.url === "string" && data.url !== "" && data.url !== "no-photo") {
+					photos[id] = { url: data.url, isLoading: false };
+				}
+			});
+			return photos;
+		} catch {
+			return {};
+		}
+	},
+	set: (id: string, url: string) => {
+		try {
+			savePhoto(id, url);
+		} catch (error) {
+			console.error("Error saving to photo cache:", error);
+		}
+	},
 };
 
 export const TelegramChatsManager = () => {
-	// Add loading state tracking
-	const [loadingPhotos, setLoadingPhotos] = useState<Set<string>>(new Set());
-
-	// Helper to handle photo fetching with timeout
-	const fetchChatPhoto = async (chatId: string, getChatPhoto: any, setChatPhotos: React.Dispatch<React.SetStateAction<Record<string, string>>>, setLoadingPhotos: React.Dispatch<React.SetStateAction<Set<string>>>) => {
-		try {
-			setLoadingPhotos((prev) => new Set([...prev, chatId]));
-			const result = await Promise.race([getChatPhoto({ variables: { chatId } }), new Promise((_, reject) => setTimeout(() => reject(new Error("Photo fetch timeout")), 30000))]);
-
-			if (result?.data?.getChatPhoto) {
-				const shouldUseDefaultLogo = result.data.getChatPhoto === "no-photo" || !result.data.getChatPhoto;
-				const photoUrl = shouldUseDefaultLogo ? "/assets/KiFi_LOGO.jpg" : result.data.getChatPhoto;
-
-				setChatPhotos((prev) => ({
-					...prev,
-					[chatId]: photoUrl,
-				}));
-			} else {
-				throw new Error("No photo data received");
-			}
-		} catch (error) {
-			console.error(`Error fetching photo for chat ${chatId}:`, error);
-			setChatPhotos((prev) => ({
-				...prev,
-				[chatId]: "/assets/KiFi_LOGO.jpg",
-			}));
-		} finally {
-			setLoadingPhotos((prev) => {
-				const next = new Set(prev);
-				next.delete(chatId);
-				return next;
-			});
-		}
-	};
-
-	const [, setSelectedChats] = useState<string[]>([]);
+	// State
+	const [photos, setPhotos] = useState<PhotoCache>(photoCache.get());
 	const [apiLink, setApiLink] = useState("");
+	const [searchTerm, setSearchTerm] = useState("");
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const [pendingSavedChats, setPendingSavedChats] = useState<string[]>([]);
+	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+	const [isMobileView, setIsMobileView] = useState(false);
+
 	// Pagination state
 	const [availableChatsPage, setAvailableChatsPage] = useState(1);
 	const [savedChatsPage, setSavedChatsPage] = useState(1);
-	// Error message state
-	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	// Pending changes state
-	const [pendingSavedChats, setPendingSavedChats] = useState<string[]>([]);
-	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-	// Search state
-	const [searchTerm, setSearchTerm] = useState("");
-	const [isMobileView, setIsMobileView] = useState(false);
-	// Page limit state
-	const [pageLimit, setPageLimit] = useState(15); // Default to desktop view
-	const [savedChatsPageLimit, setSavedChatsPageLimit] = useState(5); // Make this dynamic
+	const [pageLimit, setPageLimit] = useState(15);
+	const [savedChatsPageLimit, setSavedChatsPageLimit] = useState(5);
 
-	// Initialize chatPhotos from localStorage if available
-	const [chatPhotos, setChatPhotos] = useState<Record<string, string>>(() => {
-		try {
-			const storedPhotos = localStorage.getItem(CHAT_PHOTOS_STORAGE_KEY);
-			return storedPhotos ? JSON.parse(storedPhotos) : {};
-		} catch (error) {
-			console.error("Error loading chat photos from localStorage:", error);
-			return {};
-		}
-	});
-
-	// Queries
+	// Queries and mutations
 	const { data: telegramChats, loading: loadingTelegram, error: telegramError } = useGetTelegramChatsQuery();
 	const { data: savedChats, loading: loadingSaved, refetch: refetchSavedChats } = useGetUserSavedChatsQuery();
-	const [getChatPhoto, {}] = useGetChatPhotoLazyQuery();
-
-	// Mutations
+	const [getChatPhoto] = useGetChatPhotoLazyQuery();
 	const [saveChats, { loading: savingChats }] = useSaveUserChatsMutation({
 		onCompleted: () => {
 			refetchSavedChats();
-			setSelectedChats([]);
 			setPendingSavedChats([]);
 			setErrorMessage(null);
 			setHasUnsavedChanges(false);
 		},
 	});
-
 	const [updateApiLink, { loading: updatingLink }] = useUpdateTelegramApiLinkMutation({
 		onCompleted: () => {
 			setErrorMessage(null);
@@ -117,14 +81,81 @@ export const TelegramChatsManager = () => {
 		},
 	});
 
-	// Save chat photos to localStorage whenever they change
+	// Filter chats based on search term
+	const filteredChats =
+		telegramChats?.getTelegramChats.chats.filter((chat) => {
+			return chat.name.toLowerCase().includes(searchTerm.toLowerCase());
+		}) || [];
+
+	// Calculate pagination values
+	const availableChatsTotal = searchTerm ? filteredChats.length : telegramChats?.getTelegramChats.chats.length || 0;
+	const availableChatsPages = Math.ceil(availableChatsTotal / pageLimit);
+	const availableChatsStart = (availableChatsPage - 1) * pageLimit;
+	const availableChatsEnd = availableChatsStart + pageLimit;
+
+	const pendingSavedChatsTotal = pendingSavedChats.length;
+	const savedChatsPages = Math.max(1, Math.ceil(pendingSavedChatsTotal / savedChatsPageLimit));
+	const savedChatsStart = (savedChatsPage - 1) * savedChatsPageLimit;
+	const savedChatsEnd = Math.min(savedChatsStart + savedChatsPageLimit, pendingSavedChatsTotal);
+
+	// Photo fetching logic
+	const fetchPhoto = useCallback(
+		async (chatId: string, photoUrl?: string | null) => {
+			// Skip if no need to fetch
+			if (!photoUrl?.startsWith("/api/telegram/photo/")) return;
+			if (photos[chatId]?.isLoading || (photos[chatId]?.url && !photos[chatId]?.error)) return;
+
+			setPhotos((prev) => ({
+				...prev,
+				[chatId]: { url: DEFAULT_PHOTO, isLoading: true },
+			}));
+
+			try {
+				const result = await getChatPhoto({ variables: { chatId } });
+				const url = result.data?.getChatPhoto;
+				const finalUrl = !url || url === "no-photo" ? DEFAULT_PHOTO : url;
+
+				setPhotos((prev) => ({
+					...prev,
+					[chatId]: { url: finalUrl, isLoading: false },
+				}));
+
+				if (finalUrl !== DEFAULT_PHOTO) {
+					photoCache.set(chatId, finalUrl);
+				}
+			} catch (error) {
+				console.error("Error fetching photo:", error);
+				setPhotos((prev) => ({
+					...prev,
+					[chatId]: { url: DEFAULT_PHOTO, isLoading: false, error: "Failed to load" },
+				}));
+			}
+		},
+		[getChatPhoto, photos]
+	);
+
+	// Fetch photos for visible chats
 	useEffect(() => {
-		try {
-			localStorage.setItem(CHAT_PHOTOS_STORAGE_KEY, JSON.stringify(chatPhotos));
-		} catch (error) {
-			console.error("Error saving chat photos to localStorage:", error);
-		}
-	}, [chatPhotos]);
+		const visibleChats = [...(telegramChats?.getTelegramChats.chats?.slice(availableChatsStart, availableChatsEnd) || []), ...(savedChats?.getUserSavedChats.chats?.slice(savedChatsStart, savedChatsEnd) || [])];
+
+		visibleChats.forEach((chat) => {
+			if (!photos[chat.id] || photos[chat.id]?.error) {
+				fetchPhoto(chat.id, chat.photoUrl);
+			}
+		});
+	}, [telegramChats?.getTelegramChats.chats, savedChats?.getUserSavedChats.chats, availableChatsStart, availableChatsEnd, savedChatsStart, savedChatsEnd, fetchPhoto, photos]);
+
+	// ChatAvatar component
+	const ChatAvatar = ({ chatId, name }: { chatId: string; name: string; photoUrl?: string | null }) => {
+		const photo = photos[chatId] || { url: DEFAULT_PHOTO, isLoading: false };
+
+		return (
+			<div className={photo.isLoading ? styles.chatAvatarLoading : undefined}>
+				{photo.isLoading && <div className={styles.chatAvatarSpinner} />}
+				<Image src={photo.url} alt={name} className={`${styles.chatAvatar} ${photo.isLoading ? styles.hidden : ""}`} width={50} height={50} priority={false} />
+			</div>
+		);
+	};
 
 	// Check for mobile view on mount and window resize
 	useEffect(() => {
@@ -200,52 +231,6 @@ export const TelegramChatsManager = () => {
 		window.addEventListener("resize", handleResize);
 		return () => window.removeEventListener("resize", handleResize);
 	}, [telegramChats, pendingSavedChats.length, availableChatsPage, savedChatsPage, isMobileView]);
-
-	// Filter chats based on search term
-	const filteredChats =
-		telegramChats?.getTelegramChats.chats.filter((chat) => {
-			return chat.name.toLowerCase().includes(searchTerm.toLowerCase());
-		}) || [];
-
-	// Calculate pagination values for available chats
-	const availableChatsTotal = searchTerm ? filteredChats.length : telegramChats?.getTelegramChats.chats.length || 0;
-	const availableChatsPages = Math.ceil(availableChatsTotal / pageLimit);
-	const availableChatsStart = (availableChatsPage - 1) * pageLimit;
-	const availableChatsEnd = availableChatsStart + pageLimit;
-
-	// Calculate pagination values for saved chats - always 5 per page
-	const pendingSavedChatsTotal = pendingSavedChats.length;
-	const savedChatsPages = Math.max(1, Math.ceil(pendingSavedChatsTotal / savedChatsPageLimit));
-	const savedChatsStart = (savedChatsPage - 1) * savedChatsPageLimit;
-	const savedChatsEnd = Math.min(savedChatsStart + savedChatsPageLimit, pendingSavedChatsTotal);
-
-	// Update the useEffect that fetches photos
-	useEffect(() => {
-		const visibleChats = [...(telegramChats?.getTelegramChats.chats?.slice(availableChatsStart, availableChatsEnd) || []), ...(savedChats?.getUserSavedChats.chats?.slice(savedChatsStart, savedChatsEnd) || [])];
-
-		// Only fetch photos for chats that:
-		// 1. Are not already in the cache
-		// 2. Have a photo URL that needs to be fetched from the API
-		const chatIdsToFetch = visibleChats
-			.filter((chat) => {
-				const needsFetch = needsPhotoFetch(chat.photoUrl);
-				const notInCache = !hasPhotoBeenFetched(chat.id, chatPhotos);
-				return needsFetch && notInCache;
-			})
-			.map((chat) => chat.id);
-
-		if (chatIdsToFetch.length > 0) {
-			const fetchPhotos = async () => {
-				try {
-					await Promise.all(chatIdsToFetch.map((chatId) => fetchChatPhoto(chatId, getChatPhoto, setChatPhotos, setLoadingPhotos)));
-				} catch (error) {
-					console.error("Error fetching chat photos:", error);
-				}
-			};
-
-			fetchPhotos();
-		}
-	}, [availableChatsStart, availableChatsEnd, savedChatsStart, savedChatsEnd, telegramChats?.getTelegramChats.chats, savedChats?.getUserSavedChats.chats, getChatPhoto]); // Remove chatPhotos from dependencies as it's used in hasPhotoBeenFetched
 
 	// Initialize pendingSavedChats when savedChats data is loaded
 	useEffect(() => {
@@ -379,29 +364,6 @@ export const TelegramChatsManager = () => {
 		setSearchTerm(e.target.value);
 	};
 
-	const ChatAvatar = ({ chatId, photoUrl, name }: { chatId: string; photoUrl?: string | null; name: string }) => {
-		const isLoading = loadingPhotos.has(chatId);
-		const hasPhoto = chatPhotos[chatId];
-
-		// If we have a cached photo, use it
-		if (hasPhoto) {
-			return <Image src={hasPhoto} alt={name} className={styles.chatAvatar} width={50} height={50} priority={false} />;
-		}
-
-		// If we're loading or it's an API URL that needs fetching, show loading state
-		if (isLoading || (photoUrl && needsPhotoFetch(photoUrl))) {
-			return (
-				<div className={styles.chatAvatarLoading}>
-					<div className={styles.chatAvatarSpinner}></div>
-				</div>
-			);
-		}
-
-		// Otherwise use the validated photo URL or default logo
-		const validPhotoUrl = getValidPhotoUrl(photoUrl);
-		return <Image src={validPhotoUrl} alt={name} className={styles.chatAvatar} width={50} height={50} priority={false} />;
-	};
-
 	if (loadingTelegram || loadingSaved) {
 		return (
 			<div className={styles.loadingContainer}>
@@ -447,7 +409,7 @@ export const TelegramChatsManager = () => {
 						<div className={`${styles.chatGrid} ${styles.availableChatsRow}`}>
 							{(searchTerm ? filteredChats : telegramChats?.getTelegramChats.chats || []).slice(availableChatsStart, availableChatsEnd).map((chat) => (
 								<div key={chat.id} className={`${styles.chatCard} ${isPendingSaved(chat.id) ? styles.chatCardSaved : ""}`} onClick={() => handleChatSelect(chat.id)}>
-									<ChatAvatar chatId={chat.id} photoUrl={chat.photoUrl} name={chat.name} />
+									<ChatAvatar chatId={chat.id} name={chat.name} />
 									<h1 className={styles.chatName}>{chat.name}</h1>
 									<p className={styles.chatType}>{chat.type}</p>
 									{isPendingSaved(chat.id) && <div className={styles.savedBadge}>Selected</div>}
@@ -480,7 +442,7 @@ export const TelegramChatsManager = () => {
 
 										return (
 											<div key={chat.id} className={`${styles.chatCard} ${styles.savedChatCard}`} onClick={() => handleSavedChatToggle(chat.id)}>
-												<ChatAvatar chatId={chat.id} photoUrl={chat.photoUrl} name={chat.name} />
+												<ChatAvatar chatId={chat.id} name={chat.name} />
 												<h3 className={styles.chatName}>{chat.name}</h3>
 												<p className={styles.chatType}>{chat.type}</p>
 												<div

@@ -5,7 +5,7 @@ import styles from "./GroupManager.module.css";
 import Image from "next/image";
 import { useState, useEffect, useMemo } from "react";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
-import { getCallerPhoto, saveCallerPhoto } from "@/utils/localStorage";
+import { getPhoto, savePhoto } from "@/utils/localStorage";
 
 const DEFAULT_PROFILE_IMAGE = "/assets/KiFi_LOGO.jpg";
 
@@ -80,7 +80,7 @@ export function GroupManager() {
 			const chatIdsToFetch = new Set<string>();
 
 			savedChatsData.getUserSavedChats.chats.forEach((chat) => {
-				const cachedPhoto = getCallerPhoto(chat.id);
+				const cachedPhoto = getPhoto(chat.id);
 				if (cachedPhoto) {
 					setChatPhotos((prev) => ({
 						...prev,
@@ -103,7 +103,7 @@ export function GroupManager() {
 									[chatId]: photoUrl,
 								}));
 								if (photoUrl !== DEFAULT_PROFILE_IMAGE) {
-									saveCallerPhoto(chatId, photoUrl);
+									savePhoto(chatId, photoUrl);
 								}
 							}
 						},
@@ -120,15 +120,18 @@ export function GroupManager() {
 		}
 	}, [savedChatsData, getChatPhoto]);
 
-	const callers =
-		savedChatsData?.getUserSavedChats.chats.map((chat) => ({
-			id: chat.id,
-			name: chat.name,
-			profileImageUrl: chatPhotos[chat.id] || DEFAULT_PROFILE_IMAGE,
-			callCount: 0,
-			winRate: 0,
-			timestamp: new Date().toISOString(),
-		})) || [];
+	const callers = useMemo(
+		() =>
+			savedChatsData?.getUserSavedChats.chats.map((chat) => ({
+				id: chat.id,
+				name: chat.name,
+				profileImageUrl: chatPhotos[chat.id] || DEFAULT_PROFILE_IMAGE,
+				callCount: 0,
+				winRate: 0,
+				timestamp: new Date().toISOString(),
+			})) || [],
+		[savedChatsData, chatPhotos]
+	);
 
 	const handleSort = (field: SortField) => {
 		setSortConfig((prevConfig) => ({

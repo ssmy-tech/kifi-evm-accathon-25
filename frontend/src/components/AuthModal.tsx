@@ -4,7 +4,6 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import styles from "./AuthModal.module.css";
 import { TelegramSetup } from "./telegram/TelegramSetup";
-import { TelegramChatsManager } from "./telegram/TelegramChatsManager";
 
 interface AuthModalProps {
 	isOpen: boolean;

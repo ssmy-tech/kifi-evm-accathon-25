@@ -4,10 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import styles from "./Avatar.module.css";
 import Image from "next/image";
-import { Settings, LogOut, X } from "lucide-react";
+import { Settings, LogOut } from "lucide-react";
 import { FaTelegramPlane } from "react-icons/fa";
 import { TelegramSetup } from "./telegram/TelegramSetup";
-import { useCheckTelegramApiHealthQuery, useGetUserSavedChatsQuery } from "../generated/graphql";
+import { useGetUserSavedChatsQuery } from "../generated/graphql";
 
 const Avatar = () => {
 	const { user, logout } = usePrivy();
@@ -16,15 +16,10 @@ const Avatar = () => {
 	const [, setTelegramSetupStage] = useState<"setup" | "manage">("setup");
 	const avatarRef = useRef<HTMLDivElement>(null);
 	const modalRef = useRef<HTMLDivElement>(null);
-	const telegramModalRef = useRef<HTMLDivElement>(null);
 	const [imageLoaded, setImageLoaded] = useState(false);
 
 	// Get saved chats to determine if API is already set up
 	const { data: savedChatsData } = useGetUserSavedChatsQuery();
-	const { data: healthCheck } = useCheckTelegramApiHealthQuery({
-		pollInterval: 30000,
-	});
-	const isHealthy = healthCheck?.checkTelegramApiHealth.status === "healthy";
 
 	useEffect(() => {
 		// Check if we have chats data, which indicates API is set up

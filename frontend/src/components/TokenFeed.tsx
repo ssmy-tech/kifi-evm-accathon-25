@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import styles from "./TokenFeed.module.css";
 import { FaTelegramPlane, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
@@ -10,12 +10,49 @@ import CallerFeed from "./CallerFeed";
 import TwitterSentiment from "./TwitterSentiment";
 import TelegramSentiment from "./TelegramSentiment";
 import TradeModule from "./TradeModule";
-import { getCallerPhoto, saveCallerPhoto } from "../utils/localStorage";
 
 import { useGetCallsByTokenQuery, useGetChatPhotoLazyQuery } from "@/generated/graphql";
+import { GetCallsByTokenQuery } from "@/generated/graphql";
+import { savePhoto, getAllPhotos } from "../utils/localStorage";
 
 const TOKENS_PER_PAGE = 50;
 const LOAD_MORE_COOLDOWN = 5000;
+const DEFAULT_PHOTO = "/assets/KiFi_LOGO.jpg";
+
+// Photo management types
+interface PhotoState {
+	url: string;
+	isLoading: boolean;
+	error?: string;
+}
+
+type PhotoCache = Record<string, PhotoState>;
+
+// Helper to manage photo cache in localStorage
+const photoCache = {
+	get: (): PhotoCache => {
+		try {
+			const photos: PhotoCache = {};
+			const cached = getAllPhotos();
+
+			Object.entries(cached).forEach(([id, data]) => {
+				if (data && typeof data.url === "string" && data.url !== "" && data.url !== "no-photo") {
+					photos[id] = { url: data.url, isLoading: false };
+				}
+			});
+			return photos;
+		} catch {
+			return {};
+		}
+	},
+	set: (id: string, url: string) => {
+		try {
+			savePhoto(id, url);
+		} catch (error) {
+			console.error("Error saving to photo cache:", error);
+		}
+	},
+};
 
 const TokenFeed: React.FC = () => {
 	const [sortField, setSortField] = useState<SortField>("callers");
@@ -24,70 +61,89 @@ const TokenFeed: React.FC = () => {
 	const [expandedTokenId, setExpandedTokenId] = useState<string | null>(null);
 	const [closingTokenId, setClosingTokenId] = useState<string | null>(null);
 	const [processedTokens, setProcessedTokens] = useState<TokenWithDexInfo[]>([]);
-	const [processingTokens, setProcessingTokens] = useState(false);
 	const [page, setPage] = useState(1);
 	const [hasMore, setHasMore] = useState(true);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
 	const [isLoadingCooldown, setIsLoadingCooldown] = useState(false);
 	const observerTarget = useRef<HTMLDivElement>(null);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-	const [chatPhotos, setChatPhotos] = useState<Record<string, string>>({});
+	const [photos, setPhotos] = useState<PhotoCache>(photoCache.get());
+	const [tokenCallsData, setTokenCallsData] = useState<NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"]>([]);
+	const processedDataRef = useRef(false);
 
 	const { data: callsByTokenData, loading: callsByTokenLoading } = useGetCallsByTokenQuery({});
 	const [getChatPhoto] = useGetChatPhotoLazyQuery();
 
-	// Fetch photos for callers
-	useEffect(() => {
-		if (callsByTokenData?.getCallsByToken?.tokenCalls) {
-			const chatIdsToFetch = new Set<string>();
+	// Photo fetching logic
+	const fetchPhoto = useCallback(
+		async (chatId: string, photoUrl?: string | null) => {
+			// Skip if no need to fetch
+			if (!photoUrl?.startsWith("/api/telegram/photo/")) return;
+			if (photos[chatId]?.isLoading || (photos[chatId]?.url && !photos[chatId]?.error)) return;
 
-			callsByTokenData.getCallsByToken.tokenCalls.forEach((tokenCall) => {
+			setPhotos((prev) => ({
+				...prev,
+				[chatId]: { url: DEFAULT_PHOTO, isLoading: true },
+			}));
+
+			try {
+				const result = await getChatPhoto({ variables: { chatId } });
+				const url = result.data?.getChatPhoto;
+				const finalUrl = !url || url === "no-photo" ? DEFAULT_PHOTO : url;
+
+				setPhotos((prev) => ({
+					...prev,
+					[chatId]: { url: finalUrl, isLoading: false },
+				}));
+
+				if (finalUrl !== DEFAULT_PHOTO) {
+					photoCache.set(chatId, finalUrl);
+				}
+			} catch (error) {
+				console.error("Error fetching photo:", error);
+				setPhotos((prev) => ({
+					...prev,
+					[chatId]: { url: DEFAULT_PHOTO, isLoading: false, error: "Failed to load" },
+				}));
+			}
+		},
+		[getChatPhoto, photos]
+	);
+
+	// Process token calls data once when it's available
+	useEffect(() => {
+		if (callsByTokenData?.getCallsByToken?.tokenCalls && !processedDataRef.current) {
+			const tokenCalls = callsByTokenData.getCallsByToken.tokenCalls;
+			setTokenCallsData(tokenCalls);
+			processedDataRef.current = true;
+
+			// Process photos in one pass
+			const chatIdsToFetch = new Set<string>();
+			const chatMap = new Map<string, { chat: (typeof tokenCalls)[0]["calls"][0]["chat"] }>();
+
+			tokenCalls.forEach((tokenCall) => {
 				tokenCall.calls.forEach((call) => {
-					const cachedPhoto = getCallerPhoto(call.chat.id);
-					if (cachedPhoto) {
-						setChatPhotos((prev) => ({
-							...prev,
-							[call.chat.id]: cachedPhoto,
-						}));
-					} else {
+					if (!photos[call.chat.id] || photos[call.chat.id]?.error) {
 						chatIdsToFetch.add(call.chat.id);
+						chatMap.set(call.chat.id, { chat: call.chat });
 					}
 				});
 			});
 
-			if (chatIdsToFetch.size > 0) {
-				Array.from(chatIdsToFetch).forEach((chatId) => {
-					getChatPhoto({
-						variables: { chatId },
-						onCompleted: (data) => {
-							if (data.getChatPhoto) {
-								const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? "/assets/KiFi_LOGO.jpg" : data.getChatPhoto;
-								setChatPhotos((prev) => ({
-									...prev,
-									[chatId]: photoUrl,
-								}));
-								if (photoUrl !== "/assets/KiFi_LOGO.jpg") {
-									saveCallerPhoto(chatId, photoUrl);
-								}
-							}
-						},
-						onError: (error) => {
-							console.error("Error fetching chat photo:", error);
-							setChatPhotos((prev) => ({
-								...prev,
-								[chatId]: "/assets/KiFi_LOGO.jpg",
-							}));
-						},
-					});
-				});
-			}
+			// Fetch photos in batches
+			Array.from(chatIdsToFetch).forEach((chatId) => {
+				const chatData = chatMap.get(chatId);
+				if (chatData) {
+					fetchPhoto(chatId, chatData.chat.photoUrl);
+				}
+			});
 		}
-	}, [callsByTokenData, getChatPhoto]);
+	}, [callsByTokenData, photos, fetchPhoto]);
 
 	// Intersection Observer for infinite scroll
 	useEffect(() => {
 		const observer = new IntersectionObserver(
-			(entries) => {
+			(entries: IntersectionObserverEntry[]) => {
 				if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoadingCooldown) {
 					setPage((prevPage) => prevPage + 1);
 					setIsLoadingCooldown(true);
@@ -99,29 +155,27 @@ const TokenFeed: React.FC = () => {
 			{ threshold: 0.1 }
 		);
 
-		if (observerTarget.current) {
-			observer.observe(observerTarget.current);
+		const currentTarget = observerTarget.current;
+		if (currentTarget) {
+			observer.observe(currentTarget);
 		}
 
 		return () => {
-			if (observerTarget.current) {
-				observer.unobserve(observerTarget.current);
+			if (currentTarget) {
+				observer.unobserve(currentTarget);
 			}
 		};
 	}, [hasMore, isLoadingMore, isLoadingCooldown]);
 
 	useEffect(() => {
-		if (callsByTokenData?.getCallsByToken?.tokenCalls) {
-			const tokenCalls = callsByTokenData.getCallsByToken.tokenCalls;
-			console.log("Token calls data:", tokenCalls);
-
+		if (tokenCallsData.length > 0) {
 			const fetchTokenInfo = async () => {
 				setIsLoadingMore(true);
 
 				// Sort token calls by call count before processing
-				const sortedTokenCalls = [...tokenCalls].sort((a, b) => {
-					const aCallCount = a.calls.reduce((sum, call) => sum + call.callCount, 0);
-					const bCallCount = b.calls.reduce((sum, call) => sum + call.callCount, 0);
+				const sortedTokenCalls = [...tokenCallsData].sort((a, b) => {
+					const aCallCount = a.calls.reduce((sum: number, call) => sum + call.callCount, 0);
+					const bCallCount = b.calls.reduce((sum: number, call) => sum + call.callCount, 0);
 					return bCallCount - aCallCount;
 				});
 
@@ -188,7 +242,8 @@ const TokenFeed: React.FC = () => {
 									imageUrl: dexData.info?.imageUrl || "/assets/coin.png",
 									createdAt: validCreatedAt || "",
 									callers: tokenCall.calls.map((call) => {
-										const profileImageUrl = chatPhotos[call.chat.id] || "/assets/KiFi_LOGO.jpg";
+										const photo = photos[call.chat.id];
+										const profileImageUrl = photo?.url || DEFAULT_PHOTO;
 										return {
 											id: call.chat.id,
 											name: call.chat.name,
@@ -201,17 +256,13 @@ const TokenFeed: React.FC = () => {
 												type: call.chat.type as "Group" | "Channel" | "Private",
 												photoUrl: profileImageUrl,
 											},
-											messages: (call.messages || []).map((msg) => {
-												const msgCreatedAt = msg.createdAt ? new Date(msg.createdAt) : null;
-												const validMsgCreatedAt = msgCreatedAt && !isNaN(msgCreatedAt.getTime()) ? msgCreatedAt.toISOString() : new Date().toISOString();
-
-												return {
+											messages:
+												call.messages?.map((msg) => ({
 													id: msg.id,
-													createdAt: validMsgCreatedAt,
+													createdAt: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
 													text: msg.text || "",
 													fromId: msg.fromId || null,
-												};
-											}),
+												})) || [],
 										};
 									}),
 									tokenCallsData: tokenCall,
@@ -241,7 +292,7 @@ const TokenFeed: React.FC = () => {
 
 			fetchTokenInfo();
 		}
-	}, [callsByTokenData, chatPhotos, page]);
+	}, [tokenCallsData, photos, page]);
 
 	useEffect(() => {
 		// Sort the processed tokens

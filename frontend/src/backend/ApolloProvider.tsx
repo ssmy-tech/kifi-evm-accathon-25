@@ -18,7 +18,7 @@ const ApolloProviderWrapper = ({ children }: { children: React.ReactNode }) => {
 			if (authenticated) {
 				const newToken = await getAccessToken();
 				console.log("Setting new privy token");
-				// console.log(newToken);
+				console.log(newToken);
 				setToken(newToken);
 			} else {
 				console.log("Clearing token - not authenticated");

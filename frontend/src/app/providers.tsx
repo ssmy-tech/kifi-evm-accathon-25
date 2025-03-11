@@ -2,7 +2,6 @@
 
 import { PrivyProvider } from "@privy-io/react-auth";
 import ApolloProviderWrapper from "../backend/ApolloProvider";
-import ImagePreloader from "@/components/ImagePreloader";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
 	if (!process.env.NEXT_PUBLIC_PRIVY_ID) {
@@ -23,10 +22,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 				},
 			}}
 		>
-			<ApolloProviderWrapper>
-				<ImagePreloader />
-				{children}
-			</ApolloProviderWrapper>
+			<ApolloProviderWrapper>{children}</ApolloProviderWrapper>
 		</PrivyProvider>
 	);
 }

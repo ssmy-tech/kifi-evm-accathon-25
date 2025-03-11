@@ -1,11 +1,9 @@
 /**
- * Utility functions for managing caller photo URLs in localStorage
+ * Utility functions for managing photo URLs in localStorage
  */
 
-const CALLER_PHOTOS_KEY = "kifi-caller-photos";
-
-// Global storage key for all chat photos
-const GLOBAL_CHAT_PHOTOS_KEY = "global-chat-photos-cache";
+// Private constant - not exported
+const STORAGE_KEY = "global-chat-photos-cache";
 
 interface GlobalPhotoCache {
 	[chatId: string]: {
@@ -16,7 +14,7 @@ interface GlobalPhotoCache {
 
 function migrateOldCache(): void {
 	try {
-		const cache = localStorage.getItem(GLOBAL_CHAT_PHOTOS_KEY);
+		const cache = localStorage.getItem(STORAGE_KEY);
 		if (!cache) return;
 
 		const photos = JSON.parse(cache);
@@ -34,7 +32,7 @@ function migrateOldCache(): void {
 		});
 
 		if (hasChanges) {
-			localStorage.setItem(GLOBAL_CHAT_PHOTOS_KEY, JSON.stringify(photos));
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(photos));
 			console.log("Migrated old cache format to new format");
 		}
 	} catch (error) {
@@ -43,59 +41,29 @@ function migrateOldCache(): void {
 }
 
 /**
- * Save a caller's photo URL to localStorage
+ * Save a photo URL to localStorage
  */
-export function saveCallerPhoto(chatId: string, photoUrl: string): void {
+export function savePhoto(chatId: string, photoUrl: string): void {
 	try {
-		const cache = localStorage.getItem(GLOBAL_CHAT_PHOTOS_KEY);
+		const cache = localStorage.getItem(STORAGE_KEY);
 		const photos: GlobalPhotoCache = cache ? JSON.parse(cache) : {};
 		photos[chatId] = {
 			url: photoUrl,
 			timestamp: Date.now(),
 		};
-		localStorage.setItem(GLOBAL_CHAT_PHOTOS_KEY, JSON.stringify(photos));
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(photos));
 	} catch (error) {
-		console.error("Error saving to chat photos cache:", error);
+		console.error("Error saving to photos cache:", error);
 	}
 }
 
 /**
- * Save multiple caller photos at once
+ * Get a photo URL from localStorage
  */
-export function saveCallerPhotos(callers: Array<{ id: string; profileImageUrl: string }>): void {
-	try {
-		// Get existing photos from localStorage
-		const existingPhotosJson = localStorage.getItem(CALLER_PHOTOS_KEY);
-		const existingPhotos: GlobalPhotoCache = existingPhotosJson ? JSON.parse(existingPhotosJson) : {};
-
-		// Current timestamp for all entries
-		const now = Date.now();
-
-		// Add or update each photo URL
-		callers.forEach((caller) => {
-			// Skip default images
-			if (caller.profileImageUrl !== "/assets/KiFi_LOGO.jpg") {
-				existingPhotos[caller.id] = {
-					url: caller.profileImageUrl,
-					timestamp: now,
-				};
-			}
-		});
-
-		// Save back to localStorage
-		localStorage.setItem(CALLER_PHOTOS_KEY, JSON.stringify(existingPhotos));
-	} catch (error) {
-		console.error("Error saving caller photos to localStorage:", error);
-	}
-}
-
-/**
- * Get a caller's photo URL from localStorage
- */
-export function getCallerPhoto(chatId: string): string | null {
+export function getPhoto(chatId: string): string | null {
 	try {
 		migrateOldCache(); // Ensure cache is in correct format
-		const cache = localStorage.getItem(GLOBAL_CHAT_PHOTOS_KEY);
+		const cache = localStorage.getItem(STORAGE_KEY);
 		const photos: GlobalPhotoCache = cache ? JSON.parse(cache) : {};
 		const photo = photos[chatId];
 
@@ -105,7 +73,7 @@ export function getCallerPhoto(chatId: string): string | null {
 		}
 		return photo?.url || null;
 	} catch (error) {
-		console.error("Error reading from chat photos cache:", error);
+		console.error("Error reading from photos cache:", error);
 		return null;
 	}
 }
@@ -113,9 +81,9 @@ export function getCallerPhoto(chatId: string): string | null {
 /**
  * Clean up old photo entries (older than maxAge in milliseconds)
  */
-export function cleanupCallerPhotos(maxAge: number = 7 * 24 * 60 * 60 * 1000): void {
+export function cleanupPhotos(maxAge: number = 7 * 24 * 60 * 60 * 1000): void {
 	try {
-		const cache = localStorage.getItem(GLOBAL_CHAT_PHOTOS_KEY);
+		const cache = localStorage.getItem(STORAGE_KEY);
 		if (!cache) return;
 
 		const photos: GlobalPhotoCache = JSON.parse(cache);
@@ -131,115 +99,36 @@ export function cleanupCallerPhotos(maxAge: number = 7 * 24 * 60 * 60 * 1000): v
 		});
 
 		if (hasChanges) {
-			localStorage.setItem(GLOBAL_CHAT_PHOTOS_KEY, JSON.stringify(photos));
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(photos));
 		}
 	} catch (error) {
-		console.error("Error cleaning up chat photos cache:", error);
+		console.error("Error cleaning up photos cache:", error);
 	}
 }
 
 /**
- * Preload images from localStorage cache
- * This can be called early in the app lifecycle to ensure images are ready
+ * Get all cached photos
  */
-export function preloadCachedImages(): void {
+export function getAllPhotos(): GlobalPhotoCache {
 	try {
-		const photosJson = localStorage.getItem(CALLER_PHOTOS_KEY);
-		if (!photosJson) return;
+		const cache = localStorage.getItem(STORAGE_KEY);
+		if (!cache) return {};
 
-		const photos: GlobalPhotoCache = JSON.parse(photosJson);
-
-		// Preload each image by creating an Image object
-		Object.values(photos).forEach((photoData) => {
-			if (photoData.url && !photoData.url.includes("/assets/")) {
-				const img = new Image();
-				img.src = photoData.url;
-			}
-		});
+		return JSON.parse(cache) as GlobalPhotoCache;
 	} catch (error) {
-		console.error("Error preloading cached images:", error);
-	}
-}
-
-/**
- * Get all cached caller photos
- */
-export function getAllCallerPhotos(): GlobalPhotoCache {
-	try {
-		const photosJson = localStorage.getItem(CALLER_PHOTOS_KEY);
-		if (!photosJson) return {};
-
-		return JSON.parse(photosJson) as GlobalPhotoCache;
-	} catch (error) {
-		console.error("Error getting all caller photos from localStorage:", error);
+		console.error("Error getting all photos from localStorage:", error);
 		return {};
 	}
 }
 
 /**
- * Clear all caller photos from localStorage
- * This is useful for debugging purposes
+ * Clear all photos from localStorage
  */
-export function clearCallerPhotos(): void {
+export function clearPhotos(): void {
 	try {
-		localStorage.removeItem(CALLER_PHOTOS_KEY);
-		console.log("Caller photos cleared from localStorage");
+		localStorage.removeItem(STORAGE_KEY);
+		console.log("Photos cleared from localStorage");
 	} catch (error) {
-		console.error("Error clearing caller photos from localStorage:", error);
-	}
-}
-
-/**
- * Clear all chat photos from TokenFeed
- * This is useful for debugging purposes
- */
-export function clearTokenFeedPhotos(): void {
-	try {
-		localStorage.removeItem("token-feed-chat-photos");
-		console.log("Token feed photos cleared from localStorage");
-	} catch (error) {
-		console.error("Error clearing token feed photos from localStorage:", error);
-	}
-}
-
-/**
- * Clear all Telegram chat photos
- * This is useful for debugging purposes
- */
-export function clearTelegramChatPhotos(): void {
-	try {
-		localStorage.removeItem("telegram-chat-photos");
-		console.log("Telegram chat photos cleared from localStorage");
-	} catch (error) {
-		console.error("Error clearing telegram chat photos from localStorage:", error);
-	}
-}
-
-/**
- * Clear all CallerFeed photos from localStorage
- * This is useful for debugging purposes
- */
-export function clearCallerFeedPhotos(): void {
-	try {
-		localStorage.removeItem("caller-feed-photos");
-		console.log("CallerFeed photos cleared from localStorage");
-	} catch (error) {
-		console.error("Error clearing CallerFeed photos from localStorage:", error);
-	}
-}
-
-/**
- * Clear all photo-related items from localStorage
- * This is useful for debugging purposes
- */
-export function clearAllPhotoCache(): void {
-	try {
-		clearCallerPhotos();
-		clearTokenFeedPhotos();
-		clearTelegramChatPhotos();
-		clearCallerFeedPhotos();
-		console.log("All photo caches cleared from localStorage");
-	} catch (error) {
-		console.error("Error clearing all photo caches from localStorage:", error);
+		console.error("Error clearing photos from localStorage:", error);
 	}
 }

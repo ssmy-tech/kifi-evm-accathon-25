@@ -4,12 +4,10 @@ import styles from "./CallerFeed.module.css";
 import { formatTimestamp } from "@/utils/formatters";
 import Image from "next/image";
 import { Caller } from "@/types/caller.types";
-import { saveCallerPhoto, getCallerPhoto } from "@/utils/localStorage";
+import { savePhoto, getAllPhotos } from "@/utils/localStorage";
 import { useGetChatPhotoLazyQuery } from "@/generated/graphql";
 
-// Storage key for caller photos in CallerFeed
-const CALLER_FEED_PHOTOS_KEY = "caller-feed-photos";
-
+const DEFAULT_PHOTO = "/assets/KiFi_LOGO.jpg";
 const MESSAGES_PER_PAGE = 1;
 
 interface CallerFeedProps {
@@ -17,6 +15,15 @@ interface CallerFeedProps {
 	title?: string;
 	isLoading?: boolean;
 }
+
+// Photo management types
+interface PhotoState {
+	url: string;
+	isLoading: boolean;
+	error?: string;
+}
+
+type PhotoCache = Record<string, PhotoState>;
 
 export default function CallerFeed({ callers, title = "Token Callers", isLoading = false }: CallerFeedProps) {
 	const [sortField, setSortField] = useState<"callCount" | "timestamp">("timestamp");
@@ -26,13 +33,20 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 	const [currentPage, setCurrentPage] = useState<Record<string, number>>({});
 	const tableContainerRef = useRef<HTMLDivElement>(null);
 
-	// Initialize local photo cache from localStorage
-	const [callerPhotos, setCallerPhotos] = useState<Record<string, string>>(() => {
+	// Initialize photo cache from localStorage
+	const [photos, setPhotos] = useState<PhotoCache>(() => {
 		try {
-			const storedPhotos = localStorage.getItem(CALLER_FEED_PHOTOS_KEY);
-			return storedPhotos ? JSON.parse(storedPhotos) : {};
+			const photos: PhotoCache = {};
+			const cached = getAllPhotos();
+
+			Object.entries(cached).forEach(([id, data]) => {
+				if (data && typeof data.url === "string" && data.url !== "" && data.url !== "no-photo") {
+					photos[id] = { url: data.url, isLoading: false };
+				}
+			});
+			return photos;
 		} catch (error) {
-			console.error("Error loading caller photos from localStorage:", error);
+			console.error("Error loading photos from localStorage:", error);
 			return {};
 		}
 	});
@@ -40,72 +54,55 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 	// Get the chat photo query hook
 	const [getChatPhoto] = useGetChatPhotoLazyQuery();
 
-	// Save caller photos to localStorage whenever they change
-	useEffect(() => {
-		try {
-			localStorage.setItem(CALLER_FEED_PHOTOS_KEY, JSON.stringify(callerPhotos));
-		} catch (error) {
-			console.error("Error saving caller photos to localStorage:", error);
-		}
-	}, [callerPhotos]);
-
 	// Fetch photos for callers
 	useEffect(() => {
 		if (callers && callers.length > 0) {
 			callers.forEach((caller) => {
 				const chatId = caller.chat.id;
-				// Only fetch if we don't already have the photo in local state
-				if (!callerPhotos[chatId]) {
-					// First try to get from global caller photos cache
-					const cachedPhoto = getCallerPhoto(chatId);
+				// Skip if already loading or loaded successfully
+				if (photos[chatId]?.isLoading || (photos[chatId]?.url && !photos[chatId]?.error)) return;
 
-					if (cachedPhoto) {
-						// If found in global cache, use it and update local state
-						setCallerPhotos((prev) => ({
-							...prev,
-							[chatId]: cachedPhoto,
-						}));
-					} else if (caller.chat.photoUrl === "no-photo") {
-						// If using default image, try to fetch from API
-						getChatPhoto({
-							variables: { chatId },
-							onCompleted: (data) => {
-								if (data.getChatPhoto) {
-									const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? "/assets/KiFi_LOGO.jpg" : data.getChatPhoto;
+				// Set loading state
+				setPhotos((prev) => ({
+					...prev,
+					[chatId]: { url: DEFAULT_PHOTO, isLoading: true },
+				}));
 
-									// Update local state
-									setCallerPhotos((prev) => ({
-										...prev,
-										[chatId]: photoUrl,
-									}));
+				if (caller.chat.photoUrl && caller.chat.photoUrl !== "no-photo") {
+					// If caller already has a valid photo URL, use it
+					setPhotos((prev) => ({
+						...prev,
+						[chatId]: { url: caller.chat.photoUrl, isLoading: false },
+					}));
+					savePhoto(chatId, caller.chat.photoUrl);
+				} else {
+					// Try to fetch from API
+					getChatPhoto({
+						variables: { chatId },
+						onCompleted: (data) => {
+							const photoUrl = !data.getChatPhoto || data.getChatPhoto === "no-photo" ? DEFAULT_PHOTO : data.getChatPhoto;
 
-									// Also save to global cache if it's not the default image
-									if (photoUrl !== "/assets/KiFi_LOGO.jpg") {
-										saveCallerPhoto(chatId, photoUrl);
-									}
-								}
-							},
-							onError: (error) => {
-								console.error("Error fetching chat photo:", error);
-								// Set default image on error
-								setCallerPhotos((prev) => ({
-									...prev,
-									[chatId]: "/assets/KiFi_LOGO.jpg",
-								}));
-							},
-						});
-					} else if (caller.chat.photoUrl && caller.chat.photoUrl !== "no-photo") {
-						// If caller already has a non-default photo, save it to both caches
-						setCallerPhotos((prev) => ({
-							...prev,
-							[chatId]: caller.chat.photoUrl,
-						}));
-						saveCallerPhoto(chatId, caller.chat.photoUrl);
-					}
+							setPhotos((prev) => ({
+								...prev,
+								[chatId]: { url: photoUrl, isLoading: false },
+							}));
+
+							if (photoUrl !== DEFAULT_PHOTO) {
+								savePhoto(chatId, photoUrl);
+							}
+						},
+						onError: (error) => {
+							console.error("Error fetching chat photo:", error);
+							setPhotos((prev) => ({
+								...prev,
+								[chatId]: { url: DEFAULT_PHOTO, isLoading: false, error: "Failed to load" },
+							}));
+						},
+					});
 				}
 			});
 		}
-	}, [callers, getChatPhoto, callerPhotos]);
+	}, [callers, photos, getChatPhoto]);
 
 	const handleSort = (field: "callCount" | "timestamp") => {
 		if (field === sortField) {
@@ -189,7 +186,7 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 							<tbody className={styles.tableBody}>
 								{sortedCallers.map((caller) => {
 									const chatId = caller.chat.id;
-									const profileImageUrl = callerPhotos[chatId] || "/assets/KiFi_LOGO.jpg";
+									const photo = photos[chatId] || { url: DEFAULT_PHOTO, isLoading: false };
 									const latestMessage = caller.messages[0];
 
 									return (
@@ -198,14 +195,14 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 												<td className={styles.nameColumn}>
 													<div className={styles.profileImage}>
 														<Image
-															src={profileImageUrl}
+															src={photo.url}
 															alt={`Chat ${caller.chat.name}`}
 															width={38}
 															height={38}
 															className={styles.avatar}
 															onError={(e) => {
 																const target = e.target as HTMLImageElement;
-																target.src = "/assets/KiFi_LOGO.jpg";
+																target.src = DEFAULT_PHOTO;
 															}}
 														/>
 													</div>

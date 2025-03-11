@@ -90,19 +90,6 @@ export default function TradeModule() {
 		slippage: 10,
 		estimatedGas: "0.000123",
 	});
-
-	const exchangeRate = React.useMemo(() => {
-		const rate = sellToken.price / buyToken.price;
-		const usdValue = sellToken.price;
-		return `1 ${sellToken.symbol} = ${rate.toLocaleString("en-US", {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 8,
-		})} ${buyToken.symbol} ($${usdValue.toLocaleString("en-US", {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 8,
-		})})`;
-	}, [sellToken, buyToken]);
-
 	// Swap Tokens
 	const handleSwap = () => {
 		const tempToken = sellToken;
