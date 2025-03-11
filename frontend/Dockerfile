@@ -9,6 +9,15 @@ RUN npm ci
 # Copy rest of the application code
 COPY . .
 
+ARG NEXT_PUBLIC_PRIVY_ID=placeholder_value
+
+ENV NEXT_PUBLIC_PRIVY_ID=$NEXT_PUBLIC_PRIVY_ID
+
+ARG NEXT_PUBLIC_GRAPHQL_URL=placeholder_value
+
+ENV NEXT_PUBLIC_GRAPHQL_URL=$NEXT_PUBLIC_GRAPHQL_URL
+
+
 # Build the application
 RUN npm run build
 
