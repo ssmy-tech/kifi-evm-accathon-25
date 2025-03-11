@@ -4,8 +4,11 @@
 * sudo -u postgres createuser kifiadmin
 * sudo -u postgres createdb kifitokens
 * sudo -u postgres psql
-    * alter user <database user> with encrypted password '<database password>';
-    * grant all privileges on database <database name> to <database user>;
+
+```
+    alter user <database user> with encrypted password '<database password>';
+    grant all privileges on database <database name> to <database user>;
+```
 
 # Install libcurl
 
