@@ -108,6 +108,9 @@ const NavBar: React.FC = () => {
 				</div>
 
 				<div className={styles.authContainer}>
+					<button className={styles.themeSwitcher} onClick={toggleTheme} aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}>
+						{isDarkMode ? <FaSun /> : <FaMoon />}
+					</button>
 					{ready &&
 						(authenticated ? (
 							<Avatar />
@@ -116,9 +119,6 @@ const NavBar: React.FC = () => {
 								Sign In
 							</button>
 						))}
-					<button className={styles.themeSwitcher} onClick={toggleTheme} aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}>
-						{isDarkMode ? <FaSun /> : <FaMoon />}
-					</button>
 					<button className={styles.mobileMenuButton} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Toggle mobile menu">
 						{isMobileMenuOpen ? <FaTimes /> : <FaBars />}
 					</button>

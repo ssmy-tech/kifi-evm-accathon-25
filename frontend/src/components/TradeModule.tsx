@@ -118,12 +118,10 @@ export default function TradeModule() {
 					<MdSwapVerticalCircle />
 				</div>
 				<TokenInput type="buy" value={buyAmount} token={buyToken} onValueChange={setBuyAmount} />
-				<div className={styles.tradeInfo}>
-					<div className={styles.tradeActions}>
-						<button className={`${styles.reviewButton} ${!isValidTrade ? styles.reviewButtonDisabled : ""}`} disabled={!isValidTrade}>
-							{getButtonText()}
-						</button>
-					</div>
+				<div className={styles.tradeActions}>
+					<button className={`${styles.reviewButton} ${!isValidTrade ? styles.reviewButtonDisabled : ""}`} disabled={!isValidTrade}>
+						{getButtonText()}
+					</button>
 				</div>
 			</div>
 		</div>

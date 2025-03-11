@@ -57,7 +57,7 @@ export default function TwitterSentiment({ contractAddress }: TwitterSentimentPr
 						</div>
 					</div>
 				</div>
-				<div className={`${styles.summary} ${styles.neutral}`}>Loading sentiment analysis...</div>
+				<div className={`${styles.summary} `}>Loading sentiment analysis...</div>
 			</div>
 		);
 	}
@@ -99,25 +99,31 @@ export default function TwitterSentiment({ contractAddress }: TwitterSentimentPr
 					{tweets.length > 0 ? (
 						<>
 							<div className={styles.tweet}>
-								<div className={styles.tweetAuthor}>@{currentTweet.author}</div>
-								<div className={styles.tweetText}>{currentTweet.text}</div>
+								<div className={styles.tweetHeader}>
+									<div className={styles.tweetAuthor}>@{currentTweet.author}</div>
+									<span className={styles.tweetTime}>{new Date(currentTweet.timestamp).toLocaleDateString()}</span>
+								</div>
+								<div className={styles.tweetContent}>
+									<div className={styles.tweetText}>{currentTweet.text}</div>
+								</div>
 								<div className={styles.tweetMeta}>
 									<a href={currentTweet.url} target="_blank" rel="noopener noreferrer" className={styles.tweetLink}>
 										View on X
 									</a>
-									<span className={styles.tweetTime}>{new Date(currentTweet.timestamp).toLocaleDateString()}</span>
+									<div className={styles.tweetActions}>
+										<div className={styles.pagination}>
+											<button onClick={handlePrevPage} className={styles.paginationButton} disabled={currentPage === 0}>
+												<FaChevronLeft />
+											</button>
+											<span className={styles.pageInfo}>
+												{currentPage + 1} / {totalPages}
+											</span>
+											<button onClick={handleNextPage} className={styles.paginationButton} disabled={currentPage === totalPages - 1}>
+												<FaChevronRight />
+											</button>
+										</div>
+									</div>
 								</div>
-							</div>
-							<div className={styles.pagination}>
-								<button onClick={handlePrevPage} className={styles.paginationButton} disabled={currentPage === 0}>
-									<FaChevronLeft />
-								</button>
-								<span className={styles.pageInfo}>
-									{currentPage + 1} / {totalPages}
-								</span>
-								<button onClick={handleNextPage} className={styles.paginationButton} disabled={currentPage === totalPages - 1}>
-									<FaChevronRight />
-								</button>
 							</div>
 						</>
 					) : (

@@ -38,7 +38,7 @@ export default function TelegramSentiment({ contractAddress }: TelegramSentiment
 						</div>
 					</div>
 				</div>
-				<div className={`${styles.summary} ${styles.neutral}`}>Loading sentiment analysis...</div>
+				<div className={`${styles.summary} `}>Loading sentiment analysis...</div>
 			</div>
 		);
 	}

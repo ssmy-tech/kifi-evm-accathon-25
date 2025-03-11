@@ -233,15 +233,21 @@ const TokenFeed: React.FC = () => {
 	// Process token calls data once when it's available
 	useEffect(() => {
 		if (callsByTokenData?.getCallsByToken?.tokenCalls && !processedDataRef.current) {
-			const tokenCalls = callsByTokenData.getCallsByToken.tokenCalls;
-			setTokenCallsData(tokenCalls);
+			// Sort token calls by total call count first
+			const sortedTokenCalls = [...callsByTokenData.getCallsByToken.tokenCalls].sort((a, b) => {
+				const aTotalCalls = a.chats.length;
+				const bTotalCalls = b.chats.length;
+				return bTotalCalls - aTotalCalls; // Sort in descending order
+			});
+
+			setTokenCallsData(sortedTokenCalls);
 			processedDataRef.current = true;
 
 			// Process photos in one pass
 			const chatIdsToFetch = new Set<string>();
 			const chatMap = new Map<string, { chat: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"][0]["chats"][0]["chat"] }>();
 
-			tokenCalls.forEach((tokenCall) => {
+			sortedTokenCalls.forEach((tokenCall) => {
 				tokenCall.chats.forEach((chatWithCalls) => {
 					if (!photos[chatWithCalls.chat.id] || photos[chatWithCalls.chat.id]?.error) {
 						chatIdsToFetch.add(chatWithCalls.chat.id);
@@ -295,8 +301,8 @@ const TokenFeed: React.FC = () => {
 
 				// Sort token calls by call count before processing
 				const sortedTokenCalls = [...tokenCallsData].sort((a, b) => {
-					const aCallCount = a.chats.reduce((sum: number, chatWithCalls) => sum + chatWithCalls.chat.callCount, 0);
-					const bCallCount = b.chats.reduce((sum: number, chatWithCalls) => sum + chatWithCalls.chat.callCount, 0);
+					const aCallCount = a.chats.length;
+					const bCallCount = b.chats.length;
 					return bCallCount - aCallCount;
 				});
 
@@ -314,8 +320,11 @@ const TokenFeed: React.FC = () => {
 							case "SOLANA":
 								dexAPI = `https://api.dexscreener.com/tokens/v1/solana/${address}`;
 								break;
-							case "ETH":
-								dexAPI = `https://api.dexscreener.com/tokens/v1/ethereum/${address}`;
+							case "BASE":
+								dexAPI = `https://api.dexscreener.com/tokens/v1/base/${address}`;
+								break;
+							case "MONAD":
+								dexAPI = `https://api.dexscreener.com/tokens/v1/base/${address}`;
 								break;
 							default:
 								return null;
@@ -377,13 +386,17 @@ const TokenFeed: React.FC = () => {
 												type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
 												photoUrl: profileImageUrl,
 											},
-											messages:
-												chatWithCalls.calls[0]?.messages?.map((msg) => ({
+											messages: chatWithCalls.calls.flatMap((call) =>
+												call.messages.map((msg) => ({
 													id: msg.id,
-													createdAt: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
-													text: msg.text || "",
-													fromId: msg.fromId || null,
-												})) || [],
+													createdAt: msg.createdAt ?? new Date().toISOString(),
+													text: msg.text ?? "",
+													fromId: msg.fromId ?? null,
+													messageType: msg.messageType,
+													reason: msg.reason ?? null,
+													tgMessageId: msg.tgMessageId,
+												}))
+											),
 										};
 									}),
 									tokenCallsData: tokenCall,
@@ -403,7 +416,12 @@ const TokenFeed: React.FC = () => {
 
 				// Filter out null values and update state
 				const validTokens = dexDataTokens.filter((token): token is NonNullable<typeof token> => token !== null) as TokenWithDexInfo[];
-				setHasMore(validTokens.length < sortedTokenCalls.length);
+
+				// Update hasMore only if we haven't loaded all tokens yet
+				const totalTokens = sortedTokenCalls.length;
+				const currentlyLoadedTokens = endIndex;
+				setHasMore(currentlyLoadedTokens < totalTokens && validTokens.length > 0);
+
 				setIsLoadingMore(false);
 				setProcessedTokens(validTokens);
 			};
@@ -668,26 +686,28 @@ const TokenFeed: React.FC = () => {
 											</td>
 										</tr>
 										{(expandedTokenId === token.id || closingTokenId === token.id) && (
-											<tr className={`${styles.expandedContent} ${closingTokenId === token.id ? styles.closing : ""}`}>
-												<td colSpan={isMobile ? 3 : 9}>
-													<div className={`${styles.expandedModules} ${closingTokenId === token.id ? styles.closing : ""}`}>
-														<div className={styles.moduleRow}>
-															<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-																<TradingView symbol={token.dexData ? `${token.dexData.baseToken.symbol}USD` : `${token.ticker}USD`} />
+											<tr className={`${styles.expandedRow}`}>
+												<td colSpan={isMobile ? 3 : 9} className={styles.expandedCell}>
+													<div className={`${styles.expandedContent} ${closingTokenId === token.id ? styles.closing : ""}`}>
+														<div className={`${styles.expandedModules} ${closingTokenId === token.id ? styles.closing : ""}`}>
+															<div className={styles.moduleRow}>
+																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																	<TradingView symbol={token.dexData ? `${token.dexData.baseToken.symbol}USD` : `${token.ticker}USD`} />
+																</div>
+																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																	<CallerFeed callers={token.callers || []} />
+																</div>
+																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																	<TradeModule />
+																</div>
 															</div>
-															<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-																<CallerFeed callers={token.callers || []} />
-															</div>
-															<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-																<TradeModule />
-															</div>
-														</div>
-														<div className={styles.moduleRow}>
-															<div className={`${styles.module} ${styles.wideModule} ${closingTokenId === token.id ? styles.closing : ""}`}>
-																<TwitterSentiment contractAddress={token.id} />
-															</div>
-															<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-																<TelegramSentiment contractAddress={token.id} />
+															<div className={styles.moduleRow}>
+																<div className={`${styles.module} ${styles.wideModule} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																	<TwitterSentiment contractAddress={token.id} />
+																</div>
+																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																	<TelegramSentiment contractAddress={token.id} />
+																</div>
 															</div>
 														</div>
 													</div>

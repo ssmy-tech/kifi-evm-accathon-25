@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaUsers, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaUsers } from "react-icons/fa";
 import styles from "./CallerFeed.module.css";
-import { formatTimestamp } from "@/utils/formatters";
+import { formatCurrency, formatTimestamp } from "@/utils/formatters";
 import Image from "next/image";
 import { Caller } from "@/types/caller.types";
 import { savePhoto, getAllPhotos } from "@/utils/localStorage";
 import { useGetChatPhotoLazyQuery } from "@/generated/graphql";
+import { CallContextChat } from "./CallContextChat";
 
 const DEFAULT_PHOTO = "/assets/KiFi_LOGO.jpg";
-const MESSAGES_PER_PAGE = 1;
 
 interface CallerFeedProps {
 	callers: Caller[];
@@ -27,10 +27,9 @@ type PhotoCache = Record<string, PhotoState>;
 
 export default function CallerFeed({ callers, title = "Token Callers", isLoading = false }: CallerFeedProps) {
 	const [sortField, setSortField] = useState<"callCount" | "timestamp">("timestamp");
-	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 	const [expandedCallerId, setExpandedCallerId] = useState<string | null>(null);
 	const [closingCallerId, setClosingCallerId] = useState<string | null>(null);
-	const [currentPage, setCurrentPage] = useState<Record<string, number>>({});
 	const tableContainerRef = useRef<HTMLDivElement>(null);
 
 	// Initialize photo cache from localStorage
@@ -138,21 +137,12 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 		if (sortField === "timestamp") {
 			const aTime = a.messages?.[0]?.createdAt ? new Date(a.messages[0].createdAt).getTime() : 0;
 			const bTime = b.messages?.[0]?.createdAt ? new Date(b.messages[0].createdAt).getTime() : 0;
-			return sortDirection === "desc" ? bTime - aTime : aTime - bTime;
+			return sortDirection === "asc" ? aTime - bTime : bTime - aTime;
 		}
 
 		// Sort by callCount
 		return sortDirection === "desc" ? b.callCount - a.callCount : a.callCount - b.callCount;
 	});
-
-	const handlePageChange = (chatId: string, newPage: number, totalPages: number) => {
-		if (newPage >= 0 && newPage < totalPages) {
-			setCurrentPage((prev) => ({
-				...prev,
-				[chatId]: newPage,
-			}));
-		}
-	};
 
 	return (
 		<div className={`${styles.container} ${styles.callerFeedContainer}`}>
@@ -176,10 +166,7 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 										Timestamp
 										{sortField === "timestamp" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
 									</th>
-									<th onClick={() => handleSort("callCount")} className={`${styles.sortable} ${styles.callColumn}`}>
-										Calls
-										{sortField === "callCount" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
-									</th>
+									<th className={`${styles.sortable} ${styles.mcapColumn}`}>MCAP Called</th>
 									<th className={`${styles.sortable} ${styles.messageHeader}`}>Message(s)</th>
 								</tr>
 							</thead>
@@ -187,7 +174,9 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 								{sortedCallers.map((caller) => {
 									const chatId = caller.chat.id;
 									const photo = photos[chatId] || { url: DEFAULT_PHOTO, isLoading: false };
-									const latestMessage = caller.messages[0];
+									const firstCall = caller.messages.filter((msg) => msg.messageType === "Call").sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+									const contextMessages = caller.messages;
+									const mcapCalled = formatCurrency(1800000);
 
 									return (
 										<React.Fragment key={chatId}>
@@ -208,60 +197,18 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 													</div>
 													<div className={styles.nameText}>{caller.chat.name}</div>
 												</td>
-												<td className={styles.timestampColumn}>{latestMessage ? <span className={styles.timestamp}>{formatTimestamp(new Date(latestMessage.createdAt).getTime(), false, true)}</span> : "-"}</td>
-												<td className={styles.callColumn}>{caller.callCount}</td>
+												<td className={styles.timestampColumn}>{firstCall ? <span className={styles.timestamp}>{formatTimestamp(new Date(firstCall.createdAt).getTime(), false, true)}</span> : "-"}</td>
+
+												<td className={styles.mcapColumn}>{mcapCalled}</td>
 												<td className={styles.messageCell}>{caller.messages.length ? <div className={styles.viewButton}>{expandedCallerId === chatId ? "Hide" : "View"}</div> : "None"}</td>
 											</tr>
 											{expandedCallerId === chatId && caller.messages.length > 0 && (
 												<tr className={`${styles.messageRow} ${closingCallerId === chatId ? styles.closing : ""}`} data-caller-id={chatId}>
 													<td colSpan={4}>
 														{(() => {
-															const totalPages = Math.ceil(caller.messages.length / MESSAGES_PER_PAGE);
-															const currentPageIndex = currentPage[chatId] || 0;
-															const startIndex = currentPageIndex * MESSAGES_PER_PAGE;
-															const visibleMessages = caller.messages.slice(startIndex, startIndex + MESSAGES_PER_PAGE);
-
 															return (
 																<div className={styles.messageContentWrapper}>
-																	{totalPages > 1 && (
-																		<div className={styles.paginationControls}>
-																			<button
-																				onClick={(e) => {
-																					e.stopPropagation();
-																					handlePageChange(chatId, currentPageIndex - 1, totalPages);
-																				}}
-																				disabled={currentPageIndex === 0}
-																				className={styles.pageButton}
-																				title="Previous message"
-																			>
-																				<FaChevronLeft />
-																			</button>
-																			<span className={styles.pageInfo}>
-																				Message {currentPageIndex + 1} of {totalPages}
-																			</span>
-																			<button
-																				onClick={(e) => {
-																					e.stopPropagation();
-																					handlePageChange(chatId, currentPageIndex + 1, totalPages);
-																				}}
-																				disabled={currentPageIndex === totalPages - 1}
-																				className={styles.pageButton}
-																				title="Next message"
-																			>
-																				<FaChevronRight />
-																			</button>
-																		</div>
-																	)}
-																	<div className={styles.messageContent}>
-																		<div className={styles.messagesContainer}>
-																			{visibleMessages.map((msg) => (
-																				<div key={msg.id} className={styles.messageItem}>
-																					<div>{msg.text}</div>
-																					<div className={styles.messageTimestamp}>{formatTimestamp(new Date(msg.createdAt).getTime(), true, true)}</div>
-																				</div>
-																			))}
-																		</div>
-																	</div>
+																	<CallContextChat messages={contextMessages} />
 																</div>
 															);
 														})()}
