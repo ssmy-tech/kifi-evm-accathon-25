@@ -15,10 +15,18 @@ type AuthPayload {
   createdUser: Boolean!
 }
 
-type CallWithChat {
-  callCount: Float!
+type Call {
+  address: String!
+  createdAt: DateTime!
+  hasFutureAnalysis: Boolean!
+  hasInitialAnalysis: Boolean!
+  id: String!
+  messages: [Message!]!
+}
+
+type ChatWithCalls {
+  calls: [Call!]!
   chat: TelegramChat!
-  messages: [Message!]
 }
 
 type ChatsResponse {
@@ -45,7 +53,16 @@ type Message {
   createdAt: DateTime!
   fromId: String
   id: String!
+  messageType: MessageType!
+  reason: String
   text: String
+  tgMessageId: String!
+}
+
+"""The type of message (Call or Context)"""
+enum MessageType {
+  Call
+  Context
 }
 
 type Mutation {
@@ -108,8 +125,8 @@ input TelegramContractAnalyticsInput {
 
 type TokenCalls {
   address: String!
-  calls: [CallWithChat!]!
   chain: String!
+  chats: [ChatWithCalls!]!
 }
 
 type TokenCallsResponse {

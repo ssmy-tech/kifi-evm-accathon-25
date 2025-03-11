@@ -35,6 +35,8 @@ export type AuthPayload = {
 export type CallWithChat = {
   callCount: Scalars['Float']['output'];
   chat: TelegramChat;
+  hasFutureAnalysis: Scalars['Boolean']['output'];
+  hasInitialAnalysis: Scalars['Boolean']['output'];
   messages: Maybe<Array<Message>>;
 };
 
@@ -57,8 +59,16 @@ export type Message = {
   createdAt: Scalars['DateTime']['output'];
   fromId: Maybe<Scalars['String']['output']>;
   id: Scalars['String']['output'];
+  messageType: MessageType;
+  reason: Maybe<Scalars['String']['output']>;
   text: Maybe<Scalars['String']['output']>;
+  tgMessageId: Scalars['String']['output'];
 };
+
+/** The type of message (Call or Context) */
+export type MessageType =
+  | 'Call'
+  | 'Context';
 
 export type Mutation = {
   privyLogin: AuthPayload;
@@ -299,6 +309,7 @@ export type ResolversTypes = ResolversObject<{
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   KeyTopic: ResolverTypeWrapper<KeyTopic>;
   Message: ResolverTypeWrapper<Message>;
+  MessageType: MessageType;
   Mutation: ResolverTypeWrapper<{}>;
   NextStep: ResolverTypeWrapper<NextStep>;
   Query: ResolverTypeWrapper<{}>;
@@ -372,6 +383,8 @@ export type AuthPayloadResolvers<ContextType = Context, ParentType extends Resol
 export type CallWithChatResolvers<ContextType = Context, ParentType extends ResolversParentTypes['CallWithChat'] = ResolversParentTypes['CallWithChat']> = ResolversObject<{
   callCount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   chat?: Resolver<ResolversTypes['TelegramChat'], ParentType, ContextType>;
+  hasFutureAnalysis?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  hasInitialAnalysis?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   messages?: Resolver<Maybe<Array<ResolversTypes['Message']>>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
@@ -396,7 +409,10 @@ export type MessageResolvers<ContextType = Context, ParentType extends Resolvers
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   fromId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  messageType?: Resolver<ResolversTypes['MessageType'], ParentType, ContextType>;
+  reason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   text?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  tgMessageId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 

@@ -136,19 +136,30 @@ export const GET_CALLS_BY_TOKEN = gql`
       tokenCalls {
         chain
         address
-        calls {
+        chats {
           chat {
             id
             name
             type
             photoUrl
+            callCount
+            lastCallTimestamp
           }
-          callCount
-          messages {
+          calls {
             id
             createdAt
-            text
-            fromId
+            address
+            hasInitialAnalysis
+            hasFutureAnalysis
+            messages {
+              id
+              createdAt
+              text
+              fromId
+              messageType
+              reason
+              tgMessageId
+            }
           }
         }
       }

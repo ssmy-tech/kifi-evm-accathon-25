@@ -39,6 +39,8 @@ export type CallWithChat = {
   __typename?: 'CallWithChat';
   callCount: Scalars['Float']['output'];
   chat: TelegramChat;
+  hasFutureAnalysis: Scalars['Boolean']['output'];
+  hasInitialAnalysis: Scalars['Boolean']['output'];
   messages?: Maybe<Array<Message>>;
 };
 
@@ -64,8 +66,17 @@ export type Message = {
   createdAt: Scalars['DateTime']['output'];
   fromId?: Maybe<Scalars['String']['output']>;
   id: Scalars['String']['output'];
+  messageType: MessageType;
+  reason?: Maybe<Scalars['String']['output']>;
   text?: Maybe<Scalars['String']['output']>;
+  tgMessageId: Scalars['String']['output'];
 };
+
+/** The type of message (Call or Context) */
+export enum MessageType {
+  Call = 'Call',
+  Context = 'Context'
+}
 
 export type Mutation = {
   __typename?: 'Mutation';
@@ -288,7 +299,7 @@ export type GetCallsByTokenQueryVariables = Exact<{
 }>;
 
 
-export type GetCallsByTokenQuery = { __typename?: 'Query', getCallsByToken: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, calls: Array<{ __typename?: 'CallWithChat', callCount: number, chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null }, messages?: Array<{ __typename?: 'Message', id: string, createdAt: string, text?: string | null, fromId?: string | null }> | null }> }> } };
+export type GetCallsByTokenQuery = { __typename?: 'Query', getCallsByToken: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, calls: Array<{ __typename?: 'CallWithChat', callCount: number, hasInitialAnalysis: boolean, hasFutureAnalysis: boolean, chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null }, messages?: Array<{ __typename?: 'Message', id: string, createdAt: string, text?: string | null, fromId?: string | null, messageType: MessageType, reason?: string | null, tgMessageId: string }> | null }> }> } };
 
 export type UpdateUserSettingsMutationVariables = Exact<{
   input: UpdateUserSettingsInput;
@@ -730,11 +741,16 @@ export const GetCallsByTokenDocument = /*#__PURE__*/ gql`
           photoUrl
         }
         callCount
+        hasInitialAnalysis
+        hasFutureAnalysis
         messages {
           id
           createdAt
           text
           fromId
+          messageType
+          reason
+          tgMessageId
         }
       }
     }

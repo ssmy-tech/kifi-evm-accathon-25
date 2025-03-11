@@ -1,6 +1,12 @@
-import { Field, ObjectType, InputType } from '@nestjs/graphql';
+import { Field, ObjectType, InputType, registerEnumType } from '@nestjs/graphql';
 import { TelegramChat } from '../../telegram/dto/telegram.types';
-import { Chain } from '@prisma/client';
+import { Chain, MessageType } from '@prisma/client';
+
+// Register the MessageType enum with GraphQL
+registerEnumType(MessageType, {
+  name: 'MessageType',
+  description: 'The type of message (Call or Context)',
+});
 
 @ObjectType()
 export class Message {
@@ -15,18 +21,45 @@ export class Message {
   
   @Field({ nullable: true })
   fromId?: string;
+
+  @Field(() => MessageType)
+  messageType: MessageType;
+
+  @Field({ nullable: true })
+  reason?: string;
+
+  @Field()
+  tgMessageId: string;
 }
 
 @ObjectType()
-export class CallWithChat {
+export class Call {
+  @Field()
+  id: string;
+
+  @Field()
+  createdAt: Date;
+
+  @Field()
+  address: string;
+
+  @Field(() => [Message])
+  messages: Message[];
+
+  @Field()
+  hasInitialAnalysis: boolean;
+
+  @Field()
+  hasFutureAnalysis: boolean;
+}
+
+@ObjectType()
+export class ChatWithCalls {
   @Field(() => TelegramChat)
   chat: TelegramChat;
 
-  @Field()
-  callCount: number;
-
-  @Field(() => [Message], { nullable: true })
-  messages?: Message[];
+  @Field(() => [Call])
+  calls: Call[];
 }
 
 @ObjectType()
@@ -37,8 +70,8 @@ export class TokenCalls {
   @Field()
   address: string;
 
-  @Field(() => [CallWithChat])
-  calls: CallWithChat[];
+  @Field(() => [ChatWithCalls])
+  chats: ChatWithCalls[];
 }
 
 @ObjectType()

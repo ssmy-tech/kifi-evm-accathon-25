@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { Chain } from '@prisma/client';
-import { TokenCallsResponse, TokenCalls, CallWithChat, Message } from './dto/calls.types';
+import { TokenCallsResponse, TokenCalls, ChatWithCalls, Call, Message } from './dto/calls.types';
 
 @Injectable()
 export class CallsService {
@@ -70,6 +70,9 @@ export class CallsService {
             },
           },
         },
+        orderBy: {
+          createdAt: 'desc'
+        }
       });
 
       // Group calls by token address and chain
@@ -80,55 +83,16 @@ export class CallsService {
           acc[key] = {
             chain: call.chain,
             address: call.address,
-            calls: [],
+            chats: [],
           };
         }
 
-        // Find if we already have this chat in the calls array
-        const existingCallIndex = acc[key].calls.findIndex(
-          (c) => c.chat.id === call.chat.tgChatId
-        );
+        // Find if we already have this chat in the chats array
+        let chatGroup = acc[key].chats.find(c => c.chat.id === call.chat.tgChatId);
 
-        // Map messages to the expected format
-        const messages: Message[] = call.messages.map(msg => {
-          const msgAny = msg as any;
-          // Create the message object with fromId as null by default
-          const messageObj: Message = {
-            id: msg.telegramMessageId,
-            createdAt: msg.createdAt,
-            text: msg.text || undefined,
-            fromId: msgAny.fromId ? JSON.stringify(msgAny.fromId) : undefined
-          };
-          return messageObj;
-        });
-
-        if (existingCallIndex >= 0) {
-          // Increment call count if chat already exists
-          acc[key].calls[existingCallIndex].callCount += 1;
-          
-          // Add messages to existing call
-          if (!acc[key].calls[existingCallIndex].messages) {
-            acc[key].calls[existingCallIndex].messages = [];
-          }
-          
-          // Add new messages that aren't already in the array
-          const existingMessageIds = new Set(
-            acc[key].calls[existingCallIndex].messages?.map(m => m.id) || []
-          );
-          
-          messages.forEach(msg => {
-            if (!existingMessageIds.has(msg.id)) {
-              acc[key].calls[existingCallIndex].messages!.push(msg);
-            }
-          });
-          
-          // Sort messages by createdAt
-          acc[key].calls[existingCallIndex].messages!.sort(
-            (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-          );
-        } else {
-          // Add new chat with call count 1
-          acc[key].calls.push({
+        if (!chatGroup) {
+          // Create new chat group if it doesn't exist
+          chatGroup = {
             chat: {
               id: call.chat.tgChatId,
               name: call.chat.tgChatName || '',
@@ -137,10 +101,31 @@ export class CallsService {
               callCount: call.chat.calls.length,
               lastCallTimestamp: call.chat.calls[0]?.createdAt || undefined
             },
-            callCount: 1,
-            messages,
-          });
+            calls: []
+          };
+          acc[key].chats.push(chatGroup);
         }
+
+        // Map messages to the expected format
+        const messages: Message[] = call.messages.map(msg => ({
+          id: msg.telegramMessageId,
+          createdAt: msg.createdAt,
+          text: msg.text || undefined,
+          fromId: msg.fromId ? JSON.stringify(msg.fromId) : undefined,
+          messageType: msg.messageType,
+          reason: msg.reason || undefined,
+          tgMessageId: msg.tgMessageId
+        }));
+
+        // Add this call to the chat's calls array
+        chatGroup.calls.push({
+          id: call.telegramCallId,
+          createdAt: call.createdAt,
+          address: call.address,
+          messages: messages,
+          hasInitialAnalysis: call.hasInitialAnalysis,
+          hasFutureAnalysis: call.hasFutureAnalysis
+        });
 
         return acc;
       }, {} as Record<string, TokenCalls>);

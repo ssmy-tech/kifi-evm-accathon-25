@@ -14,6 +14,8 @@ type AuthPayload {
 type CallWithChat {
   callCount: Float!
   chat: TelegramChat!
+  hasFutureAnalysis: Boolean!
+  hasInitialAnalysis: Boolean!
   messages: [Message!]
 }
 
@@ -41,7 +43,16 @@ type Message {
   createdAt: DateTime!
   fromId: String
   id: String!
+  messageType: MessageType!
+  reason: String
   text: String
+  tgMessageId: String!
+}
+
+"""The type of message (Call or Context)"""
+enum MessageType {
+  Call
+  Context
 }
 
 type Mutation {
