@@ -1,0 +1,35 @@
+.balanceContainer {
+	display: flex;
+	align-items: center;
+	background-color: rgba(255, 255, 255, 0.1);
+	padding: 0.6rem 0.8rem;
+	border-radius: 8px;
+	border: 2px solid var(--cream);
+	margin-right: 0.5rem;
+	min-width: 120px;
+}
+
+.balance {
+	color: var(--cream);
+	font-size: 0.9rem;
+	font-family: monospace;
+	opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+	.balanceContainer {
+		padding: 0.4rem 0.6rem;
+		min-width: 100px;
+	}
+
+	.balance {
+		font-size: 0.8rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.balanceContainer {
+		padding: 0.3rem 0.5rem;
+		min-width: 90px;
+	}
+}

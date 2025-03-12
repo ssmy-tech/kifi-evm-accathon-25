@@ -23,6 +23,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 						createOnLogin: "users-without-wallets",
 					},
 				},
+				supportedChains: [
+					{
+						id: 10143,
+						name: "Monad",
+						nativeCurrency: {
+							name: "MON",
+							symbol: "MON",
+							decimals: 18,
+						},
+						rpcUrls: {
+							default: { http: ["https://testnet-rpc.monad.xyz"] },
+						},
+					},
+				],
 			}}
 		>
 			<ApolloProviderWrapper>{children}</ApolloProviderWrapper>

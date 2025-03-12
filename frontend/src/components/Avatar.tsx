@@ -9,12 +9,14 @@ import { FaTelegramPlane, FaSun, FaMoon } from "react-icons/fa";
 import { TelegramSetup } from "./telegram/TelegramSetup";
 import { useGetUserSavedChatsQuery } from "../generated/graphql";
 import { WalletDisplay } from "./WalletDisplay";
+import { WalletBalance } from "./WalletBalance";
 
 interface AvatarProps {
 	walletAddress?: string;
+	balance?: number;
 }
 
-const Avatar: React.FC<AvatarProps> = ({ walletAddress }) => {
+const Avatar: React.FC<AvatarProps> = ({ walletAddress, balance }) => {
 	const { user, logout } = usePrivy();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
@@ -120,6 +122,7 @@ const Avatar: React.FC<AvatarProps> = ({ walletAddress }) => {
 								{walletAddress && (
 									<div className={styles.walletSection}>
 										<WalletDisplay address={walletAddress} />
+										<WalletBalance balance={balance} />
 									</div>
 								)}
 							</div>

@@ -715,7 +715,7 @@ const TokenFeed: React.FC = () => {
 	const setupRefreshIntervals = useCallback(() => {
 		// Token calls refresh interval
 		const refreshTokenCalls = async () => {
-			if (!isInitialLoadComplete.current) return;
+			if (!isInitialLoadComplete.current || expandedTokenId) return;
 
 			try {
 				const [privateResult, publicResult] = await Promise.all([refetchCallsByToken(), refetchPublicCalls()]);
@@ -845,7 +845,7 @@ const TokenFeed: React.FC = () => {
 
 		// DEX data refresh interval
 		const refreshDexData = async () => {
-			if (!isInitialLoadComplete.current) return;
+			if (!isInitialLoadComplete.current || expandedTokenId) return;
 			if (Date.now() - lastDexFetchTime.current < DEX_REFRESH_INTERVAL) return;
 
 			try {
@@ -885,20 +885,44 @@ const TokenFeed: React.FC = () => {
 			}
 		};
 
+		// Clear existing intervals
 		if (refreshIntervalRef.current) {
 			clearInterval(refreshIntervalRef.current);
+			refreshIntervalRef.current = null;
 		}
 		if (dexRefreshIntervalRef.current) {
 			clearInterval(dexRefreshIntervalRef.current);
+			dexRefreshIntervalRef.current = null;
 		}
 
-		refreshIntervalRef.current = setInterval(refreshTokenCalls, CALLS_REFRESH_INTERVAL);
-		dexRefreshIntervalRef.current = setInterval(refreshDexData, DEX_REFRESH_INTERVAL);
+		// Only set up new intervals if no token is expanded
+		if (!expandedTokenId) {
+			refreshIntervalRef.current = setInterval(refreshTokenCalls, CALLS_REFRESH_INTERVAL);
+			dexRefreshIntervalRef.current = setInterval(refreshDexData, DEX_REFRESH_INTERVAL);
 
-		// Run initial refresh
-		refreshTokenCalls();
-		refreshDexData();
-	}, [currentChain, fetchTokenInfo, refetchCallsByToken, refetchPublicCalls, setNewTokenIds, setCallerChangedIds, setProcessedTokens, mergeCallers, photos]);
+			// Run initial refresh
+			refreshTokenCalls();
+			refreshDexData();
+		}
+	}, [currentChain, fetchTokenInfo, refetchCallsByToken, refetchPublicCalls, setNewTokenIds, setCallerChangedIds, setProcessedTokens, mergeCallers, photos, expandedTokenId]);
+
+	// Effect to handle expanded token state changes
+	useEffect(() => {
+		// When a token is expanded, clear the intervals
+		if (expandedTokenId) {
+			if (refreshIntervalRef.current) {
+				clearInterval(refreshIntervalRef.current);
+				refreshIntervalRef.current = null;
+			}
+			if (dexRefreshIntervalRef.current) {
+				clearInterval(dexRefreshIntervalRef.current);
+				dexRefreshIntervalRef.current = null;
+			}
+		} else {
+			// When token is collapsed, restart the intervals
+			setupRefreshIntervals();
+		}
+	}, [expandedTokenId, setupRefreshIntervals]);
 
 	// Add mobile detection
 	useEffect(() => {
@@ -1237,7 +1261,7 @@ const TokenFeed: React.FC = () => {
 																	<CallerFeed token={token} />
 																</div>
 																<div className={styles.module}>
-																	<TradeModule />
+																	<TradeModule token={token} />
 																</div>
 															</div>
 															<div className={styles.moduleRow}>

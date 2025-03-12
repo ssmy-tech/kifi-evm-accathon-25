@@ -55,6 +55,49 @@
 	padding: 0 1rem 1rem 1rem;
 }
 
+.disabled {
+	pointer-events: none;
+	position: relative;
+	filter: grayscale(0.2) blur(0.7px);
+}
+
+.overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	backdrop-filter: blur(2px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10;
+	border-radius: 12px;
+	pointer-events: all;
+}
+
+.overlayContent {
+	background: var(--background);
+	padding: 2rem;
+	border-radius: 12px;
+	text-align: center;
+	max-width: 90%;
+	border: 1px solid var(--border-color);
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.overlayContent p {
+	margin: 0;
+	color: var(--text-primary);
+}
+
+.overlayContent p:last-child {
+	margin-top: 0.5rem;
+	color: var(--text-secondary);
+	font-size: 0.875rem;
+}
+
 .tokenInput {
 	display: flex;
 	flex: 1;
@@ -251,6 +294,20 @@
 
 .reviewButton:not(.reviewButtonDisabled):hover {
 	opacity: 0.9;
+}
+
+.spinningLoader {
+	animation: spin 1s linear infinite;
+	display: inline-block;
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .exchangeRate {

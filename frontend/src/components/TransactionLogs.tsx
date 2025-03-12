@@ -23,7 +23,7 @@ interface SortConfig {
 const timestampCache = new Map<string, Date>();
 const failedTimestampFetches = new Set<string>();
 
-const ALCHEMY_URL = "https://monad-testnet.g.alchemy.com/v2/PrY4uuc2p07xAobPjrxREtjUkFYCQjMw";
+const ALCHEMY_URL = "https://monad-testnet.g.alchemy.com/v2/" + process.env.NEXT_PUBLIC_ALCHEMY_KEY;
 const DELAY_BETWEEN_CALLS = 200;
 const MAX_RETRIES = 3;
 
