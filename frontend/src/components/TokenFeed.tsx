@@ -682,7 +682,7 @@ const TokenFeed: React.FC = () => {
 														<div className={styles.tokenNameWrapper}>
 															<div className={styles.tokenName}>{token.dexData ? token.dexData.baseToken.name : token.name}</div>
 															<div className={styles.tokenTicker}>
-																{token.dexData ? token.dexData.baseToken.symbol : token.ticker}
+																${token.dexData ? token.dexData.baseToken.symbol : token.ticker}
 																<button className={`${styles.copyButton} ${copiedTokenId === token.id ? styles.copied : ""}`} onClick={(e) => handleCopyAddress(token.id, e)} title="Copy token address">
 																	<Copy size={16} />
 																</button>
