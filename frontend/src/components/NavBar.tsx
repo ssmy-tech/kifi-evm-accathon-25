@@ -48,7 +48,6 @@ const NavBar: React.FC = () => {
 		if (authenticated) {
 			logout();
 		} else {
-			// local storage flag to track if user is in the auth process
 			localStorage.setItem(AUTH_STATUS_KEY, "pending");
 			setIsAuthModalOpen(true);
 		}

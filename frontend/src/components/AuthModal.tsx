@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { usePrivy, useWallets, useDelegatedActions, type WalletWithMetadata } from "@privy-io/react-auth";
+import React, { useEffect, useState, useRef } from "react";
+import { usePrivy, useDelegatedActions, type WalletWithMetadata } from "@privy-io/react-auth";
 import styles from "./AuthModal.module.css";
 import { TelegramSetup } from "./telegram/TelegramSetup";
 import { useGetUserSettingsQuery, useUpdateUserSettingsMutation } from "../generated/graphql";
@@ -15,7 +15,6 @@ type OnboardingStep = "welcome" | "delegate" | "preferences" | "telegram" | "com
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 	const { ready, authenticated, login, user } = usePrivy();
-	const { wallets } = useWallets();
 	const { delegateWallet } = useDelegatedActions();
 	const [updateUserSettings] = useUpdateUserSettingsMutation();
 	const { data: userSettings } = useGetUserSettingsQuery();
@@ -84,14 +83,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		}
 	};
 
-	const handleLogin = useCallback(async () => {
-		try {
-			login();
-		} catch (error) {
-			console.error("Login error:", error);
-		}
-	}, [login]);
-
 	useEffect(() => {
 		if (isOpen) {
 			document.body.style.overflow = "hidden";
@@ -105,23 +96,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		};
 	}, [isOpen]);
 
-	// Separate effect for handling login
 	useEffect(() => {
-		if (isOpen && !authenticated && ready) {
-			handleLogin();
+		if (!authenticated && ready && isOpen) {
+			try {
+				login();
+			} catch (error) {
+				console.error("Login error:", error);
+			}
 		}
-	}, [isOpen, authenticated, ready, handleLogin]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [authenticated, ready, isOpen]);
 
 	// USER SETUP & TOKEN CHECK
 	useEffect(() => {
-		const userSetup = async () => {
-			if (authenticated && user && isOpen) {
-				console.log(user);
-				setShowOnboarding(true);
-				setOnboardingStep("welcome");
-			}
-		};
-		userSetup();
+		if (authenticated && user && isOpen) {
+			console.log(user);
+			setShowOnboarding(true);
+			setOnboardingStep("welcome");
+		}
 	}, [authenticated, user, isOpen]);
 
 	// Function to handle step transition with animation
@@ -193,7 +185,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
 	const handleDelegation = async () => {
 		try {
-			const walletToDelegate = wallets.find((wallet) => wallet.walletClientType === "privy");
+			const walletToDelegate = user?.linkedAccounts.find((account): account is WalletWithMetadata => account.type === "wallet" && account.walletClientType === "privy");
 			if (!walletToDelegate || !ready) return;
 
 			await delegateWallet({
@@ -241,7 +233,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 				);
 
 			case "delegate":
-				const walletToDelegate = wallets.find((wallet) => wallet.walletClientType === "privy");
+				const walletToDelegate = user?.linkedAccounts.find((account) => account.type === "wallet" && account.walletClientType === "privy");
 				const isDelegated = isWalletDelegated();
 
 				return (
@@ -256,14 +248,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 							</ul>
 						</div>
 						<div className={styles.delegateSection}>
-							<button className={styles.nextButton} onClick={handleDelegation} disabled={!ready || !walletToDelegate || isDelegated || animatingStep}>
+							<button className={styles.delegateButton} onClick={handleDelegation} disabled={!ready || !walletToDelegate || isDelegated || animatingStep}>
 								{isDelegated ? "Delegated Access Enabled ✓" : "Delegate Access"}
 							</button>
-							{isDelegated && (
-								<button className={styles.nextButton} onClick={() => changeStep("preferences")}>
-									Continue to Preferences
-								</button>
-							)}
+
+							<button className={styles.nextButton} onClick={() => changeStep("preferences")}>
+								Continue to Preferences
+							</button>
 						</div>
 					</div>
 				);

@@ -575,15 +575,17 @@
 	border-radius: 50%;
 }
 
-.nameContainer {
+.tokenNameWrapper {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	overflow: hidden;
-	width: calc(100% - 80px);
+	width: 100%;
 }
 
 .tokenName {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
 	font-weight: 600;
 	color: var(--text-primary, #ffffff);
 	font-size: clamp(0.9rem, 0.7vw + 0.8rem, 1.2rem);
@@ -593,7 +595,36 @@
 	text-overflow: ellipsis;
 }
 
+.copyButton {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	font-size: 0.9em;
+	opacity: 0.6;
+	transition: all 0.2s ease;
+}
+
+.copyButton:hover {
+	opacity: 1;
+	color: var(--text-primary);
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.copyButton.copied {
+	color: var(--success, #4caf50);
+	opacity: 1;
+}
+
 .tokenTicker {
+	display: flex;
+	align-items: center;
+	gap: 2px;
 	font-size: clamp(0.75rem, 0.5vw + 0.65rem, 1rem);
 	color: var(--text-secondary, #a0a0a0);
 	text-transform: uppercase;
@@ -839,6 +870,11 @@
 
 	.module.wideModule {
 		width: 100%;
+	}
+
+	.copyButton {
+		padding: 2px;
+		font-size: 0.85em;
 	}
 }
 

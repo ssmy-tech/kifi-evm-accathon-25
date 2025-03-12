@@ -98,14 +98,13 @@
 	font-weight: 500;
 	cursor: pointer;
 	transition: background-color 0.3s ease;
-	border: 3px solid transparent;
+	border: 2px solid transparent;
 }
 
 .authButton:hover {
-	color: var(--tint);
-	background-color: transparent;
-	border: 3px solid var(--tint);
-	font-weight: 600;
+	color: var(--cream);
+	background-color: var(--forest);
+	border: 2px solid var(--cream);
 }
 
 .mobileMenuButton {

@@ -490,10 +490,20 @@
 }
 
 .delegateSection button:disabled {
-	background-color: #9ca3af;
+	background-color: var(--tint);
+	color: var(--forest);
 	cursor: not-allowed;
 }
 
-.delegateSection button[disabled]:hover {
-	background-color: #9ca3af;
+.delegateButton {
+	background-color: var(--forest);
+	color: var(--cream);
+	border: none;
+	padding: 0.75rem 1.5rem;
+	border-radius: 8px;
+	font-size: clamp(0.875rem, 1.25vw + 0.5rem, 1.1rem);
+	font-weight: 500;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+	border: 2px solid transparent;
 }

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import styles from "./TokenFeed.module.css";
 import { FaTelegramPlane, FaSortUp, FaSortDown } from "react-icons/fa";
+import { Copy } from "lucide-react";
 import { formatCurrency, formatPercentage, abbreviateAge } from "../utils/formatters";
 import { SortField, SortDirection, TokenWithDexInfo } from "../types/token.types";
 import { TradingView } from "./TradingView";
@@ -75,6 +76,7 @@ const TokenFeed: React.FC = () => {
 	const [photos, setPhotos] = useState<PhotoCache>(photoCache.get());
 	const [tokenCallsData, setTokenCallsData] = useState<NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"]>([]);
 	const [isChainLoading, setIsChainLoading] = useState(false);
+	const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
 
 	const observerTarget = useRef<HTMLDivElement>(null);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -432,6 +434,17 @@ const TokenFeed: React.FC = () => {
 		}
 	};
 
+	const handleCopyAddress = async (tokenId: string, event: React.MouseEvent) => {
+		event.stopPropagation(); // Prevent row expansion when clicking copy
+		try {
+			await navigator.clipboard.writeText(tokenId);
+			setCopiedTokenId(tokenId);
+			setTimeout(() => setCopiedTokenId(null), 2000); // Reset after 2 seconds
+		} catch (err) {
+			console.error("Failed to copy address:", err);
+		}
+	};
+
 	if (!ready) {
 		return (
 			<div className={styles.initialLoading}>
@@ -543,8 +556,15 @@ const TokenFeed: React.FC = () => {
 														/>
 													</div>
 													<div className={styles.nameContainer}>
-														<div className={styles.tokenName}>{token.dexData ? token.dexData.baseToken.name : token.name}</div>
-														<div className={styles.tokenTicker}>{token.dexData ? token.dexData.baseToken.symbol : token.ticker}</div>
+														<div className={styles.tokenNameWrapper}>
+															<div className={styles.tokenName}>{token.dexData ? token.dexData.baseToken.name : token.name}</div>
+															<div className={styles.tokenTicker}>
+																{token.dexData ? token.dexData.baseToken.symbol : token.ticker}
+																<button className={`${styles.copyButton} ${copiedTokenId === token.id ? styles.copied : ""}`} onClick={(e) => handleCopyAddress(token.id, e)} title="Copy token address">
+																	<Copy size={16} />
+																</button>
+															</div>
+														</div>
 													</div>
 												</div>
 											</td>
