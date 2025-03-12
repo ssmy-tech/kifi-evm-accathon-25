@@ -12,6 +12,7 @@ import { usePrivyLoginMutation } from "@/generated/graphql";
 import ChainSwitcher from "./ChainSwitcher";
 import { WalletDisplay } from "./WalletDisplay";
 import { WalletBalance } from "./WalletBalance";
+import FeedSwitcher from "./FeedSwitcher";
 
 const AUTH_STATUS_KEY = "auth_pending_onboarding";
 const ALCHEMY_URL = "https://monad-testnet.g.alchemy.com/v2/" + process.env.NEXT_PUBLIC_ALCHEMY_KEY;
@@ -146,6 +147,7 @@ const NavBar: React.FC = () => {
 						</span>
 						<div className={styles.logoText}>KiSignals</div>
 					</Link>
+					<FeedSwitcher />
 				</div>
 
 				<div className={`${styles.navLinks} ${isMobileMenuOpen ? styles.navLinksOpen : ""}`}>

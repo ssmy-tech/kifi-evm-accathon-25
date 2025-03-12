@@ -7,6 +7,7 @@
 	background-color: var(--background);
 	border-radius: 8px;
 	gap: 0;
+	min-height: 320px;
 }
 
 .header {
@@ -14,6 +15,8 @@
 	justify-content: space-between;
 	align-items: center;
 	flex-shrink: 0;
+	padding: 0.75rem;
+	min-height: 60px;
 }
 
 .titleGroup {
@@ -23,18 +26,21 @@
 }
 
 .titleGroup h3 {
-	font-size: 1.25rem;
+	font-size: 1.125rem;
 	font-weight: 600;
 	color: var(--text-primary);
 	margin: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .titleWithIcon {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	margin: 1rem;
 	width: 100%;
+	padding: 0 0.5rem;
 }
 
 .icon {
@@ -42,6 +48,7 @@
 	font-size: 1.2em;
 	height: auto;
 	width: auto;
+	flex-shrink: 0;
 }
 
 .contentWrapper {
@@ -51,8 +58,8 @@
 	position: relative;
 	width: 100%;
 	margin: 0 auto;
-	flex: 1;
 	padding: 0 1rem 1rem 1rem;
+	min-height: 0;
 }
 
 .disabled {
@@ -100,16 +107,16 @@
 
 .tokenInput {
 	display: flex;
-	flex: 1;
 	flex-direction: column;
-	padding: clamp(0.75rem, 2vw, 1.5rem);
+	padding: 0.75rem;
 	background-color: var(--border-color);
 	border-radius: 12px;
-	justify-content: space-between;
+	gap: 0.25rem;
+	min-height: 90px;
 }
 
 .inputLabel {
-	font-size: clamp(0.875rem, 1.25vw, 1.125rem);
+	font-size: 0.75rem;
 	font-weight: 600;
 	color: var(--text-primary);
 }
@@ -119,14 +126,14 @@
 	justify-content: space-between;
 	align-items: center;
 	width: 100%;
-	gap: 12px;
+	gap: 8px;
 }
 
 .amountInput {
 	flex: 1;
 	background: none;
 	border: none;
-	font-size: clamp(1.25rem, 2vw, 2rem);
+	font-size: 1rem;
 	color: var(--text-primary);
 	outline: none;
 	width: 100%;
@@ -136,8 +143,8 @@
 .tokenSelector {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 8px 12px;
+	gap: 4px;
+	padding: 4px 8px;
 	background-color: var(--border-color);
 	border-radius: 8px;
 	cursor: pointer;
@@ -145,7 +152,7 @@
 }
 
 .tokenSelector span {
-	font-size: clamp(0.875rem, 1.25vw, 1.125rem);
+	font-size: 0.75rem;
 	font-weight: 600;
 	color: var(--text-primary);
 }
@@ -155,7 +162,7 @@
 	width: 100%;
 	align-items: center;
 	justify-content: space-between;
-	padding-top: 0.5rem;
+	padding-top: 0.25rem;
 }
 
 .balanceInfo {
@@ -166,7 +173,7 @@
 
 .usdValue,
 .maxAmount {
-	font-size: clamp(0.75rem, 1vw, 0.875rem);
+	font-size: 0.675rem;
 	color: var(--text-secondary);
 }
 
@@ -180,51 +187,19 @@
 }
 
 .maxButton {
-	padding: 4px 8px;
-	font-size: clamp(0.75rem, 1vw, 0.875rem);
+	padding: 2px 4px;
+	font-size: 0.675rem;
 	font-weight: 600;
 	color: var(--cream);
 	background-color: var(--forest);
 	border: none;
-	border-radius: 6px;
+	border-radius: 4px;
 	cursor: pointer;
 	transition: opacity 0.2s;
 }
 
 .maxButton:hover {
 	opacity: 0.8;
-}
-
-.swapIcon {
-	margin: -20px auto;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	width: 40px;
-	height: 40px;
-	border-radius: 50%;
-	background-color: var(--background);
-	cursor: pointer;
-	z-index: 1;
-	font-size: 2.5rem;
-	box-shadow: 0 0 0 6px var(--background);
-}
-
-.swapIcon svg {
-	color: var(--forest);
-}
-
-.swapIcon:hover svg {
-	color: var(--tint);
-	transition: color 0.2s;
-}
-
-@media (min-width: 640px) {
-	.tradeInfo {
-		flex-direction: row;
-		align-items: center;
-		gap: 16px;
-	}
 }
 
 .settingItem {
@@ -235,13 +210,13 @@
 }
 
 .settingItem span:first-child {
-	font-size: clamp(0.75rem, 1vw, 0.875rem);
+	font-size: 0.75rem;
 	color: var(--text-secondary);
 	opacity: 0.8;
 }
 
 .settingItem span:last-child {
-	font-size: clamp(0.875rem, 1.25vw, 1rem);
+	font-size: 0.875rem;
 	font-weight: 500;
 	color: var(--text-primary);
 }
@@ -259,9 +234,13 @@
 .tradeActions {
 	display: flex;
 	flex-direction: column;
-	margin-top: 4px;
-	height: 100%;
+	margin-top: 8px;
 	width: 100%;
+	min-height: 40px;
+}
+
+.tokenImage {
+	border-radius: 50%;
 }
 
 @media (min-width: 640px) {
@@ -273,17 +252,21 @@
 
 .reviewButton {
 	width: 100%;
-	height: 100%;
-	padding: 0 16px;
+	padding: 0.75rem;
 	background-color: var(--tint);
 	color: var(--text-primary);
 	border: none;
 	border-radius: 8px;
-	font-size: clamp(0.875rem, 1.25vw, 1.125rem);
+	font-size: 0.875rem;
 	font-weight: 600;
 	cursor: pointer;
 	transition: all 0.2s;
 	white-space: nowrap;
+	height: 40px;
+	min-height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .reviewButtonDisabled {
@@ -324,33 +307,102 @@
 }
 
 @media (max-width: 768px) {
+	.container {
+		min-height: 280px;
+	}
+
 	.titleGroup h3 {
-		font-size: 1.15rem;
+		font-size: 1rem;
+	}
+
+	.amountInput {
+		font-size: 1.125rem;
+	}
+
+	.tokenSelector {
+		padding: 4px 8px;
+	}
+
+	.tokenSelector span {
+		font-size: 0.8125rem;
+	}
+
+	.tokenInput {
+		min-height: 80px;
+		padding: 0.5rem;
+	}
+
+	.contentWrapper {
+		gap: 12px;
 	}
 }
 
 @media (min-width: 1200px) {
+	.container {
+		min-height: 350px;
+	}
+
 	.titleGroup h3 {
-		font-size: 1.5rem;
+		font-size: 1.25rem;
+	}
+
+	.amountInput {
+		font-size: 1.125rem;
+	}
+
+	.inputLabel {
+		font-size: 0.875rem;
+	}
+
+	.tokenSelector span {
+		font-size: 0.875rem;
+	}
+
+	.usdValue,
+	.maxAmount {
+		font-size: 0.75rem;
+	}
+
+	.reviewButton {
+		font-size: 1rem;
+	}
+
+	.tokenInput {
+		min-height: 100px;
 	}
 }
 
 @media (min-width: 1600px) {
 	.titleGroup h3 {
-		font-size: 1.5rem;
+		font-size: 1.375rem;
 	}
 
-	.titleWithIcon {
-		margin: 1.25rem;
+	.amountInput {
+		font-size: 1.25rem;
+	}
+
+	.inputLabel {
+		font-size: 1rem;
 	}
 }
 
 @media (min-width: 1800px) {
 	.titleGroup h3 {
-		font-size: 1.75rem;
+		font-size: 1.5rem;
 	}
 
-	.icon {
-		font-size: 1.5em;
+	.amountInput {
+		font-size: 1.375rem;
 	}
+
+	.inputLabel {
+		font-size: 1.125rem;
+	}
+}
+
+/* Remove these classes as they're no longer needed */
+.swapIcon,
+.swapIcon svg,
+.swapIcon:hover svg {
+	display: none;
 }

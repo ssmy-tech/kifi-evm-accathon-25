@@ -2,6 +2,8 @@
 
 import { PrivyProvider } from "@privy-io/react-auth";
 import ApolloProviderWrapper from "../backend/ApolloProvider";
+import { ChainProvider } from "@/contexts/ChainContext";
+import { FeedFilterProvider } from "@/contexts/FeedFilterContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
 	if (!process.env.NEXT_PUBLIC_PRIVY_ID) {
@@ -39,7 +41,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 				],
 			}}
 		>
-			<ApolloProviderWrapper>{children}</ApolloProviderWrapper>
+			<ApolloProviderWrapper>
+				<ChainProvider>
+					<FeedFilterProvider>{children}</FeedFilterProvider>
+				</ChainProvider>
+			</ApolloProviderWrapper>
 		</PrivyProvider>
 	);
 }

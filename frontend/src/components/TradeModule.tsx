@@ -3,7 +3,6 @@
 import React from "react";
 import styles from "./TradeModule.module.css";
 import { RiSwap2Fill } from "react-icons/ri";
-import { MdSwapVerticalCircle } from "react-icons/md";
 import { BiLoaderAlt } from "react-icons/bi";
 import Image from "next/image";
 import { TokenWithDexInfo } from "@/types/token.types";
@@ -88,7 +87,7 @@ function TokenInput({ type, value, token, onValueChange, isLoading }: TokenInput
 			<div className={styles.inputContainer}>
 				<input type="text" inputMode="decimal" value={value} onChange={handleInputChange} placeholder="0.0" className={styles.amountInput} disabled={isLoading} />
 				<div className={styles.tokenSelector}>
-					{imageUrl && <Image src={imageUrl} alt={symbol} width={28} height={28} />}
+					{imageUrl && <Image className={styles.tokenImage} src={imageUrl} alt={symbol} width={28} height={28} />}
 					<span>{isLoading ? <BiLoaderAlt className={styles.spinningLoader} /> : symbol}</span>
 				</div>
 			</div>
@@ -96,11 +95,15 @@ function TokenInput({ type, value, token, onValueChange, isLoading }: TokenInput
 			<div className={styles.balanceContainer}>
 				<div className={styles.usdValue}>{isLoading ? <BiLoaderAlt className={styles.spinningLoader} /> : usdValue}</div>
 				<div className={styles.balanceInfo}>
-					<div className={styles.maxAmount}>{isLoading ? <BiLoaderAlt className={styles.spinningLoader} /> : `${maxAmount} ${symbol}`}</div>
-					{type === "sell" && maxAmount > 0 && (
-						<button className={styles.maxButton} onClick={() => onValueChange(maxAmount.toString())} disabled={isLoading}>
-							MAX
-						</button>
+					{maxAmount && (
+						<>
+							<div className={styles.maxAmount}>{isLoading ? <BiLoaderAlt className={styles.spinningLoader} /> : `${maxAmount} ${symbol}`}</div>
+							{type === "sell" && maxAmount > 0 && (
+								<button className={styles.maxButton} onClick={() => onValueChange(maxAmount.toString())} disabled={isLoading}>
+									MAX
+								</button>
+							)}
+						</>
 					)}
 				</div>
 			</div>
@@ -387,9 +390,6 @@ export default function TradeModule({ token }: TradeModuleProps) {
 			</div>
 			<div className={`${styles.contentWrapper} ${!isMonad ? styles.disabled : ""}`}>
 				<TokenInput type="sell" value={sellAmount} token={quoteToken} onValueChange={setSellAmount} isLoading={isLoadingQuoteToken} />
-				<div className={styles.swapIcon} onClick={handleSwap}>
-					<MdSwapVerticalCircle />
-				</div>
 				<TokenInput type="buy" value={buyAmount} token={token} onValueChange={setBuyAmount} isLoading={isLoadingQuoteToken || (!!debouncedSellAmount && !priceQuote)} />
 				<div className={styles.tradeActions}>
 					<button className={`${styles.reviewButton} ${!isValidTrade ? styles.reviewButtonDisabled : ""}`} disabled={!isValidTrade || isLoadingQuoteToken} onClick={handleSwap}>

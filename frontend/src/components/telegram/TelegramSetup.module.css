@@ -175,6 +175,30 @@
 	margin-bottom: 0.5rem;
 }
 
+.apiSecretSection {
+	margin-top: 1rem;
+	padding: 1rem;
+	background-color: #f3f4f6;
+	border-radius: 0.375rem;
+}
+
+.apiSecretLabel {
+	font-weight: 500;
+	color: #374151;
+	margin-bottom: 0.5rem;
+}
+
+.apiSecret {
+	display: block;
+	padding: 0.75rem;
+	background-color: #e5e7eb;
+	border-radius: 0.25rem;
+	font-family: monospace;
+	font-size: 0.875rem;
+	color: #1f2937;
+	word-break: break-all;
+}
+
 .link {
 	color: #3b82f6;
 	text-decoration: underline;

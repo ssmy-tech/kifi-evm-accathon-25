@@ -32,7 +32,7 @@
 
 .modal {
 	position: fixed;
-	top: 75px;
+	top: 60px;
 	right: 0;
 	width: 380px;
 	background-color: var(--forest);

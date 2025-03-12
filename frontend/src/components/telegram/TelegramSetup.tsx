@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useUpdateTelegramApiLinkMutation, useCheckTelegramApiHealthQuery, useGetUserSavedChatsQuery } from "../../generated/graphql";
+import { useUpdateTelegramApiLinkMutation, useCheckTelegramApiHealthQuery, useGetUserSavedChatsQuery, useGetTelegramApiSecretQuery } from "../../generated/graphql";
 import styles from "./TelegramSetup.module.css";
 import { TelegramChatsManager } from "./TelegramChatsManager";
 import { X } from "lucide-react";
@@ -20,6 +20,7 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 		pollInterval: 10000,
 	});
 	const { data: savedChats, loading: savedChatsLoading } = useGetUserSavedChatsQuery();
+	const { data: apiSecret, loading: apiSecretLoading } = useGetTelegramApiSecretQuery();
 
 	const [updateApiLink, { loading: updatingLink }] = useUpdateTelegramApiLinkMutation({
 		onCompleted: async () => {
@@ -74,9 +75,6 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 				<div className={styles.loadingContainer}>
 					<div className={styles.loadingSpinner}></div>
 					<p className={styles.loadingText}>Checking your Telegram connection...</p>
-					<button onClick={onContinue} className={styles.maybeLaterButton}>
-						Maybe Later
-					</button>
 				</div>
 			);
 		}
@@ -116,7 +114,7 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 							<button type="submit" disabled={updatingLink} className={styles.submitButton}>
 								{updatingLink ? "Connecting..." : "Connect to Telegram"}
 							</button>
-							<button type="button" onClick={onContinue} className={styles.maybeLaterButton}>
+							<button type="button" onClick={onContinue || onClose} className={styles.maybeLaterButton}>
 								Maybe Later
 							</button>
 						</div>
@@ -127,13 +125,26 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 						<ol className={styles.helpList}>
 							<li>
 								Set up a Telegram API server using our{" "}
-								<a href="#" className={styles.link}>
+								<a href="https://nova-screen-c53.notion.site/Telegram-Middleware-Setup-1b495657b8b1801cb3c7f21f3f446851" className={styles.link} target="_blank" rel="noopener noreferrer">
 									documentation
 								</a>
 							</li>
 							<li>Copy the API URL from your server configuration</li>
 							<li>Paste it in the field above and click Connect</li>
 						</ol>
+						{apiSecretLoading ? (
+							<div className={styles.apiSecretSection}>
+								<div className={styles.loadingSpinner}></div>
+								<p className={styles.loadingText}>Loading API Secret...</p>
+							</div>
+						) : (
+							apiSecret?.getTelegramApiSecret?.apiSecret && (
+								<div className={styles.apiSecretSection}>
+									<p className={styles.apiSecretLabel}>Required Environment Variable:</p>
+									<code className={styles.apiSecret}>TELEGRAM_API_SECRET={apiSecret.getTelegramApiSecret.apiSecret}</code>
+								</div>
+							)
+						)}
 					</div>
 				</div>
 			</div>
