@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle, Time, CandlestickData as LightweightCandlestickData, CandlestickSeries, LineWidth } from "lightweight-charts";
+import { createChart, IChartApi, ISeriesApi, Time, CandlestickData as LightweightCandlestickData, CandlestickSeries, LineWidth } from "lightweight-charts";
 import styles from "./TradingView.module.css";
 
 import { useChain } from "@/contexts/ChainContext";
 import { TokenWithDexInfo } from "@/types/token.types";
 
-type SupportedInterval = "5m" | "30m" | "1h" | "1d";
+type SupportedInterval = "5m" | "15m" | "1h" | "1d";
 
 interface TradingViewProps {
 	token: TokenWithDexInfo;
@@ -38,7 +38,7 @@ function formatPrice(price: number): string {
 	return price.toFixed(0);
 }
 
-export function TradingView({ token, interval: initialInterval = "30m", theme = "dark", width = "100%", height = "100%", isFullscreen = false }: TradingViewProps) {
+export function TradingView({ token, interval: initialInterval = "5m", theme = "dark", width = "100%", height = "100%", isFullscreen = false }: TradingViewProps) {
 	const { currentChain } = useChain();
 	const chartContainerRef = useRef<HTMLDivElement>(null);
 	const [candleData, setCandleData] = useState<CandleData[]>([]);
@@ -178,21 +178,13 @@ export function TradingView({ token, interval: initialInterval = "30m", theme = 
 		async function fetchPriceHistory() {
 			setIsLoading(true);
 			try {
-				// Calculate current date and 30 days ago
-				const currentDate = new Date();
 				const thirtyDaysAgo = new Date();
 				thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-				const toTimestamp = Math.floor(currentDate.getTime() / 1000);
 				const fromTimestamp = Math.floor(thirtyDaysAgo.getTime() / 1000);
 
-				const response = await fetch(`https://api.mobula.io/api/1/market/history/pair?blockchain=${currentChain.id}&from=${fromTimestamp}&period=${interval}&amount=5000&asset=${token.id}`, {
-					headers: {
-						Authorization: process.env.NEXT_PUBLIC_MOBULA_KEY || "",
-					},
-				});
+				const response = await fetch(`https://api.mobula.io/api/1/market/history/pair?blockchain=${currentChain.id}&from=${fromTimestamp}&period=${interval}&amount=5000&asset=${token.id}`, {});
 				const data = await response.json();
-				console.log(data);
 
 				if (data.data && Array.isArray(data.data)) {
 					setCandleData(data.data);
@@ -217,7 +209,7 @@ export function TradingView({ token, interval: initialInterval = "30m", theme = 
 	};
 
 	// Supported intervals
-	const supportedIntervals: SupportedInterval[] = ["5m", "30m", "1h", "1d"];
+	const supportedIntervals: SupportedInterval[] = ["5m", "15m", "1h", "1d"];
 
 	return (
 		<div className={styles.tradingViewWrapper}>

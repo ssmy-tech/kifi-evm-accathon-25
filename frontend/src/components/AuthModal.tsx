@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { usePrivy, useDelegatedActions, type WalletWithMetadata } from "@privy-io/react-auth";
 import styles from "./AuthModal.module.css";
 import { TelegramSetup } from "./telegram/TelegramSetup";
@@ -83,6 +83,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		}
 	};
 
+	// Function to check if wallet is already delegated
+	const isWalletDelegated = useCallback(() => {
+		return !!user?.linkedAccounts.find((account): account is WalletWithMetadata => account.type === "wallet" && account.delegated);
+	}, [user]);
+
 	useEffect(() => {
 		if (isOpen) {
 			document.body.style.overflow = "hidden";
@@ -130,7 +135,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 				setShowOnboarding(false);
 			}
 		}
-	}, [authenticated, user, isOpen, userSettings, userSettingsLoading]);
+	}, [authenticated, user, isOpen, userSettings, userSettingsLoading, isWalletDelegated]);
 
 	// Function to handle step transition with animation
 	const changeStep = (newStep: OnboardingStep) => {
@@ -213,11 +218,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		} catch (error) {
 			console.error("Delegation error:", error);
 		}
-	};
-
-	// Function to check if wallet is already delegated
-	const isWalletDelegated = () => {
-		return !!user?.linkedAccounts.find((account): account is WalletWithMetadata => account.type === "wallet" && account.delegated);
 	};
 
 	// Initialize form values from user settings with validation
