@@ -146,6 +146,7 @@ const TokenFeed: React.FC = () => {
 		return () => {
 			initializationRef.current = false;
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ready, authenticated, filterType, currentChain.name, callsByTokenData, publicCallsData, callsByTokenLoading, publicCallsLoading, setupRefreshIntervals]);
 
 	// Update processedTokensRef when processedTokens changes
@@ -321,9 +322,13 @@ const TokenFeed: React.FC = () => {
 		isInitialLoadComplete.current = false;
 		initializationRef.current = false;
 
+		// Store ref values in variables inside the effect
+		const refreshInterval = refreshIntervalRef.current;
+		const dexRefreshInterval = dexRefreshIntervalRef.current;
+
 		// Clear existing intervals
-		if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
-		if (dexRefreshIntervalRef.current) clearInterval(dexRefreshIntervalRef.current);
+		if (refreshInterval) clearInterval(refreshInterval);
+		if (dexRefreshInterval) clearInterval(dexRefreshInterval);
 
 		// Reset states
 		setProcessedTokens([]);
@@ -334,8 +339,8 @@ const TokenFeed: React.FC = () => {
 		setCallerChangedIds(new Set());
 
 		return () => {
-			if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
-			if (dexRefreshIntervalRef.current) clearInterval(dexRefreshIntervalRef.current);
+			if (refreshInterval) clearInterval(refreshInterval);
+			if (dexRefreshInterval) clearInterval(dexRefreshInterval);
 		};
 	}, [currentChain, ready, authenticated]);
 
@@ -348,7 +353,6 @@ const TokenFeed: React.FC = () => {
 			}
 
 			const operation = isPolling ? "dex data refresh" : "initial load";
-			console.log(`Starting ${operation} for ${tokenCalls.length} tokens`);
 
 			try {
 				// Filter tokens by current chain
@@ -362,16 +366,14 @@ const TokenFeed: React.FC = () => {
 
 				// Sort by call count first - using direct comparison for better performance
 				filteredTokenCalls.sort((a, b) => b.chats.length - a.chats.length);
+				console.log(`Starting ${operation} for ${tokenCalls.length} tokens`);
 
 				// Calculate range for processing
 				const startIndex = 0;
-				const endIndex = isPolling ? filteredTokenCalls.length : page * TOKENS_PER_PAGE;
+				const endIndex = isPolling ? 50 : page * TOKENS_PER_PAGE;
 				const currentPageTokenCalls = filteredTokenCalls.slice(startIndex, endIndex);
 
-				console.log(`Processing ${currentPageTokenCalls.length} tokens during ${operation}`);
-
 				// For refreshes, only fetch DEX data for top 50 tokens
-				// For load more or initial load, fetch DEX data for all new tokens in the current page
 				const tokensNeedingDexData = isPolling
 					? currentPageTokenCalls.slice(0, 50) // During refresh, only top 50
 					: currentPageTokenCalls; // During load more or initial load, all tokens
