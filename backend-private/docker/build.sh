@@ -15,7 +15,7 @@ docker buildx build --platform linux/amd64,linux/arm64 \
   ..
 
 # Build service images
-services=("chat-scraper" "api-health" "ai-analytics")
+services=("chat-scraper" "api-health" "ai-analytics" "trade-executor")
 
 for service in "${services[@]}"; do
   echo "Building $service image..."

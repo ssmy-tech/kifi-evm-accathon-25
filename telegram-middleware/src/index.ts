@@ -395,13 +395,11 @@ app.get('/api/telegram/messages', authenticateToken, async (req, res) => {
         messages = await client.getMessages(chatId, {
           limit,
           offsetId: fromMessageId,
-          addOffset: 1
         });
       } else {
         messages = await client.getMessages(chatId, {
           limit,
           minId: fromMessageId,
-          addOffset: 1
         });
       }
     } else {
