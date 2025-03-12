@@ -17,7 +17,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 	const { ready, authenticated, login, user } = usePrivy();
 	const { delegateWallet } = useDelegatedActions();
 	const [updateUserSettings] = useUpdateUserSettingsMutation();
-	const { data: userSettings } = useGetUserSettingsQuery();
+	const { data: userSettings, loading: userSettingsLoading } = useGetUserSettingsQuery();
 	const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
 	const [showOnboarding, setShowOnboarding] = useState(false);
 	const [animatingStep, setAnimatingStep] = useState(false);
@@ -40,14 +40,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
 	const validateBuyAmount = (amount: string): number | null => {
 		const parsed = parseFloat(amount);
-		if (isNaN(parsed) || parsed <= 0) return null;
+		if (isNaN(parsed) || parsed < 0.0001) return null;
 		// Round to 4 decimal places to avoid floating point issues
 		return Math.round(parsed * 10000) / 10000;
 	};
 
 	const validateGroupThreshold = (threshold: string): number | null => {
 		const parsed = parseInt(threshold);
-		if (isNaN(parsed) || parsed < 1 || parsed > 10) return null;
+		if (isNaN(parsed) || parsed <= 0 || parsed > 10) return null;
 		return parsed;
 	};
 
@@ -109,12 +109,28 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
 	// USER SETUP & TOKEN CHECK
 	useEffect(() => {
-		if (authenticated && user && isOpen) {
-			console.log(user);
-			setShowOnboarding(true);
-			setOnboardingStep("welcome");
+		if (authenticated && user && isOpen && !userSettingsLoading) {
+			// Only show onboarding if groupCallThreshold is missing or invalid
+			const hasValidGroupThreshold = userSettings?.getUserSettings?.groupCallThreshold && userSettings.getUserSettings.groupCallThreshold >= 1;
+
+			if (!hasValidGroupThreshold) {
+				console.log("User needs onboarding - missing group threshold setting");
+				setShowOnboarding(true);
+
+				// Determine starting step based on existing settings
+				const hasBuyAmount = userSettings?.getUserSettings?.buyAmount && userSettings.getUserSettings.buyAmount > 0;
+
+				// If user has some settings but missing group threshold, skip to preferences
+				if (hasBuyAmount || isWalletDelegated()) {
+					setOnboardingStep("preferences");
+				} else {
+					setOnboardingStep("welcome");
+				}
+			} else {
+				setShowOnboarding(false);
+			}
 		}
-	}, [authenticated, user, isOpen]);
+	}, [authenticated, user, isOpen, userSettings, userSettingsLoading]);
 
 	// Function to handle step transition with animation
 	const changeStep = (newStep: OnboardingStep) => {
@@ -137,7 +153,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 				setTimeout(() => {
 					contentRef.current!.style.opacity = "1";
 					contentRef.current!.style.transform = "translateY(0)";
-					modalRef.current!.style.opacity = "1"; // Restore modal opacity
+					modalRef.current!.style.opacity = "1";
 					setAnimatingStep(false);
 				}, 50);
 			}
@@ -262,18 +278,39 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 			case "preferences":
 				return (
 					<div className={styles.step}>
-						<h2>Your Preferences</h2>
+						<h2>Set Your Trading Preferences</h2>
+						<p className={styles.stepDescription}>Please set your minimum group call threshold to enable Auto Alpha trading.</p>
 						<div className={styles.preferencesForm}>
 							<div className={styles.formItem}>
 								<label htmlFor="quickBuyAmount">Quick Buy Amount</label>
 								<div className={styles.formItemDescription}>Default amount in ETH you want to use for quick buys or Auto Alpha Buys.</div>
-								<input type="number" id="quickBuyAmount" min="0" step="0.01" placeholder="Enter amount" value={formValues.quickBuyAmount} onChange={handleInputChange} className={submitAttempted && formValues.quickBuyAmount === "" ? styles.invalidInput : ""} />
+								<input
+									type="number"
+									id="quickBuyAmount"
+									min="0.0001"
+									step="0.0001"
+									placeholder="Enter amount (min: 0.0001 ETH)"
+									value={formValues.quickBuyAmount}
+									onChange={handleInputChange}
+									className={submitAttempted && (!formValues.quickBuyAmount || parseFloat(formValues.quickBuyAmount) <= 0) ? styles.invalidInput : ""}
+								/>
+								{submitAttempted && (!formValues.quickBuyAmount || parseFloat(formValues.quickBuyAmount) <= 0) && <div className={styles.validationMessage}>Please enter a value greater than 0</div>}
 							</div>
 
 							<div className={styles.formItem}>
 								<label htmlFor="minGroupsIndicator">Minimum Group Call Indicator</label>
-								<div className={styles.formItemDescription}>Minimum number of groups required to call a token before Auto Alpha Buy is triggered. Monitored groups can be configured in settings.</div>
-								<input type="number" id="minGroupsIndicator" min="1" placeholder="Enter minimum groups" value={formValues.minGroupsIndicator} onChange={handleInputChange} className={submitAttempted && formValues.minGroupsIndicator === "" ? styles.invalidInput : ""} />
+								<div className={styles.formItemDescription}>Minimum number of groups required to call a token before Auto Alpha Buy is triggered (1-10)</div>
+								<input
+									type="number"
+									id="minGroupsIndicator"
+									min="1"
+									max="10"
+									placeholder="Enter minimum groups (1-10)"
+									value={formValues.minGroupsIndicator}
+									onChange={handleInputChange}
+									className={submitAttempted && (!formValues.minGroupsIndicator || parseInt(formValues.minGroupsIndicator) <= 0) ? styles.invalidInput : ""}
+								/>
+								{submitAttempted && (!formValues.minGroupsIndicator || parseInt(formValues.minGroupsIndicator) <= 0) && <div className={styles.validationMessage}>Please enter a value greater than 0</div>}
 							</div>
 
 							<div className={styles.formItem}>
@@ -301,12 +338,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 										<label htmlFor="blueChip">Blue Chip ($100M+)</label>
 									</div>
 								</div>
+								{submitAttempted && !Object.values(formValues.marketCaps).some((v) => v) && <div className={styles.validationMessage}>Please select at least one market cap range</div>}
 							</div>
 						</div>
-						<button className={styles.nextButton} onClick={handleContinue} disabled={animatingStep}>
-							Continue
-						</button>
-						{submitAttempted && !isFormValid() && <p className={styles.validationMessage}>Please fill in all fields to continue</p>}
+						<div className={styles.buttonContainer}>
+							<button
+								className={styles.nextButton}
+								onClick={handleContinue}
+								disabled={
+									animatingStep || !formValues.quickBuyAmount || parseFloat(formValues.quickBuyAmount) < 0.0001 || !formValues.minGroupsIndicator || parseInt(formValues.minGroupsIndicator) <= 0 || parseInt(formValues.minGroupsIndicator) > 10 || !Object.values(formValues.marketCaps).some((v) => v)
+								}
+							>
+								Continue
+							</button>
+						</div>
 					</div>
 				);
 

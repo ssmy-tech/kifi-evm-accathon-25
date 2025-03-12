@@ -615,7 +615,7 @@ const TokenFeed: React.FC = () => {
 														<div className={`${styles.expandedModules} ${closingTokenId === token.id ? styles.closing : ""}`}>
 															<div className={styles.moduleRow}>
 																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-																	<TradingView symbol={token.dexData ? `${token.dexData.baseToken.symbol}USD` : `${token.ticker}USD`} />
+																	<TradingView token={token} theme={document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"} />
 																</div>
 																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
 																	<CallerFeed callers={token.callers || []} />

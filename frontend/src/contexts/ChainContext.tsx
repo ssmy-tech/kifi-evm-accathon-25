@@ -22,17 +22,36 @@ const defaultChains: Chain[] = [
 	{ id: "solana", name: "Solana", icon: "/assets/chains/solana.png" },
 ];
 
+function getInitialChain(): Chain {
+	if (typeof window === "undefined") return defaultChains[0];
+
+	const savedChain = localStorage.getItem("selectedChain");
+	if (savedChain) {
+		const parsed = JSON.parse(savedChain);
+		// Validate the saved chain exists in available chains
+		if (defaultChains.some((chain) => chain.id === parsed.id)) {
+			return parsed;
+		}
+	}
+	return defaultChains[0];
+}
+
 const ChainContext = createContext<ChainContextType | undefined>(undefined);
 
 export function ChainProvider({ children }: { children: ReactNode }) {
-	const [currentChain, setCurrentChain] = useState<Chain>(defaultChains[0]);
+	const [currentChain, setCurrentChain] = useState<Chain>(getInitialChain());
 	const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+
+	const handleChainChange = (chain: Chain) => {
+		setCurrentChain(chain);
+		localStorage.setItem("selectedChain", JSON.stringify(chain));
+	};
 
 	return (
 		<ChainContext.Provider
 			value={{
 				currentChain,
-				setCurrentChain,
+				setCurrentChain: handleChainChange,
 				availableChains: defaultChains,
 				isLoadingTokens,
 				setIsLoadingTokens,

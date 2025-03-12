@@ -1,92 +1,241 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle, Time, CandlestickData as LightweightCandlestickData, CandlestickSeries, LineWidth } from "lightweight-charts";
 import styles from "./TradingView.module.css";
 
+import { useChain } from "@/contexts/ChainContext";
+import { TokenWithDexInfo } from "@/types/token.types";
+
+type SupportedInterval = "5m" | "30m" | "1h" | "1d";
+
 interface TradingViewProps {
-	symbol?: string;
-	interval?: string;
+	token: TokenWithDexInfo;
+	interval?: SupportedInterval;
 	theme?: "light" | "dark";
 	width?: string | number;
 	height?: string | number;
 	isFullscreen?: boolean;
 }
 
-export function TradingView({ symbol = "BINANCE:BTCUSDT", interval = "1D", theme = "dark", width = "100%", height = "100%", isFullscreen = false }: TradingViewProps) {
-	const containerRef = useRef<HTMLDivElement>(null);
+interface CustomCandlestickData extends LightweightCandlestickData<Time> {
+	time: Time;
+}
 
+interface CandleData {
+	volume: number;
+	open: number;
+	high: number;
+	low: number;
+	close: number;
+	time: number;
+}
+
+function formatPrice(price: number): string {
+	if (price < 0.000001) return price.toExponential(6);
+	if (price < 0.0001) return price.toFixed(6);
+	if (price < 0.01) return price.toFixed(5);
+	if (price < 1) return price.toFixed(4);
+	if (price < 1000) return price.toFixed(2);
+	return price.toFixed(0);
+}
+
+export function TradingView({ token, interval: initialInterval = "30m", theme = "dark", width = "100%", height = "100%", isFullscreen = false }: TradingViewProps) {
+	const { currentChain } = useChain();
+	const chartContainerRef = useRef<HTMLDivElement>(null);
+	const [candleData, setCandleData] = useState<CandleData[]>([]);
+	const chartRef = useRef<IChartApi | null>(null);
+	const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+	const [interval, setInterval] = useState<SupportedInterval>(initialInterval);
+	const [isLoading, setIsLoading] = useState(false);
+
+	// Initialize chart
 	useEffect(() => {
-		const script = document.createElement("script");
-		script.src = "https://s3.tradingview.com/tv.js";
-		script.async = true;
-		script.onload = () => {
-			if (typeof window.TradingView !== "undefined" && containerRef.current) {
-				const dataTheme = document.documentElement.getAttribute("data-theme");
-				const chartTheme = dataTheme === "light" ? "light" : "dark";
+		if (!chartContainerRef.current) return;
 
-				new window.TradingView.widget({
-					autosize: true,
-					symbol,
-					interval,
-					timezone: "Etc/UTC",
-					theme: chartTheme,
-					style: "1",
-					locale: "en",
-					toolbar_bg: "#f1f3f6",
-					enable_publishing: false,
-					allow_symbol_change: false,
-					container_id: containerRef.current.id,
-					hide_side_toolbar: false,
-					hide_top_toolbar: false,
-					compare_symbols: false,
-					calendar: false,
-					studies: [],
+		const chartOptions = {
+			layout: {
+				background: { color: theme === "dark" ? "#1A1A1A" : "#FFFFFF" },
+				textColor: theme === "dark" ? "#FFFFFF" : "#000000",
+			},
+			grid: {
+				vertLines: { color: theme === "dark" ? "#2B2B2B" : "#E6E6E6" },
+				horzLines: { color: theme === "dark" ? "#2B2B2B" : "#E6E6E6" },
+			},
+			timeScale: {
+				timeVisible: true,
+				secondsVisible: false,
+				borderColor: theme === "dark" ? "#2B2B2B" : "#E6E6E6",
+				textColor: theme === "dark" ? "#FFFFFF" : "#000000",
+			},
+			rightPriceScale: {
+				borderColor: theme === "dark" ? "#2B2B2B" : "#E6E6E6",
+				textColor: theme === "dark" ? "#FFFFFF" : "#000000",
+				autoScale: true,
+				mode: 1,
+				alignLabels: true,
+				borderVisible: true,
+				entireTextOnly: false,
+				scaleMargins: {
+					top: 0.2,
+					bottom: 0.1,
+				},
+				priceFormat: {
+					type: "price",
+					precision: 6,
+					minMove: 0.000001,
+				},
+				formatPrice: (price: number) => {
+					const formattedPrice = formatPrice(price);
+					return `$${formattedPrice}`;
+				},
+			},
+			width: chartContainerRef.current.clientWidth,
+			height: chartContainerRef.current.clientHeight,
+			crosshair: {
+				mode: 0,
+				vertLine: {
+					color: theme === "dark" ? "#555" : "#ddd",
+					width: 1 as LineWidth,
+					style: 2, // Dashed line
+					visible: true,
+					labelVisible: true,
+				},
+				horzLine: {
+					color: theme === "dark" ? "#555" : "#ddd",
+					width: 1 as LineWidth,
+					style: 2, // Dashed line
+					visible: true,
+					labelVisible: true,
+				},
+			},
+		};
+
+		const chart = createChart(chartContainerRef.current, chartOptions);
+
+		// Add candlestick series
+		const candlestickSeries = chart.addSeries(CandlestickSeries, {
+			upColor: "#26a69a",
+			downColor: "#ef5350",
+			borderVisible: false,
+			wickUpColor: "#26a69a",
+			wickDownColor: "#ef5350",
+			wickVisible: true,
+			priceFormat: {
+				type: "price",
+				precision: 6,
+				minMove: 0.000001,
+			},
+		});
+
+		chartRef.current = chart;
+		candlestickSeriesRef.current = candlestickSeries;
+
+		// Handle resize
+		const handleResize = () => {
+			if (chartContainerRef.current && chartRef.current) {
+				chartRef.current.applyOptions({
+					width: chartContainerRef.current.clientWidth,
+					height: chartContainerRef.current.clientHeight,
 				});
 			}
 		};
-		document.head.appendChild(script);
+
+		window.addEventListener("resize", handleResize);
 
 		return () => {
-			if (script.parentNode) {
-				script.parentNode.removeChild(script);
+			window.removeEventListener("resize", handleResize);
+			if (chartRef.current) {
+				chartRef.current.remove();
 			}
 		};
-	}, [symbol, interval, theme]);
+	}, [theme]);
+
+	// Process candle data for chart
+	useEffect(() => {
+		if (!candleData.length || !candlestickSeriesRef.current) return;
+
+		// Format data for candlestick chart
+		const formattedCandleData: CustomCandlestickData[] = candleData.map((candle) => ({
+			time: Math.floor(candle.time / 1000) as Time,
+			open: candle.open,
+			high: candle.high,
+			low: candle.low,
+			close: candle.close,
+		}));
+
+		// Sort by time
+		formattedCandleData.sort((a, b) => Number(a.time) - Number(b.time));
+
+		// Update chart
+		candlestickSeriesRef.current.setData(formattedCandleData);
+
+		if (chartRef.current && formattedCandleData.length > 0) {
+			chartRef.current.timeScale().fitContent();
+		}
+	}, [candleData]);
+
+	// Fetch price history from Mobula
+	useEffect(() => {
+		async function fetchPriceHistory() {
+			setIsLoading(true);
+			try {
+				// Calculate current date and 30 days ago
+				const currentDate = new Date();
+				const thirtyDaysAgo = new Date();
+				thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+				const toTimestamp = Math.floor(currentDate.getTime() / 1000);
+				const fromTimestamp = Math.floor(thirtyDaysAgo.getTime() / 1000);
+
+				const response = await fetch(`https://api.mobula.io/api/1/market/history/pair?blockchain=${currentChain.id}&from=${fromTimestamp}&period=${interval}&amount=5000&asset=${token.id}`, {
+					headers: {
+						Authorization: process.env.NEXT_PUBLIC_MOBULA_KEY || "",
+					},
+				});
+				const data = await response.json();
+				console.log(data);
+
+				if (data.data && Array.isArray(data.data)) {
+					setCandleData(data.data);
+				} else {
+					console.error("Invalid price history data format:", data);
+				}
+			} catch (error) {
+				console.error("Error fetching price data:", error);
+			} finally {
+				setIsLoading(false);
+			}
+		}
+
+		if (token.id && currentChain.id) {
+			fetchPriceHistory();
+		}
+	}, [token.id, currentChain.id, interval]);
+
+	// Handle interval change
+	const handleIntervalChange = (newInterval: SupportedInterval) => {
+		setInterval(newInterval);
+	};
+
+	// Supported intervals
+	const supportedIntervals: SupportedInterval[] = ["5m", "30m", "1h", "1d"];
 
 	return (
-		<div className={`${styles.tradingViewContainer} ${isFullscreen ? styles.fullscreen : ""}`} style={{ width, height }}>
-			<div id="tradingview_widget" ref={containerRef} className={styles.chartContainer} />
+		<div className={styles.tradingViewWrapper}>
+			<div ref={chartContainerRef} className={`${styles.tradingViewContainer} ${isFullscreen ? styles.fullscreen : ""} ${isLoading ? styles.loading : ""}`} style={{ width, height }}>
+				<div className={styles.intervalSelector}>
+					{supportedIntervals.map((option) => (
+						<button key={option} className={`${styles.intervalButton} ${interval === option ? styles.active : ""}`} onClick={() => handleIntervalChange(option)}>
+							{option}
+						</button>
+					))}
+				</div>
+				{isLoading && (
+					<div className={styles.loadingOverlay}>
+						<div className={styles.loadingSpinner}></div>
+						Loading chart data...
+					</div>
+				)}
+			</div>
 		</div>
 	);
-}
-
-// Add TypeScript declaration for TradingView
-declare global {
-	interface Window {
-		TradingView: {
-			widget: new (config: {
-				autosize?: boolean;
-				symbol?: string;
-				interval?: string;
-				timezone?: string;
-				theme?: string;
-				style?: string;
-				locale?: string;
-				toolbar_bg?: string;
-				enable_publishing?: boolean;
-				allow_symbol_change?: boolean;
-				container_id?: string;
-				hide_side_toolbar?: boolean;
-				hide_top_toolbar?: boolean;
-				compare_symbols?: boolean;
-				studies?: string[];
-				save_image?: boolean;
-				hide_legend?: boolean;
-				withdateranges?: boolean;
-				details?: boolean;
-				hotlist?: boolean;
-				calendar?: boolean;
-				width?: string | number;
-				height?: string | number;
-			}) => void;
-		};
-	}
 }
