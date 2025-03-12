@@ -119,6 +119,7 @@ export type Query = {
   checkTelegramApiHealth: ApiHealthResponse;
   getCallsByToken: TokenCallsResponse;
   getChatPhoto?: Maybe<Scalars['String']['output']>;
+  getPublicCalls: TokenCallsResponse;
   getTelegramApiSecret: ApiSecretResponse;
   getTelegramChats: ChatsResponse;
   getTelegramContractAnalytics: TelegramAnalyticsResponse;
@@ -137,6 +138,11 @@ export type QueryGetCallsByTokenArgs = {
 
 export type QueryGetChatPhotoArgs = {
   chatId: Scalars['String']['input'];
+};
+
+
+export type QueryGetPublicCallsArgs = {
+  input?: InputMaybe<GetCallsInput>;
 };
 
 
@@ -307,6 +313,13 @@ export type GetCallsByTokenQueryVariables = Exact<{
 
 
 export type GetCallsByTokenQuery = { __typename?: 'Query', getCallsByToken: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, chats: Array<{ __typename?: 'ChatWithCalls', chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null, callCount: number, lastCallTimestamp?: string | null }, calls: Array<{ __typename?: 'Call', id: string, createdAt: string, address: string, hasInitialAnalysis: boolean, hasFutureAnalysis: boolean, messages: Array<{ __typename?: 'Message', id: string, createdAt: string, text?: string | null, fromId?: string | null, messageType: MessageType, reason?: string | null, tgMessageId: string }> }> }> }> } };
+
+export type GetPublicCallsQueryVariables = Exact<{
+  input?: InputMaybe<GetCallsInput>;
+}>;
+
+
+export type GetPublicCallsQuery = { __typename?: 'Query', getPublicCalls: { __typename?: 'TokenCallsResponse', tokenCalls: Array<{ __typename?: 'TokenCalls', chain: string, address: string, chats: Array<{ __typename?: 'ChatWithCalls', chat: { __typename?: 'TelegramChat', id: string, name: string, type: string, photoUrl?: string | null, callCount: number, lastCallTimestamp?: string | null }, calls: Array<{ __typename?: 'Call', id: string, createdAt: string, address: string, hasInitialAnalysis: boolean, hasFutureAnalysis: boolean, messages: Array<{ __typename?: 'Message', id: string, createdAt: string, text?: string | null, fromId?: string | null, messageType: MessageType, reason?: string | null, tgMessageId: string }> }> }> }> } };
 
 export type UpdateUserSettingsMutationVariables = Exact<{
   input: UpdateUserSettingsInput;
@@ -805,6 +818,78 @@ export type GetCallsByTokenSuspenseQueryHookResult = ReturnType<typeof useGetCal
 export type GetCallsByTokenQueryResult = Apollo.QueryResult<GetCallsByTokenQuery, GetCallsByTokenQueryVariables>;
 export function refetchGetCallsByTokenQuery(variables?: GetCallsByTokenQueryVariables) {
       return { query: GetCallsByTokenDocument, variables: variables }
+    }
+export const GetPublicCallsDocument = /*#__PURE__*/ gql`
+    query GetPublicCalls($input: GetCallsInput) {
+  getPublicCalls(input: $input) {
+    tokenCalls {
+      chain
+      address
+      chats {
+        chat {
+          id
+          name
+          type
+          photoUrl
+          callCount
+          lastCallTimestamp
+        }
+        calls {
+          id
+          createdAt
+          address
+          hasInitialAnalysis
+          hasFutureAnalysis
+          messages {
+            id
+            createdAt
+            text
+            fromId
+            messageType
+            reason
+            tgMessageId
+          }
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetPublicCallsQuery__
+ *
+ * To run a query within a React component, call `useGetPublicCallsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPublicCallsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPublicCallsQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useGetPublicCallsQuery(baseOptions?: Apollo.QueryHookOptions<GetPublicCallsQuery, GetPublicCallsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetPublicCallsQuery, GetPublicCallsQueryVariables>(GetPublicCallsDocument, options);
+      }
+export function useGetPublicCallsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetPublicCallsQuery, GetPublicCallsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetPublicCallsQuery, GetPublicCallsQueryVariables>(GetPublicCallsDocument, options);
+        }
+export function useGetPublicCallsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPublicCallsQuery, GetPublicCallsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetPublicCallsQuery, GetPublicCallsQueryVariables>(GetPublicCallsDocument, options);
+        }
+export type GetPublicCallsQueryHookResult = ReturnType<typeof useGetPublicCallsQuery>;
+export type GetPublicCallsLazyQueryHookResult = ReturnType<typeof useGetPublicCallsLazyQuery>;
+export type GetPublicCallsSuspenseQueryHookResult = ReturnType<typeof useGetPublicCallsSuspenseQuery>;
+export type GetPublicCallsQueryResult = Apollo.QueryResult<GetPublicCallsQuery, GetPublicCallsQueryVariables>;
+export function refetchGetPublicCallsQuery(variables?: GetPublicCallsQueryVariables) {
+      return { query: GetPublicCallsDocument, variables: variables }
     }
 export const UpdateUserSettingsDocument = /*#__PURE__*/ gql`
     mutation UpdateUserSettings($input: UpdateUserSettingsInput!) {

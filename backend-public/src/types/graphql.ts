@@ -107,6 +107,7 @@ export type Query = {
   checkTelegramApiHealth: ApiHealthResponse;
   getCallsByToken: TokenCallsResponse;
   getChatPhoto: Maybe<Scalars['String']['output']>;
+  getPublicCalls: TokenCallsResponse;
   getTelegramApiSecret: ApiSecretResponse;
   getTelegramChats: ChatsResponse;
   getTelegramContractAnalytics: TelegramAnalyticsResponse;
@@ -125,6 +126,11 @@ export type QueryGetCallsByTokenArgs = {
 
 export type QueryGetChatPhotoArgs = {
   chatId: Scalars['String']['input'];
+};
+
+
+export type QueryGetPublicCallsArgs = {
+  input?: InputMaybe<GetCallsInput>;
 };
 
 
@@ -448,6 +454,7 @@ export type QueryResolvers<ContextType = Context, ParentType extends ResolversPa
   checkTelegramApiHealth?: Resolver<ResolversTypes['ApiHealthResponse'], ParentType, ContextType>;
   getCallsByToken?: Resolver<ResolversTypes['TokenCallsResponse'], ParentType, ContextType, Partial<QueryGetCallsByTokenArgs>>;
   getChatPhoto?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType, RequireFields<QueryGetChatPhotoArgs, 'chatId'>>;
+  getPublicCalls?: Resolver<ResolversTypes['TokenCallsResponse'], ParentType, ContextType, Partial<QueryGetPublicCallsArgs>>;
   getTelegramApiSecret?: Resolver<ResolversTypes['ApiSecretResponse'], ParentType, ContextType>;
   getTelegramChats?: Resolver<ResolversTypes['ChatsResponse'], ParentType, ContextType>;
   getTelegramContractAnalytics?: Resolver<ResolversTypes['TelegramAnalyticsResponse'], ParentType, ContextType, RequireFields<QueryGetTelegramContractAnalyticsArgs, 'input'>>;

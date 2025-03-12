@@ -167,6 +167,55 @@ export const GET_CALLS_BY_TOKEN = gql`
   }
 `;
 
+export const GET_PUBLIC_CALLS = gql`
+  query GetPublicCalls($input: GetCallsInput) {
+    getPublicCalls(input: $input) {
+      tokenCalls {
+        chain
+        address
+        chats {
+          chat {
+            id
+            name
+            type
+            photoUrl
+            callCount
+            lastCallTimestamp
+          }
+          calls {
+            id
+            createdAt
+            address
+            hasInitialAnalysis
+            hasFutureAnalysis
+            messages {
+              id
+              createdAt
+              text
+              fromId
+              messageType
+              reason
+              tgMessageId
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const GET_USER_TRADES = gql`
+  query GetUserTrades($chain: Chain) {
+    getUserTrades(chain: $chain) {
+      trades {
+        tokenAddress
+        entryTxHash
+        amount
+      }
+    }
+  }
+`;
+
 // Mutations
 export const UPDATE_USER_SETTINGS = gql`
   mutation UpdateUserSettings($input: UpdateUserSettingsInput!) {

@@ -81,12 +81,14 @@ type Query {
   checkTelegramApiHealth: ApiHealthResponse!
   getCallsByToken(input: GetCallsInput): TokenCallsResponse!
   getChatPhoto(chatId: String!): String
+  getPublicCalls(input: GetCallsInput): TokenCallsResponse!
   getTelegramApiSecret: ApiSecretResponse!
   getTelegramChats: ChatsResponse!
   getTelegramContractAnalytics(input: TelegramContractAnalyticsInput!): TelegramAnalyticsResponse!
   getTwitterContractAnalytics(input: TwitterContractAnalyticsInput!): TwitterAnalyticsResponse!
   getUserSavedChats: ChatsResponse!
   getUserSettings: UserSettings!
+  getUserTrades(chain: String): TradesResponse!
   user: User
   whoAmI: String!
 }
@@ -131,6 +133,16 @@ type TokenCalls {
 
 type TokenCallsResponse {
   tokenCalls: [TokenCalls!]!
+}
+
+type Trade {
+  amount: String!
+  entryTxHash: String
+  tokenAddress: String!
+}
+
+type TradesResponse {
+  trades: [Trade!]!
 }
 
 type Tweet {
