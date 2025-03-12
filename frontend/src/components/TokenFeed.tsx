@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import styles from "./TokenFeed.module.css";
-import { FaTelegramPlane, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaTelegramPlane, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import { Copy } from "lucide-react";
 import { formatCurrency, formatPercentage, abbreviateAge } from "../utils/formatters";
 import { SortField, SortDirection, TokenWithDexInfo } from "../types/token.types";
@@ -143,7 +143,6 @@ const TokenFeed: React.FC = () => {
 				const bTotalCalls = b.chats.length;
 				return bTotalCalls - aTotalCalls; // Sort in descending order
 			});
-			console.log("Sorted token calls:", sortedTokenCalls);
 
 			setTokenCallsData(sortedTokenCalls);
 			processedDataRef.current = true;
@@ -232,7 +231,7 @@ const TokenFeed: React.FC = () => {
 								tokenDataEndpoint = `https://api.dexscreener.com/tokens/v1/base/${address}`;
 								break;
 							case "MONAD":
-								tokenDataEndpoint = `https://api.mobula.io/api/1/market/data?blockchain=10143&asset=${address}`;
+								tokenDataEndpoint = `https://api.kuru.io/api/v2/markets/search?limit=100&q=${address}`;
 								break;
 							default:
 								return null;
@@ -242,7 +241,117 @@ const TokenFeed: React.FC = () => {
 							const response = await fetch(tokenDataEndpoint);
 							const data = await response.json();
 
-							if (data) {
+							if (tokenCall.chain === "MONAD") {
+								if (data?.success && data?.data?.data?.[0]) {
+									const monadData = data.data.data[0];
+									const baseToken = monadData.basetoken;
+
+									if (!baseToken) return null;
+
+									const token: TokenWithDexInfo = {
+										id: baseToken.address,
+										name: baseToken.name,
+										ticker: baseToken.ticker,
+										price: monadData.lastPrice || 0,
+										marketCap: (parseFloat(baseToken.circulatingSupply) / Math.pow(10, baseToken.decimal || 18)) * (monadData.lastPrice || 0),
+										change24h: monadData.priceChange24h || 0,
+										volume: monadData.volume24h || 0,
+										liquidity: monadData.liquidity || 0,
+										imageUrl: baseToken.imageurl || "/assets/coin.png",
+										createdAt: monadData.triggertime || "",
+										callers: tokenCall.chats.map((chatWithCalls) => {
+											const photo = photos[chatWithCalls.chat.id];
+											const profileImageUrl = photo?.url || DEFAULT_PHOTO;
+											return {
+												id: chatWithCalls.chat.id,
+												name: chatWithCalls.chat.name,
+												profileImageUrl,
+												timestamp: Date.now(),
+												callCount: chatWithCalls.chat.callCount,
+												winRate: 0,
+												chat: {
+													...chatWithCalls.chat,
+													type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
+													photoUrl: profileImageUrl,
+												},
+												messages: chatWithCalls.calls.flatMap((call) =>
+													call.messages.map((msg) => ({
+														id: msg.id,
+														createdAt: msg.createdAt ?? new Date().toISOString(),
+														text: msg.text ?? "",
+														fromId: msg.fromId ?? null,
+														messageType: msg.messageType,
+														reason: msg.reason ?? null,
+														tgMessageId: msg.tgMessageId,
+													}))
+												),
+											};
+										}),
+										tokenCallsData: tokenCall,
+										dexData: {
+											baseToken: {
+												address: baseToken.address,
+												name: baseToken.name,
+												symbol: baseToken.ticker,
+											},
+											priceUsd: monadData.lastPrice?.toString() || "0",
+											liquidity: {
+												usd: monadData.liquidity || 0,
+												base: 0,
+												quote: 0,
+											},
+											volume: {
+												h24: monadData.volume24h || 0,
+												h6: monadData.volume6h || 0,
+												h1: monadData.volume1h || 0,
+												m5: monadData.volume5m || 0,
+											},
+											priceChange: {
+												h24: monadData.priceChange24h || 0,
+												h6: monadData.priceChange6h || 0,
+												h1: monadData.priceChange1h || 0,
+												m5: monadData.priceChange5m || 0,
+											},
+											marketCap: (parseFloat(baseToken.circulatingSupply) / Math.pow(10, baseToken.decimal || 18)) * (monadData.lastPrice || 0),
+											info: {
+												imageUrl: baseToken.imageurl || "/assets/coin.png",
+											},
+											pairCreatedAt: monadData.triggertime || "",
+											chainId: "monad",
+											dexId: "kuru",
+											url: `https://kuru.io/tokens/${baseToken.address}`,
+											pairAddress: monadData.market,
+											priceNative: monadData.lastPrice?.toString() || "0",
+											fdv: parseFloat(baseToken.circulatingSupply) * (monadData.lastPrice || 0),
+											quoteToken: {
+												address: monadData.quotetoken.address,
+												name: monadData.quotetoken.name,
+												symbol: monadData.quotetoken.ticker,
+											},
+											txns: {
+												h24: {
+													buys: monadData.buyCount24h || 0,
+													sells: monadData.sellCount24h || 0,
+												},
+												h6: {
+													buys: monadData.buyCount6h || 0,
+													sells: monadData.sellCount6h || 0,
+												},
+												h1: {
+													buys: monadData.buyCount1h || 0,
+													sells: monadData.sellCount1h || 0,
+												},
+												m5: {
+													buys: monadData.buyCount5m || 0,
+													sells: monadData.sellCount5m || 0,
+												},
+											},
+										},
+									};
+
+									return token;
+								}
+							} else if (data) {
 								const dexData = data[0];
 
 								if (!dexData?.baseToken) {
@@ -445,6 +554,11 @@ const TokenFeed: React.FC = () => {
 		}
 	};
 
+	const getSortIcon = (field: SortField) => {
+		if (field !== sortField) return <FaSort className={styles.sortIcon} />;
+		return sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />;
+	};
+
 	if (!ready) {
 		return (
 			<div className={styles.initialLoading}>
@@ -471,56 +585,64 @@ const TokenFeed: React.FC = () => {
 	return (
 		<div className={styles.container}>
 			<div className={styles.tableContainer}>
-				{(callsByTokenLoading || (!callsByTokenData && !processedTokens.length) || isLoadingMore || isChainLoading) && !sortedTokens.length ? (
+				{(callsByTokenLoading || (!callsByTokenData && !processedTokens.length) || isLoadingMore || isChainLoading || (currentChain && !sortedTokens.length)) && (
 					<div className={styles.initialLoading}>
 						<div className={styles.loadingSpinner}></div>
 						<p>Loading tokens...</p>
 					</div>
-				) : (
+				)}
+				{!isChainLoading && sortedTokens.length > 0 && (
 					<>
 						<table className={styles.tokenTable}>
 							<thead>
 								<tr className={styles.tableHeader}>
 									<th className={`${styles.headerCell} ${styles.narrowColumn} ${styles.centerHeader}`}>
 										<div onClick={() => handleSort("rank")} className={styles.sortableHeader}>
-											# {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+											<span>Rank</span>
 										</div>
 									</th>
 									<th className={`${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned}`}>
 										<div onClick={() => handleSort("name")} className={styles.sortableHeader}>
-											Token {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+											<span>Token</span>
+											{getSortIcon("name")}
 										</div>
 									</th>
 									{!isMobile && (
 										<>
 											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
 												<div onClick={() => handleSort("age")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-													Age {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+													<span>Age</span>
+													{getSortIcon("age")}
 												</div>
 											</th>
 											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
 												<div onClick={() => handleSort("price")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-													Price {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+													<span>Price</span>
+													{getSortIcon("price")}
 												</div>
 											</th>
 											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
 												<div onClick={() => handleSort("liquidity")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-													Liquidity {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+													<span>Liquidity</span>
+													{getSortIcon("liquidity")}
 												</div>
 											</th>
 											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
 												<div onClick={() => handleSort("volume")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-													Volume {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+													<span>Volume</span>
+													{getSortIcon("volume")}
 												</div>
 											</th>
 											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
 												<div onClick={() => handleSort("marketCap")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-													Market Cap {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+													<span>Market Cap</span>
+													{getSortIcon("marketCap")}
 												</div>
 											</th>
 											<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>
 												<div onClick={() => handleSort("change24h")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-													24H % {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}
+													<span>24H %</span>
+													{getSortIcon("change24h")}
 												</div>
 											</th>
 										</>
@@ -529,7 +651,8 @@ const TokenFeed: React.FC = () => {
 										<div onClick={() => handleSort("callers")} className={styles.sortableHeader}>
 											<div className={styles.callersHeader}>
 												<FaTelegramPlane className={styles.telegramIcon} />
-												<span>Callers {sortDirection === "asc" ? <FaSortUp className={styles.sortIcon} /> : <FaSortDown className={styles.sortIcon} />}</span>
+												<span>Callers</span>
+												{getSortIcon("callers")}
 											</div>
 										</div>
 									</th>
@@ -618,7 +741,7 @@ const TokenFeed: React.FC = () => {
 																	<TradingView token={token} theme={document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"} />
 																</div>
 																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
-																	<CallerFeed callers={token.callers || []} />
+																	<CallerFeed token={token} />
 																</div>
 																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
 																	<TradeModule />

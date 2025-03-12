@@ -3,17 +3,16 @@ import { FaUsers } from "react-icons/fa";
 import styles from "./CallerFeed.module.css";
 import { formatCurrency, formatTimestamp } from "@/utils/formatters";
 import Image from "next/image";
-import { Caller } from "@/types/caller.types";
 import { savePhoto, getAllPhotos } from "@/utils/localStorage";
 import { useGetChatPhotoLazyQuery } from "@/generated/graphql";
 import { CallContextChat } from "./CallContextChat";
+import { TokenWithDexInfo } from "@/types/token.types";
+import { useChain } from "@/contexts/ChainContext";
 
 const DEFAULT_PHOTO = "/assets/KiFi_LOGO.jpg";
 
 interface CallerFeedProps {
-	callers: Caller[];
-	title?: string;
-	isLoading?: boolean;
+	token: TokenWithDexInfo;
 }
 
 // Photo management types
@@ -25,12 +24,30 @@ interface PhotoState {
 
 type PhotoCache = Record<string, PhotoState>;
 
-export default function CallerFeed({ callers, title = "Token Callers", isLoading = false }: CallerFeedProps) {
+// Historical market data types
+interface MarketData {
+	time: number;
+	open: number;
+	high: number;
+	low: number;
+	close: number;
+	volume: number;
+}
+
+interface CallerMarketData {
+	callerId: string;
+	marketCap: number;
+}
+
+export default function CallerFeed({ token }: CallerFeedProps) {
 	const [sortField, setSortField] = useState<"callCount" | "timestamp">("timestamp");
 	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 	const [expandedCallerId, setExpandedCallerId] = useState<string | null>(null);
 	const [closingCallerId, setClosingCallerId] = useState<string | null>(null);
 	const tableContainerRef = useRef<HTMLDivElement>(null);
+	const { currentChain } = useChain();
+
+	const callers = token.callers;
 
 	// Initialize photo cache from localStorage
 	const [photos, setPhotos] = useState<PhotoCache>(() => {
@@ -49,6 +66,51 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 			return {};
 		}
 	});
+
+	// Historical market data state
+	const [callerMarketData, setCallerMarketData] = useState<CallerMarketData[]>([]);
+	const [isLoadingMarketData, setIsLoadingMarketData] = useState(false);
+
+	// Fetch historical market data
+	useEffect(() => {
+		async function fetchHistoricalData() {
+			if (!token.id || !currentChain.id || !callers.length) return;
+
+			setIsLoadingMarketData(true);
+			try {
+				// Get the earliest caller timestamp
+				const earliestTimestamp = Math.min(...callers.map((caller) => new Date(caller.messages[0]?.createdAt || Date.now()).getTime()));
+
+				const response = await fetch(`https://api.mobula.io/api/1/market/history/pair?blockchain=${currentChain.id}&from=${Math.floor(earliestTimestamp / 1000)}&period=1m&amount=5000&asset=${token.id}`);
+				const data = await response.json();
+
+				if (data.data && Array.isArray(data.data)) {
+					// Calculate market cap for each caller at their timestamp
+					const callerData = callers.map((caller) => {
+						const callTimestamp = new Date(caller.messages[0]?.createdAt || Date.now()).getTime();
+						const closestDataPoint = data.data.reduce((prev: MarketData, curr: MarketData) => {
+							return Math.abs(curr.time - callTimestamp) < Math.abs(prev.time - callTimestamp) ? curr : prev;
+						});
+
+						// Calculate market cap at time of call using price ratio
+						const priceRatio = closestDataPoint.close / token.price;
+						return {
+							callerId: caller.id,
+							marketCap: priceRatio * token.marketCap,
+						};
+					});
+
+					setCallerMarketData(callerData);
+				}
+			} catch (error) {
+				console.error("Error fetching historical market data:", error);
+			} finally {
+				setIsLoadingMarketData(false);
+			}
+		}
+
+		fetchHistoricalData();
+	}, [token.id, currentChain.id, callers, token.marketCap, token.price]);
 
 	// Get the chat photo query hook
 	const [getChatPhoto] = useGetChatPhotoLazyQuery();
@@ -146,83 +208,87 @@ export default function CallerFeed({ callers, title = "Token Callers", isLoading
 
 	return (
 		<div className={`${styles.container} ${styles.callerFeedContainer}`}>
-			<h2 className={styles.title}>
-				<FaUsers className={styles.titleIcon} />
-				{title} ({callers?.length})
-			</h2>
+			{isLoadingMarketData ? (
+				<div className={styles.loadingOverlay}>
+					<div className={styles.loadingSpinner}></div>
+					Loading caller data...
+				</div>
+			) : (
+				<>
+					<h2 className={styles.title}>
+						<FaUsers className={styles.titleIcon} />
+						Caller Feed ({callers?.length})
+					</h2>
+					<div className={styles.scrollContainer}>
+						{sortedCallers.length === 0 ? (
+							<div className={styles.empty}>No callers found</div>
+						) : (
+							<div className={styles.tableContainer} ref={tableContainerRef}>
+								<table className={styles.table}>
+									<thead>
+										<tr>
+											<th className={`${styles.sortable} ${styles.nameColumn}`}>Chat</th>
+											<th onClick={() => handleSort("timestamp")} className={`${styles.sortable} ${styles.timestampColumn}`}>
+												Timestamp
+												{sortField === "timestamp" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
+											</th>
+											<th className={`${styles.sortable} ${styles.mcapColumn}`}>MCAP Called</th>
+											<th className={`${styles.sortable} ${styles.messageHeader}`}>Message(s)</th>
+										</tr>
+									</thead>
+									<tbody className={styles.tableBody}>
+										{sortedCallers.map((caller) => {
+											const chatId = caller.chat.id;
+											const photo = photos[chatId] || { url: DEFAULT_PHOTO, isLoading: false };
+											const firstCall = caller.messages.filter((msg) => msg.messageType === "Call").sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+											const contextMessages = caller.messages;
 
-			<div className={styles.scrollContainer}>
-				{isLoading ? (
-					<div className={styles.loading}>Loading callers...</div>
-				) : sortedCallers.length === 0 ? (
-					<div className={styles.empty}>No callers found</div>
-				) : (
-					<div className={styles.tableContainer} ref={tableContainerRef}>
-						<table className={styles.table}>
-							<thead>
-								<tr>
-									<th className={`${styles.sortable} ${styles.nameColumn}`}>Chat</th>
-									<th onClick={() => handleSort("timestamp")} className={`${styles.sortable} ${styles.timestampColumn}`}>
-										Timestamp
-										{sortField === "timestamp" && <span className={styles.sortIcon}>{sortDirection === "asc" ? " ↑" : " ↓"}</span>}
-									</th>
-									<th className={`${styles.sortable} ${styles.mcapColumn}`}>MCAP Called</th>
-									<th className={`${styles.sortable} ${styles.messageHeader}`}>Message(s)</th>
-								</tr>
-							</thead>
-							<tbody className={styles.tableBody}>
-								{sortedCallers.map((caller) => {
-									const chatId = caller.chat.id;
-									const photo = photos[chatId] || { url: DEFAULT_PHOTO, isLoading: false };
-									const firstCall = caller.messages.filter((msg) => msg.messageType === "Call").sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
-									const contextMessages = caller.messages;
-									const mcapCalled = formatCurrency(1800000);
-
-									return (
-										<React.Fragment key={chatId}>
-											<tr className={`${styles.callerRow} ${caller.messages.length ? styles.hasMessage : ""}`} onClick={() => caller.messages.length && toggleExpandCaller(chatId)} style={caller.messages.length ? { cursor: "pointer" } : {}}>
-												<td className={styles.nameColumn}>
-													<div className={styles.profileImage}>
-														<Image
-															src={photo.url}
-															alt={`Chat ${caller.chat.name}`}
-															width={38}
-															height={38}
-															className={styles.avatar}
-															onError={(e) => {
-																const target = e.target as HTMLImageElement;
-																target.src = DEFAULT_PHOTO;
-															}}
-														/>
-													</div>
-													<div className={styles.nameText}>{caller.chat.name}</div>
-												</td>
-												<td className={styles.timestampColumn}>{firstCall ? <span className={styles.timestamp}>{formatTimestamp(new Date(firstCall.createdAt).getTime(), false, true)}</span> : "-"}</td>
-
-												<td className={styles.mcapColumn}>{mcapCalled}</td>
-												<td className={styles.messageCell}>{caller.messages.length ? <div className={styles.viewButton}>{expandedCallerId === chatId ? "Hide" : "View"}</div> : "None"}</td>
-											</tr>
-											{expandedCallerId === chatId && caller.messages.length > 0 && (
-												<tr className={`${styles.messageRow} ${closingCallerId === chatId ? styles.closing : ""}`} data-caller-id={chatId}>
-													<td colSpan={4}>
-														{(() => {
-															return (
-																<div className={styles.messageContentWrapper}>
-																	<CallContextChat messages={contextMessages} />
-																</div>
-															);
-														})()}
-													</td>
-												</tr>
-											)}
-										</React.Fragment>
-									);
-								})}
-							</tbody>
-						</table>
+											return (
+												<React.Fragment key={chatId}>
+													<tr className={`${styles.callerRow} ${caller.messages.length ? styles.hasMessage : ""}`} onClick={() => caller.messages.length && toggleExpandCaller(chatId)} style={caller.messages.length ? { cursor: "pointer" } : {}}>
+														<td className={styles.nameColumn}>
+															<div className={styles.profileImage}>
+																<Image
+																	src={photo.url}
+																	alt={`Chat ${caller.chat.name}`}
+																	width={38}
+																	height={38}
+																	className={styles.avatar}
+																	onError={(e) => {
+																		const target = e.target as HTMLImageElement;
+																		target.src = DEFAULT_PHOTO;
+																	}}
+																/>
+															</div>
+															<div className={styles.nameText}>{caller.chat.name}</div>
+														</td>
+														<td className={styles.timestampColumn}>{firstCall ? <span className={styles.timestamp}>{formatTimestamp(new Date(firstCall.createdAt).getTime(), false, true)}</span> : "-"}</td>
+														<td className={styles.mcapColumn}>{callerMarketData.find((data) => data.callerId === caller.id)?.marketCap ? formatCurrency(callerMarketData.find((data) => data.callerId === caller.id)?.marketCap || 0) : "-"}</td>
+														<td className={styles.messageCell}>{caller.messages.length ? <div className={styles.viewButton}>{expandedCallerId === chatId ? "Hide" : "View"}</div> : "None"}</td>
+													</tr>
+													{expandedCallerId === chatId && caller.messages.length > 0 && (
+														<tr className={`${styles.messageRow} ${closingCallerId === chatId ? styles.closing : ""}`} data-caller-id={chatId}>
+															<td colSpan={4}>
+																{(() => {
+																	return (
+																		<div className={styles.messageContentWrapper}>
+																			<CallContextChat messages={contextMessages} />
+																		</div>
+																	);
+																})()}
+															</td>
+														</tr>
+													)}
+												</React.Fragment>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+						)}
 					</div>
-				)}
-			</div>
+				</>
+			)}
 		</div>
 	);
 }

@@ -78,7 +78,7 @@
 	flex: 1;
 	font-size: clamp(0.8rem, 1.1vw, 1.5rem);
 	line-height: 1.6;
-	padding: 1rem;
+	padding: 2rem;
 	border-radius: 0.8rem;
 	background: var(--background-light);
 	text-align: center;
@@ -88,12 +88,15 @@
 	position: relative;
 	font-weight: 500;
 	overflow-y: auto;
+	max-height: 100%;
 	scrollbar-width: none; /* Firefox */
 	-ms-overflow-style: none; /* IE and Edge */
 }
 
 .summary > * {
 	width: 100%;
+	min-height: min-content;
+	padding: 2rem 0;
 	position: relative;
 	z-index: 2;
 }

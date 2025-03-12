@@ -5,7 +5,13 @@ import styles from "./TradingView.module.css";
 import { useChain } from "@/contexts/ChainContext";
 import { TokenWithDexInfo } from "@/types/token.types";
 
-type SupportedInterval = "5m" | "15m" | "1h" | "1d";
+type SupportedInterval = "1m" | "5m" | "15m" | "1h" | "1d";
+
+// Utility function to convert UTC timestamp to PST
+function convertToPST(timestamp: number): number {
+	const date = new Date(timestamp);
+	return date.getTime() - 7 * 60 * 60 * 1000; // PST is UTC-7 (not accounting for daylight savings)
+}
 
 interface TradingViewProps {
 	token: TokenWithDexInfo;
@@ -155,7 +161,7 @@ export function TradingView({ token, interval: initialInterval = "5m", theme = "
 
 		// Format data for candlestick chart
 		const formattedCandleData: CustomCandlestickData[] = candleData.map((candle) => ({
-			time: Math.floor(candle.time / 1000) as Time,
+			time: Math.floor(convertToPST(candle.time) / 1000) as Time,
 			open: candle.open,
 			high: candle.high,
 			low: candle.low,
@@ -180,6 +186,7 @@ export function TradingView({ token, interval: initialInterval = "5m", theme = "
 			try {
 				const thirtyDaysAgo = new Date();
 				thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+				thirtyDaysAgo.setHours(thirtyDaysAgo.getHours() + 7); // Adjust for PST
 
 				const fromTimestamp = Math.floor(thirtyDaysAgo.getTime() / 1000);
 
@@ -209,7 +216,7 @@ export function TradingView({ token, interval: initialInterval = "5m", theme = "
 	};
 
 	// Supported intervals
-	const supportedIntervals: SupportedInterval[] = ["5m", "15m", "1h", "1d"];
+	const supportedIntervals: SupportedInterval[] = ["1m", "5m", "15m", "1h", "1d"];
 
 	return (
 		<div className={styles.tradingViewWrapper}>
