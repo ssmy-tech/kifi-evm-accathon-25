@@ -16,10 +16,11 @@ model User {
   tgApiSecret String
   dataStatus DataStatus
   enableAutoAlpha Boolean @default(false)
-  selectedChatsIds String[]
-  groupCallThreshold Int @default(0)
+  selectedChatsIds String[] @default([])
+  groupCallThreshold Int @default(2)
   slippage Float @default(0.1)
-  buyAmount Float @default(0.05)
+  buyAmount Float @default(0.1)
+  trades TokenTrade[]
 }
 
 model Chats {
@@ -80,6 +81,45 @@ model Summary {
     updatedAt DateTime @updatedAt
     summary String
     calls Calls[]
+}
+
+model TokenTrade {
+    id String @id @default(uuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    userId String
+    user User @relation(fields: [userId], references: [privyId])
+    tokenAddress String
+    chain Chain
+    amount String
+    status TradeStatus
+    entryPrice Float?
+    entryTxHash String?
+    exitPrice Float?
+    exitTxHash String?
+    exitReason ExitReason?
+    stopLossPrice Float?
+    takeProfitPrice Float?
+    isMonitoring Boolean @default(false)
+    lastChecked DateTime?
+
+    @@index([userId])
+    @@index([status])
+    @@index([chain])
+}
+
+enum TradeStatus {
+    PENDING
+    ACTIVE
+    EXECUTING
+    COMPLETED
+    FAILED
+}
+
+enum ExitReason {
+    STOP_LOSS
+    TAKE_PROFIT
+    MANUAL
 }
 
 enum SummaryType {

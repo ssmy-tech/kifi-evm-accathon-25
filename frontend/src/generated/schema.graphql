@@ -20,6 +20,13 @@ type Call {
   messages: [Message!]!
 }
 
+"""Supported blockchain networks"""
+enum Chain {
+  BASE
+  MONAD
+  SOLANA
+}
+
 type ChatWithCalls {
   calls: [Call!]!
   chat: TelegramChat!
@@ -37,6 +44,10 @@ scalar DateTime
 input GetCallsInput {
   address: String
   chain: String
+}
+
+input GetTradesInput {
+  chain: Chain
 }
 
 type KeyTopic {
@@ -77,12 +88,14 @@ type Query {
   checkTelegramApiHealth: ApiHealthResponse!
   getCallsByToken(input: GetCallsInput): TokenCallsResponse!
   getChatPhoto(chatId: String!): String
+  getPublicCalls(input: GetCallsInput): TokenCallsResponse!
   getTelegramApiSecret: ApiSecretResponse!
   getTelegramChats: ChatsResponse!
   getTelegramContractAnalytics(input: TelegramContractAnalyticsInput!): TelegramAnalyticsResponse!
   getTwitterContractAnalytics(input: TwitterContractAnalyticsInput!): TwitterAnalyticsResponse!
   getUserSavedChats: ChatsResponse!
   getUserSettings: UserSettings!
+  getUserTrades(input: GetTradesInput): TradesResponse!
   user: User
   whoAmI: String!
 }
@@ -127,6 +140,16 @@ type TokenCalls {
 
 type TokenCallsResponse {
   tokenCalls: [TokenCalls!]!
+}
+
+type Trade {
+  amount: String!
+  entryTxHash: String
+  tokenAddress: String!
+}
+
+type TradesResponse {
+  trades: [Trade!]!
 }
 
 type Tweet {

@@ -5,14 +5,20 @@ import { usePrivy } from "@privy-io/react-auth";
 import styles from "./Avatar.module.css";
 import Image from "next/image";
 import { Settings, LogOut } from "lucide-react";
-import { FaTelegramPlane } from "react-icons/fa";
+import { FaTelegramPlane, FaSun, FaMoon } from "react-icons/fa";
 import { TelegramSetup } from "./telegram/TelegramSetup";
 import { useGetUserSavedChatsQuery } from "../generated/graphql";
+import { WalletDisplay } from "./WalletDisplay";
 
-const Avatar = () => {
+interface AvatarProps {
+	walletAddress?: string;
+}
+
+const Avatar: React.FC<AvatarProps> = ({ walletAddress }) => {
 	const { user, logout } = usePrivy();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
+	const [isDarkMode, setIsDarkMode] = useState(true);
 	const [, setTelegramSetupStage] = useState<"setup" | "manage">("setup");
 	const avatarRef = useRef<HTMLDivElement>(null);
 	const modalRef = useRef<HTMLDivElement>(null);
@@ -29,6 +35,27 @@ const Avatar = () => {
 			setTelegramSetupStage("setup");
 		}
 	}, [savedChatsData]);
+
+	useEffect(() => {
+		const savedTheme = localStorage.getItem("theme");
+
+		if (savedTheme) {
+			const isCurrentlyDark = savedTheme === "dark";
+			setIsDarkMode(isCurrentlyDark);
+			document.documentElement.setAttribute("data-theme", savedTheme);
+		} else {
+			const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+			setIsDarkMode(prefersDark);
+			document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+		}
+	}, []);
+
+	const toggleTheme = () => {
+		const newTheme = isDarkMode ? "light" : "dark";
+		setIsDarkMode(!isDarkMode);
+		document.documentElement.setAttribute("data-theme", newTheme);
+		localStorage.setItem("theme", newTheme);
+	};
 
 	const toggleModal = () => {
 		setIsModalOpen(!isModalOpen);
@@ -90,10 +117,19 @@ const Avatar = () => {
 							<div className={styles.userTextInfo}>
 								<div className={styles.userName}>{displayName}</div>
 								{user?.email && <div className={styles.userEmail}>{user.email.address}</div>}
+								{walletAddress && (
+									<div className={styles.walletSection}>
+										<WalletDisplay address={walletAddress} />
+									</div>
+								)}
 							</div>
 						</div>
 
 						<div className={styles.actions}>
+							<button className={styles.actionButton} onClick={toggleTheme}>
+								{isDarkMode ? <FaSun className={styles.actionIcon} /> : <FaMoon className={styles.actionIcon} />}
+								<span>{isDarkMode ? "Light Mode" : "Dark Mode"}</span>
+							</button>
 							<button className={styles.actionButton} onClick={openTelegramModal}>
 								<FaTelegramPlane className={styles.actionIcon} />
 								<span>Setup Telegram</span>

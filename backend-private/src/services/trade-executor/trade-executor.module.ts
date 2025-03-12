@@ -6,7 +6,8 @@ import { PrismaModule } from '../../prisma/prisma.module';
 import { TradeExecutorService } from './trade-executor.service';
 import { ZeroExService } from './zerox.service';
 import { PriceMonitorService } from './price-monitor.service';
-
+import { PrivyService } from './privy.service';
+import { HealthController } from './health/health.controller';
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -14,10 +15,13 @@ import { PriceMonitorService } from './price-monitor.service';
     EventEmitterModule.forRoot(),
     PrismaModule,
   ],
+  controllers: [
+    HealthController
+  ],
   providers: [
     TradeExecutorService,
     ZeroExService,
-    PriceMonitorService,
+    PrivyService,
   ],
 })
 export class TradeExecutorModule {} 

@@ -74,6 +74,9 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 				<div className={styles.loadingContainer}>
 					<div className={styles.loadingSpinner}></div>
 					<p className={styles.loadingText}>Checking your Telegram connection...</p>
+					<button onClick={onContinue} className={styles.maybeLaterButton}>
+						Maybe Later
+					</button>
 				</div>
 			);
 		}
@@ -82,11 +85,13 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 			return (
 				<div className={styles.managerContainer}>
 					<TelegramChatsManager />
-					{onContinue && (
-						<button onClick={onContinue} className={styles.continueButton}>
-							Continue
-						</button>
-					)}
+					<div className={styles.buttonGroup}>
+						{onContinue && (
+							<button onClick={onContinue} className={styles.continueButton}>
+								Continue
+							</button>
+						)}
+					</div>
 				</div>
 			);
 		}
@@ -107,9 +112,14 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 							{error && <div className={styles.errorMessage}>{error}</div>}
 						</div>
 
-						<button type="submit" disabled={updatingLink} className={styles.submitButton}>
-							{updatingLink ? "Connecting..." : "Connect to Telegram"}
-						</button>
+						<div className={styles.buttonGroup}>
+							<button type="submit" disabled={updatingLink} className={styles.submitButton}>
+								{updatingLink ? "Connecting..." : "Connect to Telegram"}
+							</button>
+							<button type="button" onClick={onContinue} className={styles.maybeLaterButton}>
+								Maybe Later
+							</button>
+						</div>
 					</form>
 
 					<div className={styles.helpSection}>

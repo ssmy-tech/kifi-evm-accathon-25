@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useState, useEffect, useMemo } from "react";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import { getPhoto, savePhoto } from "@/utils/localStorage";
+import { TelegramSetup } from "./telegram/TelegramSetup";
 
 const DEFAULT_PROFILE_IMAGE = "/assets/KiFi_LOGO.jpg";
 
@@ -58,6 +59,7 @@ export function GroupManager() {
 	const [pendingRemovals, setPendingRemovals] = useState<string[]>([]);
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	const [chatPhotos, setChatPhotos] = useState<Record<string, string>>({});
+	const [showTelegramSetup, setShowTelegramSetup] = useState(false);
 
 	const [saveChats, { loading: savingChats }] = useSaveUserChatsMutation({
 		onCompleted: async () => {
@@ -126,7 +128,7 @@ export function GroupManager() {
 				id: chat.id,
 				name: chat.name,
 				profileImageUrl: chatPhotos[chat.id] || DEFAULT_PROFILE_IMAGE,
-				callCount: 0,
+				callCount: chat.callCount,
 				winRate: 0,
 				timestamp: new Date().toISOString(),
 			})) || [],
@@ -270,15 +272,35 @@ export function GroupManager() {
 					</tbody>
 				</table>
 			</div>
-			{hasUnsavedChanges && (
-				<div className={styles.actionButtonsContainer}>
-					<button onClick={handleCancelChanges} className={`${styles.button} ${styles.buttonSecondary}`}>
-						Cancel
+			<div className={styles.actionButtonsContainer}>
+				{hasUnsavedChanges ? (
+					<>
+						<button onClick={handleCancelChanges} className={`${styles.button} ${styles.buttonSecondary}`}>
+							Cancel
+						</button>
+						<button onClick={handleSaveChanges} className={`${styles.button} ${styles.buttonSuccess}`}>
+							Save Changes
+						</button>
+					</>
+				) : (
+					<button onClick={() => setShowTelegramSetup(true)} className={`${styles.button} ${styles.buttonPrimary}`}>
+						Add Group
 					</button>
-					<button onClick={handleSaveChanges} className={`${styles.button} ${styles.buttonSuccess}`}>
-						Save Changes
-					</button>
-				</div>
+				)}
+			</div>
+			{showTelegramSetup && (
+				<>
+					<div className={styles.backdrop} onClick={() => setShowTelegramSetup(false)} />
+					<div className={styles.modalOverlay}>
+						<TelegramSetup
+							onClose={() => setShowTelegramSetup(false)}
+							onSetupComplete={() => {
+								refetch();
+							}}
+							showManagerAfterSetup={true}
+						/>
+					</div>
+				</>
 			)}
 		</div>
 	);

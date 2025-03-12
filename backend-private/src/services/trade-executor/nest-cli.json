@@ -1,4 +1,5 @@
 {
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src/services/trade-executor"
+  "sourceRoot": "src/services/trade-executor",
+  "entryFile": "services/trade-executor/main"
 } 

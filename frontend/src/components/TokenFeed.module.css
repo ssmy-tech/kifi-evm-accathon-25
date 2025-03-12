@@ -3,6 +3,7 @@
 	flex-grow: 1;
 	flex-direction: column;
 	width: 100%;
+	min-height: 0;
 	height: 100vh;
 	max-height: calc(100vh - var(--navbar-height));
 	overflow: hidden;
@@ -37,6 +38,7 @@
 	-ms-overflow-style: none;
 	position: relative;
 	scroll-behavior: smooth;
+	display: block;
 }
 
 .tableContainer::-webkit-scrollbar {
@@ -45,12 +47,12 @@
 
 .tokenTable {
 	width: 100%;
-	height: 100%;
 	border-collapse: separate;
 	border-spacing: 0;
 	text-align: left;
 	font-size: clamp(0.75rem, 0.5vw + 0.65rem, 1.1rem);
 	table-layout: fixed;
+	height: auto;
 }
 
 .tableHeader {
@@ -70,7 +72,7 @@
 	border-bottom: 1px solid var(--border-color);
 	position: sticky;
 	top: 0;
-	background-color: var(--card-background);
+	background-color: var(--background);
 	z-index: 1;
 	transition: color 0.2s ease;
 	vertical-align: middle;
@@ -88,7 +90,7 @@
 	user-select: none;
 	display: inline-flex;
 	align-items: center;
-	gap: 0.25rem;
+	gap: 0.8rem;
 	transition: color 0.2s ease;
 	white-space: nowrap;
 	width: 100%;
@@ -134,7 +136,7 @@
 }
 
 .sortIcon {
-	font-size: 1rem;
+	font-size: 1.4rem;
 	opacity: 0.6;
 	transition: opacity 0.2s ease;
 	display: inline-flex;
@@ -143,6 +145,45 @@
 
 .sortableHeader:hover .sortIcon {
 	opacity: 1;
+}
+
+.sortableHeader:hover {
+	color: var(--text-primary);
+}
+
+.sortIcons {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	margin-left: 6px;
+	height: 28px;
+	line-height: 0;
+}
+
+.sortIcons .sortIcon {
+	font-size: 1.4rem;
+	line-height: 0.8;
+	height: 18px;
+	margin-top: -3px;
+	margin-bottom: -3px;
+}
+
+.sortIcons .sortIcon.active {
+	opacity: 0.9;
+	color: var(--text-primary);
+	transform: scale(1.1);
+}
+
+.sortIcons .sortIcon.inactive {
+	opacity: 0.3;
+}
+
+.sortableHeader:hover .sortIcons .sortIcon.inactive {
+	opacity: 0.5;
+}
+
+.sortableHeader:hover .sortIcons .sortIcon.active {
+	transform: scale(1.15);
 }
 
 .centerHeader {
@@ -183,11 +224,11 @@
 /* Column group styling */
 .tokenGroupHeader,
 .tokenGroupCell {
-	background-color: rgba(255, 255, 255, 0.01);
+	background-color: var(--background);
 }
 
 .metricsGroup {
-	background-color: rgba(255, 255, 255, 0.02);
+	background-color: var(--background);
 }
 
 .callersGroup {
@@ -198,7 +239,7 @@
 	transform: translateZ(0);
 	will-change: transform, background-color;
 	transition: background-color 0.2s ease;
-	height: clamp(60px, 7vh, 72px);
+	height: 72px;
 	backface-visibility: hidden;
 }
 
@@ -207,8 +248,22 @@
 	cursor: pointer;
 }
 
-.tokenRow.expanded {
+.tokenRow:hover .cell {
 	background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
+}
+
+.tokenRow.expanded,
+.tokenRow.expanded .cell {
+	background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
+}
+
+.expandedRow {
+	width: 100%;
+}
+
+.expandedCell {
+	padding: 0 !important;
+	width: 100%;
 }
 
 .expandedContent {
@@ -216,11 +271,13 @@
 	will-change: transform, opacity;
 	backface-visibility: hidden;
 	background-color: var(--hover-bg, rgba(0, 0, 0, 0.03));
-	height: calc(70vh - var(--navbar-height));
+	height: calc(80vh - var(--navbar-height));
+	width: 100%;
 	animation: expandDown 0.3s ease-out forwards;
 	transform-origin: top center;
 	overflow: hidden;
 	transition: all 0.3s ease-out;
+	display: flex;
 }
 
 .expandedContent.closing {
@@ -253,12 +310,13 @@
 	transform: translateZ(0);
 	will-change: transform, opacity;
 	backface-visibility: hidden;
-	flex: 1;
-	padding: 20px;
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	flex: 1;
+	width: 100%;
 	height: 100%;
+	padding: 20px;
+	gap: 20px;
 	animation: fadeIn 0.4s ease-out forwards;
 	animation-delay: 0.1s;
 	opacity: 0;
@@ -294,17 +352,18 @@
 .moduleRow {
 	display: flex;
 	gap: 20px;
-	height: 100%;
+	min-height: 0;
+	width: 100%;
 }
 
 .moduleRow:first-child {
-	flex: 0 0 calc(60% - 10px);
-	height: calc(60% - 10px);
+	flex: 3;
+	min-height: 0;
 }
 
 .moduleRow:last-child {
-	flex: 0 0 calc(40% - 10px);
-	height: calc(40% - 10px);
+	flex: 2;
+	min-height: 0;
 }
 
 .moduleRow:last-child > div {
@@ -329,7 +388,7 @@
 	will-change: transform, opacity;
 	backface-visibility: hidden;
 	flex: 1;
-	min-height: 0;
+	min-height: 300px;
 	background-color: var(--background);
 	border-radius: 8px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -490,18 +549,15 @@
 	animation-delay: 0.25s;
 }
 
-.tokenRow.expanded {
-	background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
-	transition: background-color 0.3s ease;
-}
-
 .cell {
 	padding: 1rem;
 	border-bottom: 1px solid var(--border-color);
 	font-size: clamp(0.8rem, 0.6vw + 0.4rem, 1.4rem);
 	font-weight: 500;
 	vertical-align: middle;
-	height: clamp(70px, 5vh + 30px, 100px);
+	height: 72px;
+	transition: background-color 0.2s ease;
+	background-color: var(--background);
 }
 
 .cell.regularColumn {
@@ -530,6 +586,7 @@
 	left: 0;
 	z-index: 1;
 	padding: 16px 0;
+	transition: background-color 0.2s ease;
 }
 
 .tokenInfo {
@@ -560,15 +617,17 @@
 	border-radius: 50%;
 }
 
-.nameContainer {
+.tokenNameWrapper {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	overflow: hidden;
-	width: calc(100% - 80px);
+	width: 100%;
 }
 
 .tokenName {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
 	font-weight: 600;
 	color: var(--text-primary, #ffffff);
 	font-size: clamp(0.9rem, 0.7vw + 0.8rem, 1.2rem);
@@ -578,7 +637,45 @@
 	text-overflow: ellipsis;
 }
 
+.copyButton {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	font-size: 0.9em;
+	opacity: 0.6;
+	transition: all 0.2s ease;
+	position: relative;
+}
+
+.copyButton svg {
+	transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.copyButton:hover {
+	opacity: 1;
+	color: var(--text-primary);
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.copyButton.copied {
+	color: var(--success, #4caf50);
+	opacity: 1;
+}
+
+.copyButton.copied svg {
+	transform: scale(1.1);
+}
+
 .tokenTicker {
+	display: flex;
+	align-items: center;
+	gap: 2px;
 	font-size: clamp(0.75rem, 0.5vw + 0.65rem, 1rem);
 	color: var(--text-secondary, #a0a0a0);
 	text-transform: uppercase;
@@ -586,6 +683,26 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	cursor: pointer;
+	transition: color 0.2s ease, background-color 0.2s ease;
+	padding: 2px 4px;
+	border-radius: 4px;
+	margin: -2px -4px;
+}
+
+.tokenTicker:hover {
+	color: var(--text-primary);
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.tokenTicker:hover .copyButton {
+	opacity: 1;
+	color: var(--text-primary);
+}
+
+.tokenTicker.copied,
+.tokenTicker:has(.copyButton.copied) {
+	color: var(--success, #4caf50);
 }
 
 .callersContainer {
@@ -697,7 +814,6 @@
 		width: auto;
 		min-width: auto;
 		max-width: none;
-		flex: 1;
 	}
 
 	.wideColumn.callersGroup {
@@ -774,11 +890,11 @@
 
 	.cell {
 		padding: 0.75rem 1rem;
-		height: 72px;
+		height: 64px;
 	}
 
 	.tokenRow {
-		height: 72px;
+		height: 64px;
 	}
 
 	/* Adjust sort icons and headers */
@@ -825,6 +941,11 @@
 
 	.module.wideModule {
 		width: 100%;
+	}
+
+	.copyButton {
+		padding: 2px;
+		font-size: 0.85em;
 	}
 }
 
@@ -909,7 +1030,11 @@
 	}
 
 	.tokenRow {
-		height: 90px;
+		height: 80px;
+	}
+
+	.cell {
+		height: 80px;
 	}
 }
 
@@ -920,7 +1045,11 @@
 	}
 
 	.tokenRow {
-		height: 50px;
+		height: 56px;
+	}
+
+	.cell {
+		height: 56px;
 	}
 }
 
@@ -997,13 +1126,13 @@
 }
 
 .authOverlay {
-	position: absolute;
+	position: fixed;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(0, 0, 0, 0.1);
-	backdrop-filter: blur(8px);
+	background: rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(10px);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -1011,24 +1140,27 @@
 	z-index: 100;
 	padding: clamp(1rem, 4vw, 3rem);
 	text-align: center;
+	overflow: hidden;
 }
 
 .authContent {
 	max-width: clamp(300px, 80vw, 1000px);
+	padding: 2rem 0rem;
+	border-radius: 1rem;
 	animation: fadeInUp 0.5s ease-out forwards;
 }
 
 .authTitle {
-	font-size: clamp(1.8rem, 2vw + 1rem, 3.2rem);
-	font-weight: 600;
-	color: var(--text-primary);
+	font-size: clamp(1.8rem, 2vw + 1rem, 3rem);
+	font-weight: 700;
+	color: white;
 	margin-bottom: clamp(1rem, 2vw, 2rem);
 	line-height: 1.2;
 }
 
 .authDescription {
 	font-size: clamp(1rem, 1vw + 0.5rem, 1.6rem);
-	color: var(--text-secondary);
+	color: var(--grey);
 	margin-bottom: clamp(1.5rem, 3vw, 3rem);
 	padding: 0 clamp(1rem, 3vw, 3rem);
 	line-height: 1.6;
@@ -1041,7 +1173,7 @@
 	background: var(--tint);
 	color: var(--forest);
 	border: 3px solid var(--forest);
-	padding: clamp(0.8rem, 1.5vw, 1.2rem) clamp(1.5rem, 3vw, 2.5rem);
+	padding: clamp(0.8rem, 1.5vw, 1rem) clamp(1.5rem, 3vw, 2rem);
 	border-radius: 0.8rem;
 	font-size: clamp(1.1rem, 1vw + 0.8rem, 1.8rem);
 	font-weight: 600;
@@ -1064,4 +1196,93 @@
 		opacity: 1;
 		transform: translateY(0);
 	}
+}
+
+@keyframes shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	25% {
+		transform: translateX(-2px);
+	}
+	75% {
+		transform: translateX(2px);
+	}
+}
+
+@keyframes flashNew {
+	0% {
+		background-color: var(--tint);
+		opacity: 1;
+	}
+	20% {
+		background-color: var(--tint);
+		opacity: 0.9;
+	}
+	40% {
+		background-color: var(--tint);
+		opacity: 0.8;
+	}
+	100% {
+		background-color: transparent;
+		opacity: 1;
+	}
+}
+
+@keyframes flashCallerChange {
+	0% {
+		background-color: var(--tint);
+		opacity: 0.9;
+	}
+	20% {
+		background-color: var(--tint);
+		opacity: 0.8;
+	}
+	40% {
+		background-color: var(--tint);
+		opacity: 0.7;
+	}
+	100% {
+		background-color: transparent;
+		opacity: 1;
+	}
+}
+
+.newToken {
+	animation: flashNew 1.5s ease-out forwards, shake 0.5s ease-in-out;
+}
+
+.callerChanged {
+	animation: flashCallerChange 1.5s ease-out forwards, shake 0.5s ease-in-out;
+}
+
+.tokenRow.newToken td,
+.tokenRow.callerChanged td {
+	position: relative;
+}
+
+.tokenRow.newToken td::after,
+.tokenRow.callerChanged td::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.tokenRow.newToken td::after {
+	animation: flashNew 1.5s ease-out forwards;
+}
+
+.tokenRow.callerChanged td::after {
+	animation: flashCallerChange 1.5s ease-out forwards;
+}
+
+.tokenRow.newToken,
+.tokenRow.callerChanged {
+	animation: shake 0.5s ease-in-out;
 }

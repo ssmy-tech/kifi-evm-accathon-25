@@ -35,8 +35,9 @@
 	top: calc(100% + 10px);
 	right: 0;
 	width: 380px;
-	background-color: var(--background-alt);
-	border-radius: 12px;
+	background-color: var(--forest);
+	border-bottom-left-radius: 12px;
+	border-bottom-right-radius: 12px;
 	box-shadow: 0 8px 36px rgba(0, 0, 0, 0.1);
 	z-index: 1000;
 	overflow: hidden;
@@ -87,6 +88,7 @@
 }
 
 .userName {
+	color: white;
 	font-weight: 700;
 	font-size: 24px;
 	margin-bottom: 8px;
@@ -94,7 +96,7 @@
 
 .userEmail {
 	font-size: 18px;
-	color: #666;
+	color: var(--cream);
 }
 
 .actions {
@@ -121,20 +123,19 @@
 }
 
 .actionButton:hover {
-	background-color: var(--forest);
-	color: white;
-	transform: translateX(4px);
+	background-color: var(--cream);
+	color: var(--forest);
 }
 
 .actionIcon {
 	width: 24px;
 	height: 24px;
-	color: var(--text-color, #333);
+	color: var(--forest);
 	flex-shrink: 0;
 }
 
 .actionButton:hover .actionIcon {
-	color: white;
+	color: var(--forest);
 }
 
 @media (max-width: 768px) {
@@ -281,4 +282,15 @@
 	align-items: center;
 	justify-content: center;
 	gap: 1rem;
+}
+
+.walletSection {
+	width: 100%;
+	margin-top: 1rem;
+}
+
+.walletSection :global(.walletDisplay) {
+	margin: 0;
+	width: 100%;
+	justify-content: space-between;
 }

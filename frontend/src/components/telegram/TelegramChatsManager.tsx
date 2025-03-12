@@ -6,7 +6,7 @@ import { FaSearch } from "react-icons/fa";
 import { savePhoto, getAllPhotos } from "../../utils/localStorage";
 
 // Constants
-const MAX_SAVED_CHATS = 20;
+const MAX_SAVED_CHATS = 10;
 const DEFAULT_PHOTO = "/assets/KiFi_LOGO.jpg";
 
 // Photo management types

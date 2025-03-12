@@ -6,6 +6,10 @@ export interface Message {
 	createdAt: string;
 	text: string;
 	fromId: string | null;
+	messageType: string;
+	reason: string | null;
+	tgMessageId: string;
+	mcap?: number;
 }
 
 /**

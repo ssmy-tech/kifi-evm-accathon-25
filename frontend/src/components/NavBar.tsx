@@ -4,20 +4,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./NavBar.module.css";
-import { FaSun, FaMoon, FaBars, FaTimes } from "react-icons/fa";
+import { FaBars, FaTimes } from "react-icons/fa";
 import AuthModal from "./AuthModal";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, WalletWithMetadata } from "@privy-io/react-auth";
 import Avatar from "./Avatar";
 import { usePrivyLoginMutation } from "@/generated/graphql";
+import ChainSwitcher from "./ChainSwitcher";
+import { WalletDisplay } from "./WalletDisplay";
 
 const AUTH_STATUS_KEY = "auth_pending_onboarding";
 
 const NavBar: React.FC = () => {
 	const pathname = usePathname();
-	const [isDarkMode, setIsDarkMode] = useState(true);
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-	const { ready, authenticated, logout } = usePrivy();
+	const [showWalletInNav, setShowWalletInNav] = useState(true);
+	const { ready, authenticated, logout, user } = usePrivy();
 	const [privyLoginMutation] = usePrivyLoginMutation({});
 
 	// Close mobile menu when route changes
@@ -38,28 +40,18 @@ const NavBar: React.FC = () => {
 		}
 	}, [ready, authenticated, privyLoginMutation]);
 
+	// Handle responsive wallet display
 	useEffect(() => {
-		const savedTheme = localStorage.getItem("theme");
+		const handleResize = () => {
+			setShowWalletInNav(window.innerWidth >= 1300);
+		};
 
-		if (savedTheme) {
-			const isCurrentlyDark = savedTheme === "dark";
-			setIsDarkMode(isCurrentlyDark);
-			document.documentElement.setAttribute("data-theme", savedTheme);
-		} else {
-			const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-			setIsDarkMode(prefersDark);
-			document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
-		}
+		// Initial check
+		handleResize();
+
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
 	}, []);
-
-	const toggleTheme = () => {
-		const newTheme = isDarkMode ? "light" : "dark";
-		setIsDarkMode(!isDarkMode);
-
-		document.documentElement.setAttribute("data-theme", newTheme);
-
-		localStorage.setItem("theme", newTheme);
-	};
 
 	const isActive = (path: string) => {
 		if (path === "/" && pathname === "/") return true;
@@ -71,7 +63,6 @@ const NavBar: React.FC = () => {
 		if (authenticated) {
 			logout();
 		} else {
-			// local storage flag to track if user is in the auth process
 			localStorage.setItem(AUTH_STATUS_KEY, "pending");
 			setIsAuthModalOpen(true);
 		}
@@ -82,6 +73,9 @@ const NavBar: React.FC = () => {
 		// Clear the pending status if user closes the modal without completing auth
 		localStorage.removeItem(AUTH_STATUS_KEY);
 	};
+
+	const embeddedWallets = user?.linkedAccounts.filter((account): account is WalletWithMetadata => account.type === "wallet" && account.walletClientType === "privy");
+	const delegatedWallets = embeddedWallets?.filter((wallet) => wallet.delegated);
 
 	return (
 		<>
@@ -108,17 +102,18 @@ const NavBar: React.FC = () => {
 				</div>
 
 				<div className={styles.authContainer}>
+					<ChainSwitcher />
 					{ready &&
 						(authenticated ? (
-							<Avatar />
+							<>
+								{showWalletInNav && delegatedWallets?.[0] && <WalletDisplay address={delegatedWallets[0].address} />}
+								<Avatar walletAddress={!showWalletInNav ? delegatedWallets?.[0]?.address : undefined} />
+							</>
 						) : (
 							<button onClick={handleAuthButtonClick} className={styles.authButton}>
 								Sign In
 							</button>
 						))}
-					<button className={styles.themeSwitcher} onClick={toggleTheme} aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}>
-						{isDarkMode ? <FaSun /> : <FaMoon />}
-					</button>
 					<button className={styles.mobileMenuButton} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Toggle mobile menu">
 						{isMobileMenuOpen ? <FaTimes /> : <FaBars />}
 					</button>

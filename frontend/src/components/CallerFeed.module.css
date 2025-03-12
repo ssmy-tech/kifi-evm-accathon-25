@@ -8,10 +8,11 @@
 	display: flex;
 	flex-direction: column;
 	position: relative;
+	overflow: hidden;
 }
 
 .title {
-	font-size: 1rem;
+	font-size: 1.25rem;
 	font-weight: 600;
 	margin: 1rem;
 	color: var(--text-primary);
@@ -19,12 +20,15 @@
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
+	opacity: 0;
+	animation: contentFadeIn 0.3s ease-out forwards;
+	animation-delay: 0.15s;
 }
 
 .titleIcon {
 	font-size: 1.2em;
 	color: inherit;
-	margin-right: 10px;
+	margin-right: 0.5rem;
 }
 
 /* Table Container and Scroll */
@@ -33,6 +37,9 @@
 	min-height: 0;
 	position: relative;
 	overflow: hidden;
+	opacity: 0;
+	animation: contentFadeIn 0.3s ease-out forwards;
+	animation-delay: 0.15s;
 }
 
 .tableContainer {
@@ -52,6 +59,51 @@
 	text-align: center;
 	color: var(--text-secondary);
 	font-style: italic;
+}
+
+.loadingOverlay {
+	position: absolute;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-size: 16px;
+	z-index: 100;
+	border-radius: 8px;
+	opacity: 1;
+	transition: opacity 0.3s ease-out;
+	animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.loadingSpinner {
+	width: 48px;
+	height: 48px;
+	border: 4px solid var(--forest);
+	border-top: 4px solid var(--tint);
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+	margin-bottom: 1rem;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
 }
 
 /* Table Base Styles */
@@ -90,7 +142,7 @@ td.nameColumn {
 
 .table td {
 	color: var(--text-primary);
-	font-size: 0.8rem;
+	font-size: 0.875rem;
 	vertical-align: middle;
 }
 
@@ -112,7 +164,21 @@ td.nameColumn {
 
 /* Column Widths */
 .nameColumn {
-	width: 35%;
+	width: 30%;
+}
+
+.timestampColumn {
+	width: 25%;
+}
+
+.callColumn {
+	width: 10%;
+}
+
+.mcapColumn {
+	width: 20%;
+	font-size: 0.875rem;
+	font-weight: 500;
 }
 
 /* Cell specific styles */
@@ -145,18 +211,10 @@ td.nameColumn {
 	height: 2.375rem;
 }
 
-.timestampColumn {
-	width: 25%;
-}
-
-.callColumn {
-	width: 15%;
-}
-
 /* Message and CalledAt columns */
 .messageCell,
 th.messageHeader {
-	width: 25%;
+	width: 15%;
 }
 
 th.calledAtHeader,
@@ -308,8 +366,13 @@ td.messageCell {
 		padding: 0.75rem;
 	}
 
+	.title {
+		font-size: 1.15rem;
+		margin: 0.75rem;
+	}
+
 	.table {
-		font-size: 0.75rem;
+		font-size: 0.875rem;
 	}
 
 	.table th,
@@ -333,39 +396,53 @@ td.messageCell {
 	}
 
 	.nameColumn {
-		width: 30%;
+		width: 25%;
 	}
 
 	.timestampColumn {
-		width: 30%;
+		width: 20%;
 	}
 
 	.callColumn {
-		width: 15%;
+		width: 10%;
+	}
+
+	.mcapColumn {
+		width: 30%;
 	}
 
 	.messageCell,
 	th.messageHeader {
-		width: 25%;
+		width: 15%;
+	}
+
+	.table td,
+	td.mcapColumn,
+	.mcapColumn {
+		font-size: 0.875rem;
 	}
 }
 
 @media (max-width: 1900px) {
 	.nameColumn {
-		width: 40%;
+		width: 30%;
 	}
 
 	.timestampColumn {
-		width: 25%;
+		width: 20%;
 	}
 
 	.callColumn {
-		width: 15%;
+		width: 10%;
+	}
+
+	.mcapColumn {
+		width: 25%;
 	}
 
 	.messageCell,
 	th.messageHeader {
-		width: 20%;
+		width: 15%;
 	}
 }
 
@@ -378,7 +455,9 @@ td.messageCell {
 		font-size: 1rem;
 	}
 
-	.table td {
+	.table td,
+	td.mcapColumn,
+	.mcapColumn {
 		font-size: 1rem;
 	}
 
@@ -392,21 +471,24 @@ td.messageCell {
 	}
 
 	.timestamp {
-		font-size: 0.95em;
+		font-size: 0.95rem;
 	}
 }
 
 @media (min-width: 1600px) {
 	.title {
-		font-size: 1.75rem;
+		font-size: 1.5rem;
+		margin: 1.25rem;
 	}
 
 	.table {
 		font-size: 1.15rem;
 	}
 
-	.table td {
-		font-size: 1.25rem;
+	.table td,
+	td.mcapColumn,
+	.mcapColumn {
+		font-size: 1.15rem;
 	}
 
 	.viewButton {
@@ -431,7 +513,53 @@ td.messageCell {
 	}
 
 	.timestamp {
-		font-size: 1em;
+		font-size: 1.15rem;
+	}
+}
+
+@media (min-width: 1800px) {
+	.title {
+		font-size: 1.75rem;
+		margin: 1.5rem;
+	}
+
+	.table {
+		font-size: 1.25rem;
+	}
+
+	.table td,
+	td.mcapColumn,
+	.mcapColumn {
+		font-size: 1.25rem;
+	}
+
+	.viewButton {
+		font-size: 1.15rem;
+		padding: 8px 16px;
+	}
+
+	.messageContent {
+		font-size: 1.35rem;
+	}
+
+	.avatar {
+		width: 3rem;
+		height: 3rem;
+	}
+
+	.imageCell,
+	.imageHeader {
+		width: 80px;
+		min-width: 80px;
+		max-width: 80px;
+	}
+
+	.timestamp {
+		font-size: 1.25rem;
+	}
+
+	.callerRow {
+		height: 80px;
 	}
 }
 
@@ -510,4 +638,15 @@ td.messageCell {
 	margin-top: 0.5rem;
 	text-align: right;
 	font-style: normal;
+}
+
+@keyframes contentFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }

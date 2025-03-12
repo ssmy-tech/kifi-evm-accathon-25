@@ -88,24 +88,6 @@
 	z-index: 1002;
 }
 
-.themeSwitcher {
-	background: none;
-	border: none;
-	color: var(--cream);
-	font-size: 1.5rem;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 0.6rem;
-	border-radius: 50%;
-	transition: background-color 0.3s ease;
-}
-
-.themeSwitcher:hover {
-	background-color: rgba(255, 255, 255, 0.1);
-}
-
 .authButton {
 	background-color: var(--tint);
 	color: var(--forest);
@@ -116,14 +98,13 @@
 	font-weight: 500;
 	cursor: pointer;
 	transition: background-color 0.3s ease;
-	border: 3px solid transparent;
+	border: 2px solid transparent;
 }
 
 .authButton:hover {
-	color: var(--tint);
-	background-color: transparent;
-	border: 3px solid var(--tint);
-	font-weight: 600;
+	color: var(--cream);
+	background-color: var(--forest);
+	border: 2px solid var(--cream);
 }
 
 .mobileMenuButton {
@@ -140,10 +121,6 @@
 }
 
 @media (max-width: 768px) {
-	.themeSwitcher {
-		display: none;
-	}
-
 	.navbar {
 		padding: 0 1.5rem;
 		height: 4rem;
@@ -189,10 +166,6 @@
 		gap: 0.8rem;
 	}
 
-	.themeSwitcher {
-		padding: 0.4rem;
-	}
-
 	.mobileMenuButton {
 		padding: 0.4rem;
 	}
@@ -217,7 +190,6 @@
 		padding: 0.3rem 0.8rem;
 	}
 
-	.themeSwitcher,
 	.mobileMenuButton {
 		padding: 0.3rem;
 	}

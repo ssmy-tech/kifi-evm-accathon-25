@@ -35,13 +35,34 @@
           "valueFrom": "arn:aws:ssm:${AWS_REGION}:${AWS_ACCOUNT_ID}:parameter/kifi/database-url"
         },
         {
-          "name": "AI_API_URL",
-          "valueFrom": "arn:aws:ssm:${AWS_REGION}:${AWS_ACCOUNT_ID}:parameter/kifi/ai-api-url"
+          "name": "ETHEREUM_RPC_URL",
+          "valueFrom": "arn:aws:ssm:${AWS_REGION}:${AWS_ACCOUNT_ID}:parameter/kifi/ethereum-rpc-url"
+        },
+        {
+          "name": "MONAD_RPC_URL",
+          "valueFrom": "arn:aws:ssm:${AWS_REGION}:${AWS_ACCOUNT_ID}:parameter/kifi/monad-rpc-url"
+        },
+        {
+          "name": "PRIVY_APP_ID",
+          "valueFrom": "arn:aws:ssm:${AWS_REGION}:${AWS_ACCOUNT_ID}:parameter/kifi/privy-app-id"
+        },
+        {
+          "name": "PRIVY_APP_SECRET",
+          "valueFrom": "arn:aws:ssm:${AWS_REGION}:${AWS_ACCOUNT_ID}:parameter/kifi/privy-app-secret"
+        },
+        {
+          "name": "PRIVY_AUTHORIZATION_PRIVATE_KEY",
+          "valueFrom": "arn:aws:ssm:${AWS_REGION}:${AWS_ACCOUNT_ID}:parameter/kifi/privy-authorization-private-key"
         }
       ],
-      "portMappings": [],
+      "portMappings": [
+        {
+          "containerPort": 3004,
+          "protocol": "tcp"
+        }
+      ],
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"],
+        "command": ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"],
         "interval": 30,
         "timeout": 5,
         "retries": 3,

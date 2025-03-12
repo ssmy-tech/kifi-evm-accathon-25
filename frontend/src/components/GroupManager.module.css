@@ -5,6 +5,7 @@
 	flex: 1;
 	min-height: 0;
 	gap: 1rem;
+	position: relative;
 }
 
 .tableContainer {
@@ -441,6 +442,18 @@
 	border-color: var(--forest);
 }
 
+.buttonPrimary {
+	background: var(--tint);
+	color: var(--cream);
+	border-color: var(--tint);
+}
+
+.buttonPrimary:hover {
+	background: var(--forest);
+	color: var(--cream);
+	border-color: var(--forest);
+}
+
 /* Removal styles */
 .pendingRemoval {
 	background: var(--error-lighter);
@@ -466,4 +479,23 @@
 
 .removeButton:active {
 	background: var(--background);
+}
+
+/* Modal overlay */
+.modalOverlay {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 1000;
+}
+
+.backdrop {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: 999;
 }

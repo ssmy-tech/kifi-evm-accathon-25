@@ -1,11 +1,9 @@
 .container {
 	display: flex;
 	flex-direction: column;
-	gap: 1.2rem;
-	padding: 1.6rem;
+	padding: 16px;
 	height: 100%;
 	width: 100%;
-	min-height: 20rem;
 }
 
 .header {
@@ -19,13 +17,32 @@
 	width: 100%;
 	align-items: center;
 	justify-content: space-between;
-	gap: 16px;
+	gap: 12px;
 }
 
-.titleGroup h3 {
-	font-size: 1.6rem;
+.titleWithIcon {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	flex: 1;
+}
+
+.titleWithIcon h3 {
+	font-size: clamp(1.4rem, 1.6vw, 1.6rem);
 	font-weight: 600;
 	color: var(--text-primary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.xIcon {
+	color: var(--text-primary);
+	height: 20px;
+	width: 20px;
+	margin-right: 10px;
+	flex-shrink: 0;
 }
 
 .sentimentSplit {
@@ -59,91 +76,47 @@
 
 .summary {
 	flex: 1;
-	font-size: clamp(1rem, 1.2vw, 1.5rem);
+	font-size: clamp(0.8rem, 1.1vw, 1.5rem);
 	line-height: 1.6;
-	padding: 0.5rem 4rem;
+	padding: 2rem;
 	border-radius: 0.8rem;
 	background: var(--background-light);
 	text-align: center;
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
 	justify-content: center;
 	position: relative;
 	font-weight: 500;
 	overflow-y: auto;
-	scrollbar-width: thin;
-	scrollbar-color: var(--text-secondary) transparent;
+	max-height: 100%;
+	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none; /* IE and Edge */
 }
 
-.summary::before,
-.summary::after {
-	position: absolute;
-	font-size: 4rem;
-	line-height: 1;
-	opacity: 0.15;
-	font-family: Georgia, serif;
-}
-
-.summary::before {
-	content: '"';
-	top: 1.6rem;
-	left: 1.6rem;
-}
-
-.summary::after {
-	content: '"';
-	bottom: 0;
-	right: 1.6rem;
+.summary > * {
+	width: 100%;
+	min-height: min-content;
+	padding: 2rem 0;
+	position: relative;
+	z-index: 2;
 }
 
 .summary::-webkit-scrollbar {
-	width: 6px;
-}
-
-.summary::-webkit-scrollbar-track {
-	background: transparent;
-}
-
-.summary::-webkit-scrollbar-thumb {
-	background-color: var(--text-secondary);
-	border-radius: 3px;
-}
-
-.positive {
-	border: 4px solid var(--success);
-}
-
-.negative {
-	border: 4px solid var(--error);
-}
-
-.neutral {
-	border: 4px solid var(--text-secondary);
-}
-
-.titleWithIcon {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.xIcon {
-	color: var(--text-primary);
-	height: 24px;
-	width: 24px;
-	margin-right: 10px;
+	display: none; /* Chrome, Safari and Opera */
 }
 
 .tweetToggle {
 	background: var(--primary-light);
 	border: none;
-	padding: 0.8rem 1.6rem;
+	display: flex;
+	padding: 0.5rem 1.2rem;
 	border-radius: 0.6rem;
 	color: var(--primary-dark);
-	font-size: 1.2rem;
+	font-size: 1.1rem;
 	font-weight: 600;
 	cursor: pointer;
 	transition: all 0.2s ease;
+	white-space: nowrap;
 }
 
 .tweetToggle[data-active="true"] {
@@ -164,48 +137,59 @@
 .tweetContainer {
 	display: flex;
 	flex-direction: column;
+	align-items: center;
+	justify-content: center;
 	background: var(--background-light);
 	border-radius: 0.8rem;
 	flex: 1;
 	position: relative;
+	min-height: 200px;
+	height: 100%;
+	padding: 1.2rem;
 }
 
 .tweet {
 	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
-	gap: 1.2rem;
-	padding: 0rem 1rem;
 	background: var(--background-lighter);
 	border-radius: 0.8rem;
-	transition: transform 0.2s ease;
+	flex: 1;
+	min-height: 0;
+	max-height: 240px;
+	width: 100%;
 	height: 100%;
-	overflow-y: auto;
-	scrollbar-width: thin;
-	scrollbar-color: var(--text-secondary) transparent;
 }
 
-.tweet::-webkit-scrollbar {
-	width: 6px;
-}
-
-.tweet::-webkit-scrollbar-track {
-	background: transparent;
-}
-
-.tweet::-webkit-scrollbar-thumb {
-	background-color: var(--text-secondary);
-	border-radius: 3px;
+.tweetHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-shrink: 0;
+	border-bottom: 1px solid var(--background-light);
 }
 
 .tweetAuthor {
 	font-weight: 600;
 	color: var(--tint);
-	font-size: 1.4rem;
+	font-size: clamp(1.2rem, 1.3vw, 1.4rem);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tweetContent {
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	align-items: center;
+	scrollbar-width: thin;
+	scrollbar-color: var(--text-secondary) transparent;
+	min-height: 0;
 }
 
 .tweetText {
-	font-size: 1.5rem;
+	font-size: clamp(1rem, 1.1vw, 1.8rem);
 	line-height: 1.5;
 	color: var(--text-primary);
 	overflow-wrap: break-word;
@@ -216,14 +200,27 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	font-size: 1.2rem;
+	font-size: clamp(1rem, 1.1vw, 1.2rem);
 	color: var(--text-secondary);
+	border-top: 1px solid var(--background-light);
+	flex-shrink: 0;
+	background: var(--background-lighter);
+	border-radius: 0 0 0.8rem 0.8rem;
+}
+
+.tweetActions {
+	display: flex;
+	align-items: center;
+	gap: 1.6rem;
 }
 
 .tweetLink {
 	color: var(--primary);
 	text-decoration: none;
 	font-weight: 500;
+	display: flex;
+	align-items: center;
+	text-decoration: underline;
 }
 
 .tweetLink:hover {
@@ -234,16 +231,23 @@
 	color: var(--text-secondary);
 }
 
+.tweetContent::-webkit-scrollbar {
+	width: 4px;
+}
+
+.tweetContent::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.tweetContent::-webkit-scrollbar-thumb {
+	background-color: var(--text-secondary);
+	border-radius: 2px;
+}
+
 .pagination {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: 1.6rem;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	background: var(--background-light);
-	border-radius: 0 0 0.8rem 0.8rem;
+	gap: 1rem;
 }
 
 .paginationButton {
@@ -251,12 +255,13 @@
 	border: none;
 	color: var(--text-primary);
 	cursor: pointer;
-	padding: 0.8rem;
+	padding: 0.4rem;
 	border-radius: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	transition: background-color 0.2s ease;
+	font-size: 1.2rem;
 }
 
 .paginationButton:hover:not(:disabled) {
@@ -269,9 +274,9 @@
 }
 
 .pageInfo {
-	font-size: 1.4rem;
+	font-size: clamp(1rem, 1.1vw, 1.2rem);
 	color: var(--text-secondary);
-	min-width: 60px;
+	min-width: 40px;
 	text-align: center;
 }
 

@@ -1,21 +1,45 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Controller, Get } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ZeroExService } from './zerox.service';
+import { PrivyService } from './privy.service';
 import { ethers } from 'ethers';
 import { Chain } from '@prisma/client';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
-export class TradeExecutorService {
+@Controller('health')
+export class TradeExecutorService implements OnModuleInit {
   private readonly logger = new Logger(TradeExecutorService.name);
-  private lastProcessedCallTime: Date = new Date(0); // Initialize to epoch
+  private lastProcessedCallTime: Date = new Date(); // Initialize to current time
+  private activeTrades: Set<string> = new Set(); // Format: `${userId}-${tokenAddress}`
 
   constructor(
     private prisma: PrismaService,
     private zeroEx: ZeroExService,
-  ) {}
+    private privy: PrivyService,
+  ) {
+    console.log('TradeExecutorService constructor called');
+  }
 
-  @Cron(CronExpression.EVERY_5_SECONDS)
+  async onModuleInit() {
+    try {
+      console.log('TradeExecutorService initializing...');
+      await this.checkNewCalls(); // Run immediately on startup
+      console.log('TradeExecutorService initialized');
+      this.logger.log('TradeExecutorService initialized - Cron jobs active');
+    } catch (error) {
+      this.logger.error('Failed to initialize service:', error);
+      throw error;
+    }
+  }
+
+  @Get()
+  healthCheck() {
+    console.log('Health check called');
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
+
+  @Cron('*/5 * * * * *') // Run every 5 seconds
   async checkNewCalls() {
     try {
       // Find new calls since last check
@@ -28,11 +52,27 @@ export class TradeExecutorService {
         },
         orderBy: {
           createdAt: 'asc'
+        },
+        include: {
+          chat: true
         }
       });
 
+      this.logger.log(`[CRON] Last processed time: ${this.lastProcessedCallTime.toISOString()}`);
+
       if (newCalls.length > 0) {
-        this.logger.log(`Found ${newCalls.length} new Monad calls to process`);
+        this.logger.log(`[NEW CALLS DETECTED] Found ${newCalls.length} new Monad calls to process`);
+        
+        // Log details for each call
+        for (const call of newCalls) {
+          this.logger.log(`[CALL DETAILS] 
+            Token: ${call.address}
+            Chat: ${call.chat.tgChatName || call.tgChatId}
+            Time: ${call.createdAt.toISOString()}
+            Token Name: ${call.tokenName || 'Unknown'}
+            Ticker: ${call.ticker || 'Unknown'}
+          `);
+        }
         
         // Update last processed time to the most recent call
         this.lastProcessedCallTime = newCalls[newCalls.length - 1].createdAt;
@@ -41,73 +81,11 @@ export class TradeExecutorService {
         for (const call of newCalls) {
           await this.handleNewCall(call);
         }
+      } else {
+        this.logger.log('[CRON] No new calls found');
       }
     } catch (error) {
       this.logger.error('Error checking for new calls:', error);
-    }
-  }
-
-  @Cron(CronExpression.EVERY_10_SECONDS)
-  async checkPendingTrades() {
-    try {
-      // Get all pending trades
-      const pendingTrades = await this.prisma.tokenTrade.findMany({
-        where: {
-          status: 'PENDING',
-          chain: Chain.MONAD,
-        },
-        include: {
-          user: true,
-        },
-      });
-
-      this.logger.log(`Found ${pendingTrades.length} pending Monad trades to process`);
-
-      for (const trade of pendingTrades) {
-        try {
-          // Get current price
-          const currentPrice = await this.zeroEx.getPrice(trade.tokenAddress);
-          
-          // Get quote for buying
-          const quote = await this.zeroEx.getQuote({
-            sellToken: 'NATIVE',
-            buyToken: trade.tokenAddress,
-            sellAmount: trade.amount,
-            takerAddress: trade.user.privyId,
-          });
-
-          const entryPrice = parseFloat(quote.price);
-          this.logger.log(`Trade ${trade.id}: Current price ${currentPrice}, Quote price ${entryPrice}`);
-
-          // TODO: Implement actual trade execution using Privy
-          // For now, we'll just update the status and set monitoring
-          await this.prisma.tokenTrade.update({
-            where: { id: trade.id },
-            data: {
-              status: 'ACTIVE',
-              entryPrice,
-              isMonitoring: true,
-              stopLossPrice: entryPrice * 0.75, // 25% down
-              takeProfitPrice: entryPrice * 2, // 100% up
-            },
-          });
-
-          this.logger.log(`Trade ${trade.id} activated with stop loss at ${entryPrice * 0.75} (25% down) and take profit at ${entryPrice * 2} (100% up)`);
-
-        } catch (error) {
-          this.logger.error(`Error processing pending trade ${trade.id}:`, error);
-          
-          // Update trade status to FAILED if there's an error
-          await this.prisma.tokenTrade.update({
-            where: { id: trade.id },
-            data: {
-              status: 'FAILED',
-            },
-          });
-        }
-      }
-    } catch (error) {
-      this.logger.error('Error checking pending trades:', error);
     }
   }
 
@@ -134,28 +112,49 @@ export class TradeExecutorService {
       this.logger.log(`Found ${users.length} users with auto-alpha enabled for chat ${call.tgChatId}`);
 
       for (const user of users) {
-        // Count unique chats that mentioned this token
-        const uniqueChatsCount = await this.prisma.calls.groupBy({
-          by: ['tgChatId'],
-          where: {
-            chain: Chain.MONAD,
-            address: call.address,
-            tgChatId: {
-              in: user.selectedChatsIds,
-            },
-            createdAt: {
-              gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
-            },
-          },
-        }).then(groups => groups.length);
+        // All validation checks before attempting trade creation
+        try {
+          // Check if we have ANY previous trades for this token
+          const previousTrade = await this.prisma.tokenTrade.findFirst({
+            where: {
+              userId: user.privyId,
+              tokenAddress: call.address,
+              status: {
+                in: ['ACTIVE', 'COMPLETED', 'FAILED']
+              }
+            }
+          });
 
-        this.logger.log(`User ${user.privyId}: Found ${uniqueChatsCount} unique Monad mentions for token ${call.address} (threshold: ${user.groupCallThreshold})`);
+          if (previousTrade) {
+            this.logger.log(`Skipping trade for user ${user.privyId} - Previous ${previousTrade.status} trade ${previousTrade.id} exists for token ${call.address}`);
+            continue;
+          }
 
-        // Check if threshold met
-        if (uniqueChatsCount >= user.groupCallThreshold) {
-          await this.executeTrade(user, call);
-        } else {
-          this.logger.debug(`Threshold not met for user ${user.privyId}: ${uniqueChatsCount}/${user.groupCallThreshold}`);
+          // Count unique chats that mentioned this token
+          const uniqueChatsCount = await this.prisma.calls.groupBy({
+            by: ['tgChatId'],
+            where: {
+              chain: Chain.MONAD,
+              address: call.address,
+              tgChatId: {
+                in: user.selectedChatsIds,
+              },
+              createdAt: {
+                gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
+              },
+            },
+          }).then(groups => groups.length);
+
+          this.logger.log(`User ${user.privyId}: Found ${uniqueChatsCount} unique Monad mentions for token ${call.address} (threshold: ${user.groupCallThreshold})`);
+
+          // Only proceed to trade execution if all validations pass
+          if (uniqueChatsCount >= user.groupCallThreshold) {
+            await this.executeTrade(user, call);
+          } else {
+            this.logger.debug(`Threshold not met for user ${user.privyId}: ${uniqueChatsCount}/${user.groupCallThreshold}`);
+          }
+        } catch (error) {
+          this.logger.error(`Error validating trade for user ${user.privyId}:`, error);
         }
       }
     } catch (error) {
@@ -164,51 +163,87 @@ export class TradeExecutorService {
   }
 
   private async executeTrade(user: any, call: any) {
+    const tradeKey = `${user.privyId}-${call.address}`;
+    
+    if (this.activeTrades.has(tradeKey)) {
+      this.logger.warn(`Trade already in progress for user ${user.privyId} and token ${call.address}`);
+      return;
+    }
+
     try {
+      this.activeTrades.add(tradeKey);
       this.logger.log(`Executing Monad trade for user ${user.privyId} - Token: ${call.address}`);
 
-      // Get initial quote to check price
-      const initialQuote = await this.zeroEx.getQuote({
-        sellToken: 'NATIVE',
-        buyToken: call.address,
-        sellAmount: (user.buyAmount * 1e18).toString(),
-        takerAddress: user.privyId,
+      // Check for existing active trade in DB
+      const existingTrade = await this.prisma.tokenTrade.findFirst({
+        where: {
+          userId: user.privyId,
+          tokenAddress: call.address,
+          status: 'ACTIVE'
+        }
       });
 
-      const entryPrice = parseFloat(initialQuote.price);
-      this.logger.log(`Initial quote received - Price: ${entryPrice}`);
+      if (existingTrade) {
+        this.logger.warn(`Active trade already exists for user ${user.privyId} and token ${call.address}`);
+        return;
+      }
 
-      // Fixed stop loss at 0.75x entry (25% down) and take profit at 2x entry (100% up)
-      const stopLossPrice = entryPrice * 0.75;
-      const takeProfitPrice = entryPrice * 2;
+      // Get delegated wallet first
+      const delegatedWallet = await this.privy.getDelegatedWallet(user.privyId);
+      if (!delegatedWallet) {
+        this.logger.error(`No delegated wallet found for user ${user.privyId}`);
+        return;
+      }
 
-      // Create trade record with initial price data
-      const trade = await this.prisma.tokenTrade.create({
+      // Get quote for buying token with MONAD
+      const quote = await this.zeroEx.getQuote({
+        sellToken: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+        buyToken: call.address,
+        sellAmount: (user.buyAmount * 1e18).toString(),
+        taker: delegatedWallet,
+        isBuyingToken: true,
+      });
+
+      const entryPrice = parseFloat(quote.price);
+      this.logger.log(`Quote received - Price: ${entryPrice}`);
+
+      // Execute the swap first
+      const txHash = await this.privy.executeSwap({
+        privyId: user.privyId,
+        walletAddress: delegatedWallet,
+        swapData: quote.transaction,
+        tokenAddress: call.address,
+        trade: "BUY",
+      });
+
+      // Only create trade record after successful swap execution
+      await this.prisma.tokenTrade.create({
         data: {
           userId: user.privyId,
           tokenAddress: call.address,
           chain: Chain.MONAD,
-          status: 'PENDING',
-          amount: ethers.parseEther(user.buyAmount.toString()).toString(), // Convert to wei string
+          status: 'ACTIVE',
+          amount: quote.minBuyAmount,
           entryPrice,
-          stopLossPrice,
-          takeProfitPrice,
-        },
+          entryTxHash: txHash,
+          isMonitoring: true,
+          stopLossPrice: entryPrice * 0.75,
+          takeProfitPrice: entryPrice * 2,
+        }
       });
 
-      this.logger.log(`Created trade record ${trade.id}:
-        Amount: ${user.buyAmount} MONAD
-        Entry: ${entryPrice}
-        Stop Loss: ${stopLossPrice} (25% down)
-        Take Profit: ${takeProfitPrice} (100% up)
+      this.logger.log(`Successfully executed buy for user ${user.privyId}:
+        Token: ${call.address}
+        Amount: ${quote.minBuyAmount}
+        Entry Price: ${entryPrice}
+        TX Hash: ${txHash}
       `);
-
-      // TODO: Implement actual trade execution using Privy
-      // This will need to be implemented based on your Privy setup
-      // For now, the checkPendingTrades cron job will handle the execution
 
     } catch (error) {
       this.logger.error(`Error executing trade for user ${user.privyId}:`, error);
+      throw error;
+    } finally {
+      this.activeTrades.delete(tradeKey);
     }
   }
 } 

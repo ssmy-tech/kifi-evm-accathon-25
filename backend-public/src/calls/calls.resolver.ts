@@ -22,4 +22,18 @@ export class CallsResolver {
       input?.address,
     );
   }
+
+  @Query(() => TokenCallsResponse)
+  @UseGuards(PrivyAuthGuard)
+  async getPublicCalls(
+    @Context() context: any,
+    @Args('input', { nullable: true }) input?: GetCallsInput,
+  ): Promise<TokenCallsResponse> {
+    const privyId = context.req?.user?.claims?.userId;
+    console.log('privyUserId (public calls):', privyId);
+    return this.callsService.getPublicCalls(
+      input?.chain,
+      input?.address,
+    );
+  }
 } 

@@ -1,12 +1,33 @@
-import { Caller } from "./caller.types";
+export interface TokenData {
+	name: string;
+	ticker: string;
+	imageUrl: string;
+	decimals: number;
+}
+
+export interface Trade {
+	__typename?: "Trade";
+	entryTxHash?: string | null;
+	tokenAddress: string;
+	amount: string;
+}
+
+export type TransactionType = "BUY" | "SELL";
+export type TransactionCondition = "Manual" | "Auto Alpha Buy";
+export type TransactionStatus = "completed" | "pending" | "failed";
 
 export interface Transaction {
 	txHash: string;
 	timestamp: Date;
-	amount: string;
+	type: TransactionType;
 	token: string;
-	status: "pending" | "completed" | "failed";
-	condition: "Manual" | "Auto Alpha Buy";
-	type: "Buy" | "Sell";
-	callers?: Caller[];
+	tokenData?: TokenData;
+	amount: string;
+	formattedAmount?: string;
+	condition: TransactionCondition;
+	status: TransactionStatus;
+	callers?: {
+		id: string;
+		profileImageUrl: string;
+	}[];
 }

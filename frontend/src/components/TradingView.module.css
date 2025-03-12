@@ -1,9 +1,20 @@
+.tradingViewWrapper {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
 .tradingViewContainer {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	min-height: 400px;
+	background-color: transparent;
 	border-radius: 8px;
 	overflow: hidden;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-	background-color: #1e222d;
-	position: relative;
+	flex: 1;
 }
 
 .chartContainer {
@@ -17,14 +28,100 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	width: 100vw !important;
-	height: 100vh !important;
 	z-index: 1000;
 	border-radius: 0;
+	background-color: var(--background-color);
+}
+
+.intervalSelector {
+	position: absolute;
+	top: 12px;
+	left: 12px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	z-index: 5;
+	background-color: var(--border-color);
+	padding: 6px;
+	border-radius: 6px;
+	backdrop-filter: blur(4px);
+}
+
+.intervalButton {
+	width: 50px;
+	padding: 6px 0px;
+	border: none;
+	background-color: var(--forest);
+	color: #ffffff;
+	border-radius: 4px;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.intervalButton:hover {
+	background-color: #3d3d3d;
+}
+
+.intervalButton.active {
+	background-color: var(--tint);
+	color: var(--forest);
+	font-weight: 500;
+}
+
+.loading {
+	position: relative;
+}
+
+.loadingOverlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-size: 16px;
+	z-index: 10;
+}
+
+.loadingSpinner {
+	width: 48px;
+	height: 48px;
+	border: 4px solid var(--forest);
+	border-top: 4px solid var(--tint);
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+	margin-bottom: 1rem;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
 }
 
 @media (max-width: 768px) {
 	.tradingViewContainer {
-		height: 300px !important;
+		min-height: 300px;
+	}
+
+	.intervalSelector {
+		top: 8px;
+		right: 8px;
+		padding: 4px;
+	}
+
+	.intervalButton {
+		width: 40px;
+		padding: 4px 0;
+		font-size: 0.8rem;
 	}
 }
