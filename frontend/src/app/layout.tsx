@@ -4,7 +4,7 @@ import "./globals.css";
 import NavBar from "@/components/NavBar";
 import Providers from "./providers";
 import { GoogleAnalytics } from "@next/third-parties/google";
-import DebugTools from "@/components/DebugTools";
+// import DebugTools from "@/components/DebugTools";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -32,7 +32,7 @@ export default function RootLayout({
 				<Providers>
 					<NavBar />
 					{children}
-					<DebugTools />
+					{/* <DebugTools /> */}
 				</Providers>
 			</body>
 			<GoogleAnalytics gaId="G-4N2MG32FXL" />
