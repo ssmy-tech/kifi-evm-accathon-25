@@ -11,6 +11,8 @@ import TwitterSentiment from "./TwitterSentiment";
 import TelegramSentiment from "./TelegramSentiment";
 import TradeModule from "./TradeModule";
 import { usePrivy } from "@privy-io/react-auth";
+import { useChain } from "../contexts/ChainContext";
+import BlurredPreviewTable from "./BlurredPreviewTable";
 
 import { useGetCallsByTokenQuery, useGetChatPhotoLazyQuery } from "@/generated/graphql";
 import { GetCallsByTokenQuery } from "@/generated/graphql";
@@ -55,110 +57,9 @@ const photoCache = {
 	},
 };
 
-const MOCK_TOKENS = [
-	{
-		id: "mock1",
-		name: "Sample Token",
-		ticker: "SAMPLE",
-		price: 0.00023,
-		liquidity: 250000,
-		volume: 890000,
-		marketCap: 1200000,
-		change24h: 12.5,
-		callers: Array(3).fill({ profileImageUrl: DEFAULT_PHOTO }),
-		createdAt: new Date().toISOString(),
-	},
-	{
-		id: "mock2",
-		name: "Demo Token",
-		ticker: "DEMO",
-		price: 1.23,
-		liquidity: 890000,
-		volume: 1500000,
-		marketCap: 5600000,
-		change24h: -5.2,
-		callers: Array(4).fill({ profileImageUrl: DEFAULT_PHOTO }),
-		createdAt: new Date().toISOString(),
-	},
-	{
-		id: "mock3",
-		name: "Test Token",
-		ticker: "TEST",
-		price: 0.0456,
-		liquidity: 450000,
-		volume: 980000,
-		marketCap: 2300000,
-		change24h: 28.4,
-		callers: Array(2).fill({ profileImageUrl: DEFAULT_PHOTO }),
-		createdAt: new Date().toISOString(),
-	},
-].map((token, index) => ({ ...token, rank: index + 1 }));
-
-const BlurredPreviewTable: React.FC = () => {
-	return (
-		<div className={styles.previewTableContainer}>
-			<table className={styles.tokenTable}>
-				<thead>
-					<tr className={styles.tableHeader}>
-						<th className={`${styles.headerCell} ${styles.narrowColumn} ${styles.centerHeader}`}>Rank</th>
-						<th className={`${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned}`}>Token</th>
-						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Age</th>
-						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Price</th>
-						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Liquidity</th>
-						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Volume</th>
-						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>Market Cap</th>
-						<th className={`${styles.headerCell} ${styles.regularColumn} ${styles.metricsGroup}`}>24H %</th>
-						<th className={`${styles.headerCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
-							<div className={styles.callersHeader}>
-								<FaTelegramPlane className={styles.telegramIcon} />
-								<span>Callers</span>
-							</div>
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-					{MOCK_TOKENS.map((token) => (
-						<tr key={token.id} className={styles.tokenRow}>
-							<td className={`${styles.cell} ${styles.indexCell} ${styles.narrowColumn} ${styles.centerAligned}`}>{token.rank}</td>
-							<td className={`${styles.cell} ${styles.tokenCell} ${styles.wideColumn} ${styles.leftAligned}`}>
-								<div className={styles.tokenInfo}>
-									<div className={styles.imageContainer}>
-										<Image src={DEFAULT_PHOTO} alt={token.name} width={42} height={42} className={styles.tokenImage} />
-									</div>
-									<div className={styles.nameContainer}>
-										<div className={styles.tokenName}>{token.name}</div>
-										<div className={styles.tokenTicker}>{token.ticker}</div>
-									</div>
-								</div>
-							</td>
-							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{abbreviateAge(token.createdAt)}</td>
-							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.price, 10, true)}</td>
-							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.liquidity)}</td>
-							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.volume)}</td>
-							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.marketCap)}</td>
-							<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup} ${token.change24h >= 0 ? styles.positive : styles.negative}`}>
-								{token.change24h >= 0 ? "+" : ""}
-								{formatPercentage(token.change24h)}
-							</td>
-							<td className={`${styles.cell} ${styles.callersCell} ${styles.wideColumn} ${styles.leftAligned} ${styles.callersGroup}`}>
-								<div className={styles.callersContainer}>
-									{token.callers.map((_, i) => (
-										<div key={i} className={styles.callerImageWrapper} style={{ zIndex: token.callers.length - i }}>
-											<Image src={DEFAULT_PHOTO} alt="Caller" width={42} height={42} className={styles.callerImage} />
-										</div>
-									))}
-								</div>
-							</td>
-						</tr>
-					))}
-				</tbody>
-			</table>
-		</div>
-	);
-};
-
 const TokenFeed: React.FC = () => {
-	const { ready, authenticated, login } = usePrivy();
+	const { ready, authenticated } = usePrivy();
+	const { currentChain } = useChain();
 
 	const [sortField, setSortField] = useState<SortField>("callers");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -173,6 +74,7 @@ const TokenFeed: React.FC = () => {
 	const [isMobile, setIsMobile] = useState(false);
 	const [photos, setPhotos] = useState<PhotoCache>(photoCache.get());
 	const [tokenCallsData, setTokenCallsData] = useState<NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"]>([]);
+	const [isChainLoading, setIsChainLoading] = useState(false);
 
 	const observerTarget = useRef<HTMLDivElement>(null);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -233,12 +135,13 @@ const TokenFeed: React.FC = () => {
 	// Process token calls data once when it's available
 	useEffect(() => {
 		if (callsByTokenData?.getCallsByToken?.tokenCalls && !processedDataRef.current) {
-			// Sort token calls by total call count first
+			// Sort token calls by  call count first
 			const sortedTokenCalls = [...callsByTokenData.getCallsByToken.tokenCalls].sort((a, b) => {
 				const aTotalCalls = a.chats.length;
 				const bTotalCalls = b.chats.length;
 				return bTotalCalls - aTotalCalls; // Sort in descending order
 			});
+			console.log("Sorted token calls:", sortedTokenCalls);
 
 			setTokenCallsData(sortedTokenCalls);
 			processedDataRef.current = true;
@@ -298,9 +201,12 @@ const TokenFeed: React.FC = () => {
 		if (tokenCallsData.length > 0) {
 			const fetchTokenInfo = async () => {
 				setIsLoadingMore(true);
+				setIsChainLoading(true);
 
-				// Sort token calls by call count before processing
-				const sortedTokenCalls = [...tokenCallsData].sort((a, b) => {
+				// Filter tokens by current chain and sort by call count
+				const filteredTokenCalls = tokenCallsData.filter((token) => currentChain.name.toUpperCase() === token.chain);
+
+				const sortedTokenCalls = [...filteredTokenCalls].sort((a, b) => {
 					const aCallCount = a.chats.length;
 					const bCallCount = b.chats.length;
 					return bCallCount - aCallCount;
@@ -314,26 +220,25 @@ const TokenFeed: React.FC = () => {
 				const dexDataTokens = await Promise.all(
 					currentPageTokenCalls.map(async (tokenCall) => {
 						const address = tokenCall.address;
-						let dexAPI = "";
+						let tokenDataEndpoint = "";
 
 						switch (tokenCall.chain) {
 							case "SOLANA":
-								dexAPI = `https://api.dexscreener.com/tokens/v1/solana/${address}`;
+								tokenDataEndpoint = `https://api.dexscreener.com/tokens/v1/solana/${address}`;
 								break;
 							case "BASE":
-								dexAPI = `https://api.dexscreener.com/tokens/v1/base/${address}`;
+								tokenDataEndpoint = `https://api.dexscreener.com/tokens/v1/base/${address}`;
 								break;
 							case "MONAD":
-								dexAPI = `https://api.dexscreener.com/tokens/v1/base/${address}`;
+								tokenDataEndpoint = `https://api.mobula.io/api/1/market/data?blockchain=10143&asset=${address}`;
 								break;
 							default:
 								return null;
 						}
 
 						try {
-							const response = await fetch(dexAPI);
+							const response = await fetch(tokenDataEndpoint);
 							const data = await response.json();
-							// console.log("DexScreener data:", data);
 
 							if (data) {
 								const dexData = data[0];
@@ -423,12 +328,13 @@ const TokenFeed: React.FC = () => {
 				setHasMore(currentlyLoadedTokens < totalTokens && validTokens.length > 0);
 
 				setIsLoadingMore(false);
+				setIsChainLoading(false);
 				setProcessedTokens(validTokens);
 			};
 
 			fetchTokenInfo();
 		}
-	}, [tokenCallsData, photos, page]);
+	}, [tokenCallsData, photos, page, currentChain]);
 
 	// Sort processed tokens
 	useEffect(() => {
@@ -464,11 +370,11 @@ const TokenFeed: React.FC = () => {
 						const aCallers = a.callers?.length || 0;
 						const bCallers = b.callers?.length || 0;
 						comparison = aCallers - bCallers;
-						// If caller counts are equal, use volume as tiebreaker
+						// If caller counts are equal, use liquidity as tiebreaker
 						if (comparison === 0) {
-							const aVolume = a.dexData?.volume?.h24 || a.volume || 0;
-							const bVolume = b.dexData?.volume?.h24 || b.volume || 0;
-							comparison = aVolume - bVolume;
+							const aLiquidity = a.dexData?.liquidity?.usd || a.liquidity || 0;
+							const bLiquidity = b.dexData?.liquidity?.usd || b.liquidity || 0;
+							comparison = aLiquidity - bLiquidity;
 						}
 						break;
 					case "createdAt":
@@ -541,11 +447,8 @@ const TokenFeed: React.FC = () => {
 				<BlurredPreviewTable />
 				<div className={styles.authOverlay}>
 					<div className={styles.authContent}>
-						<h2 className={styles.authTitle}>Sign In to Access Token Feed</h2>
+						<h2 className={styles.authTitle}>Sign In to Access Calls Feed</h2>
 						<p className={styles.authDescription}>Connect your wallet or sign in with your preferred social method to gain access to KiSignals!</p>
-						<button className={styles.authButton} onClick={login}>
-							Get Started
-						</button>
 					</div>
 				</div>
 			</div>
@@ -555,7 +458,7 @@ const TokenFeed: React.FC = () => {
 	return (
 		<div className={styles.container}>
 			<div className={styles.tableContainer}>
-				{(callsByTokenLoading || (!callsByTokenData && !processedTokens.length) || isLoadingMore) && !sortedTokens.length ? (
+				{(callsByTokenLoading || (!callsByTokenData && !processedTokens.length) || isLoadingMore || isChainLoading) && !sortedTokens.length ? (
 					<div className={styles.initialLoading}>
 						<div className={styles.loadingSpinner}></div>
 						<p>Loading tokens...</p>

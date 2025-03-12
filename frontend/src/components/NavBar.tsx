@@ -4,17 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./NavBar.module.css";
-import { FaSun, FaMoon, FaBars, FaTimes } from "react-icons/fa";
+import { FaBars, FaTimes } from "react-icons/fa";
 import AuthModal from "./AuthModal";
 import { usePrivy } from "@privy-io/react-auth";
 import Avatar from "./Avatar";
 import { usePrivyLoginMutation } from "@/generated/graphql";
+import ChainSwitcher from "./ChainSwitcher";
 
 const AUTH_STATUS_KEY = "auth_pending_onboarding";
 
 const NavBar: React.FC = () => {
 	const pathname = usePathname();
-	const [isDarkMode, setIsDarkMode] = useState(true);
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const { ready, authenticated, logout } = usePrivy();
@@ -37,29 +37,6 @@ const NavBar: React.FC = () => {
 			}
 		}
 	}, [ready, authenticated, privyLoginMutation]);
-
-	useEffect(() => {
-		const savedTheme = localStorage.getItem("theme");
-
-		if (savedTheme) {
-			const isCurrentlyDark = savedTheme === "dark";
-			setIsDarkMode(isCurrentlyDark);
-			document.documentElement.setAttribute("data-theme", savedTheme);
-		} else {
-			const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-			setIsDarkMode(prefersDark);
-			document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
-		}
-	}, []);
-
-	const toggleTheme = () => {
-		const newTheme = isDarkMode ? "light" : "dark";
-		setIsDarkMode(!isDarkMode);
-
-		document.documentElement.setAttribute("data-theme", newTheme);
-
-		localStorage.setItem("theme", newTheme);
-	};
 
 	const isActive = (path: string) => {
 		if (path === "/" && pathname === "/") return true;
@@ -108,9 +85,7 @@ const NavBar: React.FC = () => {
 				</div>
 
 				<div className={styles.authContainer}>
-					<button className={styles.themeSwitcher} onClick={toggleTheme} aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}>
-						{isDarkMode ? <FaSun /> : <FaMoon />}
-					</button>
+					<ChainSwitcher />
 					{ready &&
 						(authenticated ? (
 							<Avatar />

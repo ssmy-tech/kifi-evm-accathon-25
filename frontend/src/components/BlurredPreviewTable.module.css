@@ -1,0 +1,239 @@
+.previewTableContainer {
+	width: 100%;
+	overflow-x: auto;
+	position: relative;
+	background: var(--background);
+	border-radius: 12px;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tokenTable {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	background: var(--background);
+	position: relative;
+}
+
+.tableHeader {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background: var(--background);
+}
+
+.headerCell {
+	padding: 1rem;
+	font-weight: 600;
+	color: var(--text-primary);
+	border-bottom: 2px solid var(--border-color);
+	white-space: nowrap;
+	font-size: clamp(0.8rem, 0.6vw + 0.4rem, 1.4rem);
+}
+
+.tokenRow {
+	transition: background-color 0.2s ease;
+	cursor: pointer;
+	height: 72px;
+}
+
+.tokenRow:hover {
+	background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
+}
+
+.cell {
+	padding: 1rem;
+	border-bottom: 1px solid var(--border-color);
+	font-size: clamp(0.8rem, 0.6vw + 0.4rem, 1.4rem);
+	font-weight: 500;
+	vertical-align: middle;
+	height: 72px;
+}
+
+.cell.regularColumn {
+	text-align: center;
+	padding: 1rem;
+}
+
+.cell.narrowColumn {
+	text-align: center;
+	padding: 1rem;
+}
+
+.cell.wideColumn {
+	text-align: left;
+	padding: 1rem;
+}
+
+.cell.callersGroup {
+	text-align: left;
+	padding: 1rem;
+}
+
+.indexCell {
+	background-color: var(--background);
+	position: sticky;
+	left: 0;
+	z-index: 1;
+	padding: 16px 0;
+}
+
+.tokenInfo {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 10px 0;
+	width: 100%;
+	overflow: hidden;
+}
+
+.imageContainer {
+	width: clamp(42px, 2vw + 32px, 72px);
+	height: clamp(42px, 2vw + 32px, 72px);
+	border-radius: 50%;
+	overflow: hidden;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	border: 3px solid var(--tint, rgba(255, 255, 255, 0.2));
+	flex-shrink: 0;
+}
+
+.tokenImage {
+	object-fit: contain;
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+}
+
+.nameContainer {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	overflow: hidden;
+	width: calc(100% - 80px);
+}
+
+.tokenName {
+	font-weight: 600;
+	color: var(--text-primary, #ffffff);
+	font-size: clamp(0.9rem, 0.7vw + 0.8rem, 1.2rem);
+	line-height: 1.4;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tokenTicker {
+	color: var(--text-secondary, #a0aec0);
+	font-size: clamp(0.8rem, 0.6vw + 0.4rem, 1rem);
+	line-height: 1.4;
+}
+
+.callersContainer {
+	display: flex;
+	align-items: center;
+	gap: -14px;
+}
+
+.callerImageWrapper {
+	width: 42px;
+	height: 42px;
+	border-radius: 50%;
+	overflow: hidden;
+	border: 3px solid var(--tint, rgba(255, 255, 255, 0.2));
+	margin-right: -14px;
+	transition: transform 0.2s ease;
+}
+
+.callerImageWrapper:hover {
+	transform: translateY(-2px);
+}
+
+.callerImage {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: 50%;
+}
+
+.callersHeader {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.telegramIcon {
+	color: var(--text-primary);
+	font-size: 1.2em;
+}
+
+.positive {
+	color: var(--success);
+}
+
+.negative {
+	color: var(--error);
+}
+
+@media (max-width: 768px) {
+	.regularColumn {
+		display: none;
+	}
+
+	.narrowColumn {
+		width: 60px;
+		min-width: 60px;
+		max-width: 60px;
+	}
+
+	.wideColumn.callersGroup {
+		width: 140px;
+		min-width: 140px;
+		max-width: 140px;
+	}
+}
+
+@media (max-width: 375px) {
+	.narrowColumn {
+		width: 50px;
+		min-width: 50px;
+		max-width: 50px;
+	}
+
+	.wideColumn.callersGroup {
+		width: 120px;
+		min-width: 120px;
+		max-width: 120px;
+	}
+
+	.imageContainer {
+		width: 36px;
+		height: 36px;
+		min-width: 36px;
+	}
+
+	.tokenImage {
+		width: 36px;
+		height: 36px;
+	}
+
+	.tokenName {
+		font-size: 0.95rem;
+	}
+
+	.tokenTicker {
+		font-size: 0.85rem;
+	}
+
+	.callerImageWrapper {
+		width: 30px;
+		height: 30px;
+		margin-right: -14px;
+	}
+
+	.callerImage {
+		width: 30px;
+		height: 30px;
+	}
+}

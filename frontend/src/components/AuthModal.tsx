@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets, useDelegatedActions, type WalletWithMetadata } from "@privy-io/react-auth";
 import styles from "./AuthModal.module.css";
 import { TelegramSetup } from "./telegram/TelegramSetup";
 import { useGetUserSettingsQuery, useUpdateUserSettingsMutation } from "../generated/graphql";
@@ -11,10 +11,12 @@ interface AuthModalProps {
 	onClose: () => void;
 }
 
-type OnboardingStep = "welcome" | "preferences" | "telegram" | "complete";
+type OnboardingStep = "welcome" | "delegate" | "preferences" | "telegram" | "complete";
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 	const { ready, authenticated, login, user } = usePrivy();
+	const { wallets } = useWallets();
+	const { delegateWallet } = useDelegatedActions();
 	const [updateUserSettings] = useUpdateUserSettingsMutation();
 	const { data: userSettings } = useGetUserSettingsQuery();
 	const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
@@ -108,8 +110,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		if (isOpen && !authenticated && ready) {
 			handleLogin();
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [isOpen, authenticated, ready]);
+	}, [isOpen, authenticated, ready, handleLogin]);
 
 	// USER SETUP & TOKEN CHECK
 	useEffect(() => {
@@ -182,11 +183,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 						},
 					},
 				});
+
 				changeStep("telegram");
 			} catch (error) {
 				console.error("Failed to update user settings:", error);
 			}
 		}
+	};
+
+	const handleDelegation = async () => {
+		try {
+			const walletToDelegate = wallets.find((wallet) => wallet.walletClientType === "privy");
+			if (!walletToDelegate || !ready) return;
+
+			await delegateWallet({
+				address: walletToDelegate.address,
+				chainType: "ethereum",
+			});
+
+			changeStep("preferences");
+		} catch (error) {
+			console.error("Delegation error:", error);
+		}
+	};
+
+	// Function to check if wallet is already delegated
+	const isWalletDelegated = () => {
+		return !!user?.linkedAccounts.find((account): account is WalletWithMetadata => account.type === "wallet" && account.delegated);
 	};
 
 	// Initialize form values from user settings with validation
@@ -211,9 +234,37 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 					<div className={styles.step}>
 						<h2>Welcome to KiSignals! 👋</h2>
 						<p>Let&apos;s complete your account setup and get to trading.</p>
-						<button className={styles.nextButton} onClick={() => changeStep("preferences")} disabled={animatingStep}>
+						<button className={styles.nextButton} onClick={() => changeStep("delegate")} disabled={animatingStep}>
 							Get Started
 						</button>
+					</div>
+				);
+
+			case "delegate":
+				const walletToDelegate = wallets.find((wallet) => wallet.walletClientType === "privy");
+				const isDelegated = isWalletDelegated();
+
+				return (
+					<div className={styles.step}>
+						<h2>Delegate Access</h2>
+						<div className={styles.delegateInfo}>
+							<p className={styles.delegateDescription}>To enable Auto Alpha trading, we need specific permissions to:</p>
+							<ul className={styles.delegateList}>
+								<li>Execute trades only when Auto Alpha is enabled</li>
+								<li>Execute trades for calls from your selected groups</li>
+								<li>Use only your preset buy amount ({formValues.quickBuyAmount || "not set"})</li>
+							</ul>
+						</div>
+						<div className={styles.delegateSection}>
+							<button className={styles.nextButton} onClick={handleDelegation} disabled={!ready || !walletToDelegate || isDelegated || animatingStep}>
+								{isDelegated ? "Delegated Access Enabled ✓" : "Delegate Access"}
+							</button>
+							{isDelegated && (
+								<button className={styles.nextButton} onClick={() => changeStep("preferences")}>
+									Continue to Preferences
+								</button>
+							)}
+						</div>
 					</div>
 				);
 
