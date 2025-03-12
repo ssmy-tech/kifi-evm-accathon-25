@@ -28,6 +28,13 @@ CREATE TABLE IF NOT EXISTS liquidity_pools (
 GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE ON block_info to :user;
 GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE ON liquidity_pools to :user;
 
+-- [Optional] Set first block to process. Block 0x14FFD5C has a UniswapV3 PoolCreated event.
+
+DELETE FROM block_info;
+INSERT INTO block_info (id, last_block_processed) 
+  VALUES (1, '0x14FFD5B')
+  ON CONFLICT (id) DO NOTHING;
+
 ```
 
 Environment Variables

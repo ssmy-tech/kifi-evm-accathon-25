@@ -4,17 +4,21 @@ CXX      = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra
 LIBS     = -lpqxx -lpq -lcurl
 
+TARGETDIR = Build
 TARGET   = token_finder
 SOURCES  = token_finder.cpp keccak.cpp
-OBJS     = $(SOURCES:.cpp=.o)
+OBJS     = ${patsubst %.cpp,$(TARGETDIR)/%.o,${SOURCES}} # $(SOURCES:.cpp=.o)
 
-all: $(TARGET)
+all: $(TARGETDIR) $(TARGETDIR)/$(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
+$(TARGETDIR):
+	mkdir -p $(TARGETDIR)
 
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(TARGETDIR)/$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) -ggdb -o $(TARGETDIR)/$(TARGET) $(OBJS) $(LIBS)
+
+$(TARGETDIR)/%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c -ggdb -O0 -g3 $< -o $@
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -rf $(TARGETDIR)

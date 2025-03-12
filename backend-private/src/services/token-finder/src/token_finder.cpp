@@ -49,7 +49,7 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
 static json quickNodeJsonRpcCall(const std::string& rpcUrl, const json& requestBody) {
     // Convert to string
     std::string requestData = requestBody.dump();
-    std::cout << getTimestamp() << "[DEBUG] JSON-RPC REQUEST: " << requestData << std::endl;
+    std::cout << getTimestamp() << "[REQ] " << requestData << std::endl;
 
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -91,7 +91,7 @@ static json quickNodeJsonRpcCall(const std::string& rpcUrl, const json& requestB
 
     // Log up to 240 chars
     std::string displayResp = responseString.substr(0, std::min<size_t>(240, responseString.size()));
-    std::cout << getTimestamp() << "[DEBUG] JSON-RPC RESPONSE: " << displayResp << std::endl;
+    std::cout << getTimestamp() << "[RES] " << displayResp << std::endl;
 
     // parse JSON
     json resp;
@@ -127,7 +127,7 @@ static std::string callErc20Function(const std::string& rpcUrl,
     };
 
     std::string requestData = requestBody.dump();
-    std::cout << getTimestamp() << "[ERC20 DEBUG] JSON-RPC REQUEST: " << requestData << std::endl;
+    std::cout << getTimestamp() << "[REQ] " << requestData << std::endl;
 
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -166,7 +166,7 @@ static std::string callErc20Function(const std::string& rpcUrl,
     }
 
     std::string displayResp = responseString.substr(0, std::min<size_t>(240, responseString.size()));
-    std::cout << getTimestamp() << "[ERC20 DEBUG] JSON-RPC RESPONSE: " << displayResp << std::endl;
+    std::cout << getTimestamp() << "[RES] " << displayResp << std::endl;
 
     json jsonResp;
     try {
