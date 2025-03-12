@@ -8,8 +8,13 @@ import { Settings, LogOut } from "lucide-react";
 import { FaTelegramPlane, FaSun, FaMoon } from "react-icons/fa";
 import { TelegramSetup } from "./telegram/TelegramSetup";
 import { useGetUserSavedChatsQuery } from "../generated/graphql";
+import { WalletDisplay } from "./WalletDisplay";
 
-const Avatar = () => {
+interface AvatarProps {
+	walletAddress?: string;
+}
+
+const Avatar: React.FC<AvatarProps> = ({ walletAddress }) => {
 	const { user, logout } = usePrivy();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
@@ -112,6 +117,11 @@ const Avatar = () => {
 							<div className={styles.userTextInfo}>
 								<div className={styles.userName}>{displayName}</div>
 								{user?.email && <div className={styles.userEmail}>{user.email.address}</div>}
+								{walletAddress && (
+									<div className={styles.walletSection}>
+										<WalletDisplay address={walletAddress} />
+									</div>
+								)}
 							</div>
 						</div>
 

@@ -6,10 +6,11 @@ import { usePathname } from "next/navigation";
 import styles from "./NavBar.module.css";
 import { FaBars, FaTimes } from "react-icons/fa";
 import AuthModal from "./AuthModal";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, WalletWithMetadata } from "@privy-io/react-auth";
 import Avatar from "./Avatar";
 import { usePrivyLoginMutation } from "@/generated/graphql";
 import ChainSwitcher from "./ChainSwitcher";
+import { WalletDisplay } from "./WalletDisplay";
 
 const AUTH_STATUS_KEY = "auth_pending_onboarding";
 
@@ -17,7 +18,8 @@ const NavBar: React.FC = () => {
 	const pathname = usePathname();
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-	const { ready, authenticated, logout } = usePrivy();
+	const [showWalletInNav, setShowWalletInNav] = useState(true);
+	const { ready, authenticated, logout, user } = usePrivy();
 	const [privyLoginMutation] = usePrivyLoginMutation({});
 
 	// Close mobile menu when route changes
@@ -37,6 +39,19 @@ const NavBar: React.FC = () => {
 			}
 		}
 	}, [ready, authenticated, privyLoginMutation]);
+
+	// Handle responsive wallet display
+	useEffect(() => {
+		const handleResize = () => {
+			setShowWalletInNav(window.innerWidth >= 1300);
+		};
+
+		// Initial check
+		handleResize();
+
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
+	}, []);
 
 	const isActive = (path: string) => {
 		if (path === "/" && pathname === "/") return true;
@@ -58,6 +73,9 @@ const NavBar: React.FC = () => {
 		// Clear the pending status if user closes the modal without completing auth
 		localStorage.removeItem(AUTH_STATUS_KEY);
 	};
+
+	const embeddedWallets = user?.linkedAccounts.filter((account): account is WalletWithMetadata => account.type === "wallet" && account.walletClientType === "privy");
+	const delegatedWallets = embeddedWallets?.filter((wallet) => wallet.delegated);
 
 	return (
 		<>
@@ -87,7 +105,10 @@ const NavBar: React.FC = () => {
 					<ChainSwitcher />
 					{ready &&
 						(authenticated ? (
-							<Avatar />
+							<>
+								{showWalletInNav && delegatedWallets?.[0] && <WalletDisplay address={delegatedWallets[0].address} />}
+								<Avatar walletAddress={!showWalletInNav ? delegatedWallets?.[0]?.address : undefined} />
+							</>
 						) : (
 							<button onClick={handleAuthButtonClick} className={styles.authButton}>
 								Sign In
