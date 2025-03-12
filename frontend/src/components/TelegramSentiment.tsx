@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, memo, useMemo } from "react";
 import styles from "./TelegramSentiment.module.css";
 import { FaTelegramPlane } from "react-icons/fa";
 import { useGetTelegramContractAnalyticsQuery } from "@/generated/graphql";
@@ -8,28 +8,42 @@ interface TelegramSentimentProps {
 	contractAddress: string;
 }
 
-export default function TelegramSentiment({ contractAddress }: TelegramSentimentProps) {
-	const [summary, setSummary] = useState("");
+const TelegramSentiment = memo(
+	function TelegramSentiment({ contractAddress }: TelegramSentimentProps) {
+		const [summary, setSummary] = useState("");
 
-	const { data, loading, error } = useGetTelegramContractAnalyticsQuery({
-		variables: {
-			input: {
-				contractAddress,
+		const { data, loading, error } = useGetTelegramContractAnalyticsQuery({
+			variables: {
+				input: {
+					contractAddress,
+				},
 			},
-		},
-		skip: !contractAddress,
-	});
+			skip: !contractAddress,
+		});
 
-	useEffect(() => {
-		if (data?.getTelegramContractAnalytics.summary) {
-			const sentimentData = data.getTelegramContractAnalytics.summary;
-			setSummary(sentimentData);
-		}
-	}, [data]);
+		useEffect(() => {
+			if (data?.getTelegramContractAnalytics.summary) {
+				setSummary(data.getTelegramContractAnalytics.summary);
+			}
+		}, [data]);
 
-	if (loading) {
-		return (
-			<div className={styles.container}>
+		// Memoize the content based on loading, error, and summary states
+		const content = useMemo(() => {
+			if (loading) {
+				return <div className={`${styles.summary}`}>Loading sentiment analysis...</div>;
+			}
+
+			if (error) {
+				console.error(error);
+				return <div className={`${styles.summary} ${styles.neutral}`}>Error loading sentiment analysis</div>;
+			}
+
+			return <div className={`${styles.summary}`}>{summary}</div>;
+		}, [loading, error, summary]);
+
+		// Memoize the header since it's static
+		const header = useMemo(
+			() => (
 				<div className={styles.header}>
 					<div className={styles.titleGroup}>
 						<div className={styles.titleWithIcon}>
@@ -38,39 +52,18 @@ export default function TelegramSentiment({ contractAddress }: TelegramSentiment
 						</div>
 					</div>
 				</div>
-				<div className={`${styles.summary} `}>Loading sentiment analysis...</div>
-			</div>
+			),
+			[]
 		);
-	}
 
-	if (error) {
-		console.error(error);
 		return (
 			<div className={styles.container}>
-				<div className={styles.header}>
-					<div className={styles.titleGroup}>
-						<div className={styles.titleWithIcon}>
-							<FaTelegramPlane className={styles.telegramIcon} />
-							<h3>Telegram Sentiment</h3>
-						</div>
-					</div>
-				</div>
-				<div className={`${styles.summary} ${styles.neutral}`}>Error loading sentiment analysis</div>
+				{header}
+				{content}
 			</div>
 		);
-	}
+	},
+	(prev, next) => prev.contractAddress === next.contractAddress
+);
 
-	return (
-		<div className={styles.container}>
-			<div className={styles.header}>
-				<div className={styles.titleGroup}>
-					<div className={styles.titleWithIcon}>
-						<FaTelegramPlane className={styles.telegramIcon} />
-						<h3>Telegram Sentiment</h3>
-					</div>
-				</div>
-			</div>
-			<div className={`${styles.summary}`}>{summary}</div>
-		</div>
-	);
-}
+export default TelegramSentiment;

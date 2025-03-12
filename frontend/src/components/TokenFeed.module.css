@@ -650,6 +650,11 @@
 	font-size: 0.9em;
 	opacity: 0.6;
 	transition: all 0.2s ease;
+	position: relative;
+}
+
+.copyButton svg {
+	transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .copyButton:hover {
@@ -663,6 +668,10 @@
 	opacity: 1;
 }
 
+.copyButton.copied svg {
+	transform: scale(1.1);
+}
+
 .tokenTicker {
 	display: flex;
 	align-items: center;
@@ -674,6 +683,26 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	cursor: pointer;
+	transition: color 0.2s ease, background-color 0.2s ease;
+	padding: 2px 4px;
+	border-radius: 4px;
+	margin: -2px -4px;
+}
+
+.tokenTicker:hover {
+	color: var(--text-primary);
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.tokenTicker:hover .copyButton {
+	opacity: 1;
+	color: var(--text-primary);
+}
+
+.tokenTicker.copied,
+.tokenTicker:has(.copyButton.copied) {
+	color: var(--success, #4caf50);
 }
 
 .callersContainer {
@@ -1167,4 +1196,93 @@
 		opacity: 1;
 		transform: translateY(0);
 	}
+}
+
+@keyframes shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	25% {
+		transform: translateX(-2px);
+	}
+	75% {
+		transform: translateX(2px);
+	}
+}
+
+@keyframes flashNew {
+	0% {
+		background-color: var(--tint);
+		opacity: 1;
+	}
+	20% {
+		background-color: var(--tint);
+		opacity: 0.9;
+	}
+	40% {
+		background-color: var(--tint);
+		opacity: 0.8;
+	}
+	100% {
+		background-color: transparent;
+		opacity: 1;
+	}
+}
+
+@keyframes flashCallerChange {
+	0% {
+		background-color: var(--tint);
+		opacity: 0.9;
+	}
+	20% {
+		background-color: var(--tint);
+		opacity: 0.8;
+	}
+	40% {
+		background-color: var(--tint);
+		opacity: 0.7;
+	}
+	100% {
+		background-color: transparent;
+		opacity: 1;
+	}
+}
+
+.newToken {
+	animation: flashNew 1.5s ease-out forwards, shake 0.5s ease-in-out;
+}
+
+.callerChanged {
+	animation: flashCallerChange 1.5s ease-out forwards, shake 0.5s ease-in-out;
+}
+
+.tokenRow.newToken td,
+.tokenRow.callerChanged td {
+	position: relative;
+}
+
+.tokenRow.newToken td::after,
+.tokenRow.callerChanged td::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.tokenRow.newToken td::after {
+	animation: flashNew 1.5s ease-out forwards;
+}
+
+.tokenRow.callerChanged td::after {
+	animation: flashCallerChange 1.5s ease-out forwards;
+}
+
+.tokenRow.newToken,
+.tokenRow.callerChanged {
+	animation: shake 0.5s ease-in-out;
 }

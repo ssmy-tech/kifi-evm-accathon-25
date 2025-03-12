@@ -4,6 +4,7 @@ import "./globals.css";
 import NavBar from "@/components/NavBar";
 import Providers from "./providers";
 import { ChainProvider } from "@/contexts/ChainContext";
+import { GoogleAnalytics } from "@next/third-parties/google";
 // import DebugTools from "@/components/DebugTools";
 
 const geistSans = Geist({
@@ -37,6 +38,7 @@ export default function RootLayout({
 					</Providers>
 				</ChainProvider>
 			</body>
+			<GoogleAnalytics gaId="G-4N2MG32FXL" />
 		</html>
 	);
 }

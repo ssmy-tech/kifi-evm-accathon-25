@@ -44,6 +44,18 @@ function formatPrice(price: number): string {
 	return price.toFixed(0);
 }
 
+// Add helper function to transform candlestick data
+function transformCandlestickData(data: { t: number[]; o: number[]; h: number[]; l: number[]; c: number[]; v: number[] }): CandleData[] {
+	return data.t.map((time, index) => ({
+		time: time * 1000, // Convert to milliseconds
+		open: data.o[index],
+		high: data.h[index],
+		low: data.l[index],
+		close: data.c[index],
+		volume: data.v[index],
+	}));
+}
+
 export function TradingView({ token, interval: initialInterval = "5m", theme = "dark", width = "100%", height = "100%", isFullscreen = false }: TradingViewProps) {
 	const { currentChain } = useChain();
 	const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -186,17 +198,32 @@ export function TradingView({ token, interval: initialInterval = "5m", theme = "
 			try {
 				const thirtyDaysAgo = new Date();
 				thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-				thirtyDaysAgo.setHours(thirtyDaysAgo.getHours() + 7); // Adjust for PST
+				thirtyDaysAgo.setHours(thirtyDaysAgo.getHours() + 7); // PST Hardcoded
 
 				const fromTimestamp = Math.floor(thirtyDaysAgo.getTime() / 1000);
 
-				const response = await fetch(`https://api.mobula.io/api/1/market/history/pair?blockchain=${currentChain.id}&from=${fromTimestamp}&period=${interval}&amount=5000&asset=${token.id}`, {});
-				const data = await response.json();
+				let data;
+				if (currentChain.name === "Monad") {
+					const response = await fetch(`https://api.kuru.io/api/v1/${token.pair}/trades/history?countback=10000&from=${fromTimestamp}&to=${Math.floor(Date.now() / 1000)}&resolution=${interval}`);
+					const responseData = await response.json();
 
-				if (data.data && Array.isArray(data.data)) {
-					setCandleData(data.data);
+					if (responseData.s === "ok") {
+						// Need to format data to match our CandleData structure
+						data = transformCandlestickData(responseData);
+						setCandleData(data);
+					} else {
+						console.error("Invalid API response:", responseData);
+					}
 				} else {
-					console.error("Invalid price history data format:", data);
+					// Non-monad chains
+					const response = await fetch(`https://api.mobula.io/api/1/market/history/pair?blockchain=${currentChain.id}&from=${fromTimestamp}&period=${interval}&amount=5000&asset=${token.id}`, {});
+					const mobileData = await response.json();
+
+					if (mobileData.data && Array.isArray(mobileData.data)) {
+						setCandleData(mobileData.data);
+					} else {
+						console.error("Invalid Mobula API response:", mobileData);
+					}
 				}
 			} catch (error) {
 				console.error("Error fetching price data:", error);
@@ -205,10 +232,10 @@ export function TradingView({ token, interval: initialInterval = "5m", theme = "
 			}
 		}
 
-		if (token.id && currentChain.id) {
+		if ((token.id || token.pair) && currentChain.id) {
 			fetchPriceHistory();
 		}
-	}, [token.id, currentChain.id, interval]);
+	}, [token.id, token.pair, currentChain.id, currentChain.name, interval]);
 
 	// Handle interval change
 	const handleIntervalChange = (newInterval: SupportedInterval) => {

@@ -105,4 +105,5 @@ export interface DexScreenerResponse {
 export interface TokenWithDexInfo extends Token {
 	tokenCallsData?: GetCallsByTokenQuery["getCallsByToken"]["tokenCalls"][0];
 	dexData?: DexScreenerToken;
+	pair?: string;
 }

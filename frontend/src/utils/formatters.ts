@@ -46,7 +46,9 @@ export const formatCurrency = (value: number, decimals: number = 2, useSubscript
 	} else if (value >= 1_000) {
 		return `$${(value / 1_000).toFixed(2)}K`;
 	} else if (value >= 1) {
-		return `$${value.toFixed(2)}`;
+		return `$${value.toFixed(3)}`;
+	} else if (value >= 0.01) {
+		return `$${value.toFixed(5)}`;
 	}
 
 	return `$${value.toFixed(decimals)}`;

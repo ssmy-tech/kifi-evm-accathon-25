@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import styles from "./TokenFeed.module.css";
 import { FaTelegramPlane, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
-import { Copy } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { formatCurrency, formatPercentage, abbreviateAge } from "../utils/formatters";
 import { SortField, SortDirection, TokenWithDexInfo } from "../types/token.types";
 import { TradingView } from "./TradingView";
@@ -15,12 +15,14 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useChain } from "../contexts/ChainContext";
 import BlurredPreviewTable from "./BlurredPreviewTable";
 
-import { useGetCallsByTokenQuery, useGetChatPhotoLazyQuery } from "@/generated/graphql";
+import { useGetCallsByTokenQuery, useGetChatPhotoLazyQuery, useGetPublicCallsQuery } from "@/generated/graphql";
 import { GetCallsByTokenQuery } from "@/generated/graphql";
 import { savePhoto, getAllPhotos } from "../utils/localStorage";
 
 const TOKENS_PER_PAGE = 50;
 const LOAD_MORE_COOLDOWN = 5000;
+const CALLS_REFRESH_INTERVAL = 5000;
+const DEX_REFRESH_INTERVAL = 30000;
 const DEFAULT_PHOTO = "/assets/KiFi_LOGO.jpg";
 
 // Photo management types
@@ -62,164 +64,326 @@ const TokenFeed: React.FC = () => {
 	const { ready, authenticated } = usePrivy();
 	const { currentChain } = useChain();
 
-	const [sortField, setSortField] = useState<SortField>("callers");
-	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-	const [sortedTokens, setSortedTokens] = useState<TokenWithDexInfo[]>([]);
-	const [expandedTokenId, setExpandedTokenId] = useState<string | null>(null);
-	const [closingTokenId, setClosingTokenId] = useState<string | null>(null);
+	// Core states
 	const [processedTokens, setProcessedTokens] = useState<TokenWithDexInfo[]>([]);
+	const [sortedTokens, setSortedTokens] = useState<TokenWithDexInfo[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
 	const [page, setPage] = useState(1);
 	const [hasMore, setHasMore] = useState(true);
-	const [isLoadingMore, setIsLoadingMore] = useState(false);
-	const [isLoadingCooldown, setIsLoadingCooldown] = useState(false);
+
+	// UI states
 	const [isMobile, setIsMobile] = useState(false);
+	const [expandedTokenId, setExpandedTokenId] = useState<string | null>(null);
+	const [sortField, setSortField] = useState<SortField>("callers");
+	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 	const [photos, setPhotos] = useState<PhotoCache>(photoCache.get());
-	const [tokenCallsData, setTokenCallsData] = useState<NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"]>([]);
-	const [isChainLoading, setIsChainLoading] = useState(false);
 	const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
+	const [showCheckmark, setShowCheckmark] = useState<string | null>(null);
+	const [isLoadingCooldown, setIsLoadingCooldown] = useState(false);
 
+	// Animation states
+	const [newTokenIds, setNewTokenIds] = useState<Set<string>>(new Set());
+	const [callerChangedIds, setCallerChangedIds] = useState<Set<string>>(new Set());
+
+	// Refs
+	const isInitialLoadComplete = useRef(false);
+	const lastDexFetchTime = useRef<number>(0);
+	const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+	const dexRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const observerTarget = useRef<HTMLDivElement>(null);
-	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-	const processedDataRef = useRef(false);
+	const photoBatchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const pendingPhotoFetchesRef = useRef<Set<string>>(new Set());
 
-	const { data: callsByTokenData, loading: callsByTokenLoading } = useGetCallsByTokenQuery({});
+	const { refetch: refetchCallsByToken, data: callsByTokenData, loading: callsByTokenLoading } = useGetCallsByTokenQuery({});
+	const { refetch: refetchPublicCalls, data: publicCallsData, loading: publicCallsLoading } = useGetPublicCallsQuery({});
 	const [getChatPhoto] = useGetChatPhotoLazyQuery();
 
-	// Photo fetching logic
-	const fetchPhoto = useCallback(
-		async (chatId: string, photoUrl?: string | null) => {
+	// Add a ref to track latest processedTokens
+	const processedTokensRef = useRef<TokenWithDexInfo[]>([]);
+
+	// Function to merge callers without duplicates
+	const mergeCallers = useCallback((existingCallers: TokenWithDexInfo["callers"] = [], newCallers: TokenWithDexInfo["callers"] = []) => {
+		const uniqueCallers = new Map();
+
+		// Add existing callers first
+		existingCallers.forEach((caller) => {
+			if (caller.chat?.id) {
+				uniqueCallers.set(caller.chat.id, caller);
+			}
+		});
+
+		// Add new callers, only if they don't exist
+		newCallers.forEach((caller) => {
+			if (caller.chat?.id && !uniqueCallers.has(caller.chat.id)) {
+				uniqueCallers.set(caller.chat.id, caller);
+			}
+		});
+
+		return Array.from(uniqueCallers.values());
+	}, []);
+
+	// Effect to handle public calls data
+	useEffect(() => {
+		if (!publicCallsData?.getPublicCalls?.tokenCalls || !processedTokens.length) return;
+
+		const publicTokenCalls = publicCallsData.getPublicCalls.tokenCalls.filter((token) => token.chain === currentChain.name.toUpperCase());
+
+		setProcessedTokens((prevTokens) => {
+			const updatedTokens = prevTokens.map((token) => {
+				const publicToken = publicTokenCalls.find((t) => t.address === token.id);
+				if (!publicToken) return token;
+
+				// Convert public calls to the same format as private calls
+				const publicCallers = publicToken.chats.map((chatWithCalls) => ({
+					id: chatWithCalls.chat.id,
+					name: chatWithCalls.chat.name,
+					profileImageUrl: photos[chatWithCalls.chat.id]?.url || DEFAULT_PHOTO,
+					timestamp: Date.now(),
+					callCount: chatWithCalls.chat.callCount,
+					winRate: 0,
+					chat: {
+						...chatWithCalls.chat,
+						type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
+						photoUrl: photos[chatWithCalls.chat.id]?.url || DEFAULT_PHOTO,
+					},
+					messages: chatWithCalls.calls.flatMap((call) =>
+						call.messages.map((msg) => ({
+							id: msg.id,
+							createdAt: msg.createdAt ?? new Date().toISOString(),
+							text: msg.text ?? "",
+							fromId: msg.fromId ?? null,
+							messageType: msg.messageType,
+							reason: msg.reason ?? null,
+							tgMessageId: msg.tgMessageId,
+						}))
+					),
+				}));
+
+				// Get current caller IDs for comparison
+				const currentCallerIds = new Set(token.callers?.map((c) => c.chat?.id) || []);
+
+				// Merge existing and public callers
+				const mergedCallers = mergeCallers(token.callers, publicCallers);
+
+				// Only trigger animation if we have actual new callers
+				const hasNewCallers = publicCallers.some((caller) => caller.chat?.id && !currentCallerIds.has(caller.chat.id));
+
+				if (hasNewCallers) {
+					setCallerChangedIds((prev) => new Set([...prev, token.id]));
+					// Clear the animation after a delay
+					setTimeout(() => {
+						setCallerChangedIds((prev) => {
+							const next = new Set(prev);
+							next.delete(token.id);
+							return next;
+						});
+					}, 1500);
+				}
+
+				return {
+					...token,
+					callers: mergedCallers,
+				};
+			});
+
+			return updatedTokens;
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [publicCallsData, currentChain.name, photos, mergeCallers]);
+
+	// Batched photo fetching logic
+	const fetchPhotoBatch = useCallback(async () => {
+		const pendingFetches = Array.from(pendingPhotoFetchesRef.current);
+		if (pendingFetches.length === 0) return;
+
+		// Clear the pending set
+		pendingPhotoFetchesRef.current.clear();
+
+		// Process in smaller batches to avoid overwhelming the server
+		const BATCH_SIZE = 5;
+		for (let i = 0; i < pendingFetches.length; i += BATCH_SIZE) {
+			const batch = pendingFetches.slice(i, i + BATCH_SIZE);
+			await Promise.all(
+				batch.map(async (chatId) => {
+					try {
+						// Skip if already loading or loaded successfully
+						if (photos[chatId]?.isLoading || (photos[chatId]?.url && !photos[chatId]?.error)) return;
+
+						const result = await getChatPhoto({ variables: { chatId } });
+						const url = result.data?.getChatPhoto;
+						const finalUrl = !url || url === "no-photo" ? DEFAULT_PHOTO : url;
+
+						setPhotos((prev) => ({
+							...prev,
+							[chatId]: { url: finalUrl, isLoading: false },
+						}));
+
+						if (finalUrl !== DEFAULT_PHOTO) {
+							photoCache.set(chatId, finalUrl);
+						}
+					} catch (error) {
+						console.error("Error fetching photo for chat", chatId, ":", error);
+						setPhotos((prev) => ({
+							...prev,
+							[chatId]: { url: DEFAULT_PHOTO, isLoading: false, error: "Failed to load" },
+						}));
+					}
+				})
+			);
+
+			// Add a small delay between batches to prevent rate limiting
+			if (i + BATCH_SIZE < pendingFetches.length) {
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+		}
+	}, [getChatPhoto, photos]);
+
+	// Queue photo fetch with debouncing
+	const queuePhotoFetch = useCallback(
+		(chatId: string, photoUrl?: string | null) => {
+			// Skip if no need to fetch
 			if (!photoUrl?.startsWith("/api/telegram/photo/")) return;
 			if (photos[chatId]?.isLoading || (photos[chatId]?.url && !photos[chatId]?.error)) return;
 
+			// Set initial loading state
 			setPhotos((prev) => ({
 				...prev,
 				[chatId]: { url: DEFAULT_PHOTO, isLoading: true },
 			}));
 
-			try {
-				const result = await getChatPhoto({ variables: { chatId } });
-				const url = result.data?.getChatPhoto;
-				const finalUrl = !url || url === "no-photo" ? DEFAULT_PHOTO : url;
+			// Add to pending fetches
+			pendingPhotoFetchesRef.current.add(chatId);
 
-				setPhotos((prev) => ({
-					...prev,
-					[chatId]: { url: finalUrl, isLoading: false },
-				}));
-
-				if (finalUrl !== DEFAULT_PHOTO) {
-					photoCache.set(chatId, finalUrl);
-				}
-			} catch (error) {
-				console.error("Error fetching photo:", error);
-				setPhotos((prev) => ({
-					...prev,
-					[chatId]: { url: DEFAULT_PHOTO, isLoading: false, error: "Failed to load" },
-				}));
+			// Clear existing timeout
+			if (photoBatchTimeoutRef.current) {
+				clearTimeout(photoBatchTimeoutRef.current);
 			}
+
+			// Set new timeout for batch processing
+			photoBatchTimeoutRef.current = setTimeout(() => {
+				fetchPhotoBatch();
+			}, 100); // Adjust this delay as needed
 		},
-		[getChatPhoto, photos]
+		[photos, fetchPhotoBatch]
 	);
 
-	// Add mobile detection
+	// Effect to fetch photos for visible callers
 	useEffect(() => {
-		const checkMobile = () => {
-			setIsMobile(window.innerWidth <= 768);
-		};
+		const visibleTokens = sortedTokens.slice(0, page * TOKENS_PER_PAGE);
+		const chatIds = new Set<string>();
 
-		checkMobile();
-		window.addEventListener("resize", checkMobile);
-
-		return () => {
-			window.removeEventListener("resize", checkMobile);
-		};
-	}, []);
-
-	// Process token calls data once when it's available
-	useEffect(() => {
-		if (callsByTokenData?.getCallsByToken?.tokenCalls && !processedDataRef.current) {
-			// Sort token calls by  call count first
-			const sortedTokenCalls = [...callsByTokenData.getCallsByToken.tokenCalls].sort((a, b) => {
-				const aTotalCalls = a.chats.length;
-				const bTotalCalls = b.chats.length;
-				return bTotalCalls - aTotalCalls; // Sort in descending order
-			});
-
-			setTokenCallsData(sortedTokenCalls);
-			processedDataRef.current = true;
-
-			// Process photos in one pass
-			const chatIdsToFetch = new Set<string>();
-			const chatMap = new Map<string, { chat: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"][0]["chats"][0]["chat"] }>();
-
-			sortedTokenCalls.forEach((tokenCall) => {
-				tokenCall.chats.forEach((chatWithCalls) => {
-					if (!photos[chatWithCalls.chat.id] || photos[chatWithCalls.chat.id]?.error) {
-						chatIdsToFetch.add(chatWithCalls.chat.id);
-						chatMap.set(chatWithCalls.chat.id, { chat: chatWithCalls.chat });
-					}
-				});
-			});
-
-			// Fetch photos in batches
-			Array.from(chatIdsToFetch).forEach((chatId) => {
-				const chatData = chatMap.get(chatId);
-				if (chatData) {
-					fetchPhoto(chatId, chatData.chat.photoUrl);
+		visibleTokens.forEach((token) => {
+			token.callers?.forEach((caller) => {
+				if (caller.chat?.id) {
+					chatIds.add(caller.chat.id);
 				}
 			});
-		}
-	}, [callsByTokenData, photos, fetchPhoto]);
+		});
 
-	// Intersection Observer for infinite scroll
-	useEffect(() => {
-		const observer = new IntersectionObserver(
-			(entries: IntersectionObserverEntry[]) => {
-				if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoadingCooldown) {
-					setPage((prevPage) => prevPage + 1);
-					setIsLoadingCooldown(true);
-					setTimeout(() => {
-						setIsLoadingCooldown(false);
-					}, LOAD_MORE_COOLDOWN);
-				}
-			},
-			{ threshold: 0.1 }
-		);
+		chatIds.forEach((chatId) => {
+			const caller = visibleTokens.find((token) => token.callers?.some((c) => c.chat?.id === chatId))?.callers?.find((c) => c.chat?.id === chatId);
+			if (caller) {
+				queuePhotoFetch(chatId, caller.chat.photoUrl);
+			}
+		});
 
-		const currentTarget = observerTarget.current;
-		if (currentTarget) {
-			observer.observe(currentTarget);
-		}
-
+		// Cleanup function
 		return () => {
-			if (currentTarget) {
-				observer.unobserve(currentTarget);
+			if (photoBatchTimeoutRef.current) {
+				clearTimeout(photoBatchTimeoutRef.current);
 			}
 		};
-	}, [hasMore, isLoadingMore, isLoadingCooldown]);
+	}, [sortedTokens, page, queuePhotoFetch]);
 
-	// Process and fetch token data
+	// Chain change handler
 	useEffect(() => {
-		if (tokenCallsData.length > 0) {
-			const fetchTokenInfo = async () => {
-				setIsLoadingMore(true);
-				setIsChainLoading(true);
+		setIsLoading(true);
+		isInitialLoadComplete.current = false;
 
-				// Filter tokens by current chain and sort by call count
-				const filteredTokenCalls = tokenCallsData.filter((token) => currentChain.name.toUpperCase() === token.chain);
+		// Clear existing intervals
+		if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+		if (dexRefreshIntervalRef.current) clearInterval(dexRefreshIntervalRef.current);
 
-				const sortedTokenCalls = [...filteredTokenCalls].sort((a, b) => {
-					const aCallCount = a.chats.length;
-					const bCallCount = b.chats.length;
-					return bCallCount - aCallCount;
-				});
+		// Reset states
+		setProcessedTokens([]);
+		setSortedTokens([]);
+		setPage(1);
+		setHasMore(true);
+		setNewTokenIds(new Set());
+		setCallerChangedIds(new Set());
 
-				// Calculate start and end indices for the current page
+		// Initial load for new chain
+		if (callsByTokenData?.getCallsByToken?.tokenCalls) {
+			const tokenCalls = [...callsByTokenData.getCallsByToken.tokenCalls].filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
+
+			// Process initial data
+			fetchTokenInfo(tokenCalls, false).then(() => {
+				isInitialLoadComplete.current = true;
+				setIsLoading(false);
+				setupRefreshIntervals();
+			});
+		} else if (!callsByTokenLoading) {
+			setIsLoading(false);
+		}
+
+		return () => {
+			if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+			if (dexRefreshIntervalRef.current) clearInterval(dexRefreshIntervalRef.current);
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [currentChain, callsByTokenData]);
+
+	// Add a separate effect to handle initial data load
+	useEffect(() => {
+		if (!callsByTokenLoading && callsByTokenData?.getCallsByToken?.tokenCalls && !isInitialLoadComplete.current) {
+			const tokenCalls = [...callsByTokenData.getCallsByToken.tokenCalls].filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
+
+			fetchTokenInfo(tokenCalls, false).then(() => {
+				isInitialLoadComplete.current = true;
+				setIsLoading(false);
+				setupRefreshIntervals();
+			});
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [callsByTokenLoading, callsByTokenData]);
+
+	// Function to fetch and process token data
+	const fetchTokenInfo = useCallback(
+		async (tokenCalls: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"], isPolling = false) => {
+			// Only check refresh interval if this is a polling operation and we've already processed initial data
+			if (isPolling && isInitialLoadComplete.current && Date.now() - lastDexFetchTime.current < CALLS_REFRESH_INTERVAL) {
+				return; // Prevent too frequent refreshes
+			}
+
+			try {
+				// Filter tokens by current chain
+				const chainName = currentChain.name.toUpperCase();
+				const filteredTokenCalls = tokenCalls.filter((token) => token.chain === chainName);
+
+				if (filteredTokenCalls.length === 0) {
+					console.log("No tokens found for chain:", currentChain.name);
+					return;
+				}
+
+				// Sort by call count first - using direct comparison for better performance
+				filteredTokenCalls.sort((a, b) => b.chats.length - a.chats.length);
+
+				// Calculate range for processing
 				const startIndex = 0;
-				const endIndex = page * TOKENS_PER_PAGE;
-				const currentPageTokenCalls = sortedTokenCalls.slice(startIndex, endIndex);
+				const endIndex = isPolling ? filteredTokenCalls.length : page * TOKENS_PER_PAGE;
+				const currentPageTokenCalls = filteredTokenCalls.slice(startIndex, endIndex);
 
+				console.log(`Processing ${currentPageTokenCalls.length} tokens during ${isPolling ? "dex data refresh" : "initial load"}`);
+
+				// For refreshes, only fetch DEX data for top 50 tokens
+				// For load more or initial load, fetch DEX data for all new tokens in the current page
+				const tokensNeedingDexData = isPolling
+					? currentPageTokenCalls.slice(0, 50) // During refresh, only top 50
+					: currentPageTokenCalls; // During load more or initial load, all tokens
+
+				// Only fetch DEX data for tokens that need it
 				const dexDataTokens = await Promise.all(
-					currentPageTokenCalls.map(async (tokenCall) => {
+					tokensNeedingDexData.map(async (tokenCall) => {
 						const address = tokenCall.address;
 						let tokenDataEndpoint = "";
 
@@ -246,17 +410,33 @@ const TokenFeed: React.FC = () => {
 									const monadData = data.data.data[0];
 									const baseToken = monadData.basetoken;
 
-									if (!baseToken) return null;
+									if (!baseToken || !monadData.lastPrice) return null;
+
+									// If liquidity is null, fetch it from the additional endpoint
+									let liquidity = monadData.liquidity;
+									if (liquidity === null && monadData.market) {
+										try {
+											const marketResponse = await fetch(`https://api.kuru.io/api/v2/markets/address/${monadData.market}`);
+											const marketData = await marketResponse.json();
+											if (marketData?.success && marketData?.data?.data) {
+												liquidity = marketData.data.data.liquidity || 0;
+											}
+										} catch (error) {
+											console.error("Error fetching liquidity data:", error);
+											liquidity = 0;
+										}
+									}
 
 									const token: TokenWithDexInfo = {
 										id: baseToken.address,
 										name: baseToken.name,
 										ticker: baseToken.ticker,
 										price: monadData.lastPrice || 0,
+										pair: monadData.market,
 										marketCap: (parseFloat(baseToken.circulatingSupply) / Math.pow(10, baseToken.decimal || 18)) * (monadData.lastPrice || 0),
 										change24h: monadData.priceChange24h || 0,
 										volume: monadData.volume24h || 0,
-										liquidity: monadData.liquidity || 0,
+										liquidity: liquidity || 0,
 										imageUrl: baseToken.imageurl || "/assets/coin.png",
 										createdAt: monadData.triggertime || "",
 										callers: tokenCall.chats.map((chatWithCalls) => {
@@ -425,29 +605,343 @@ const TokenFeed: React.FC = () => {
 							return null;
 						} catch (error) {
 							console.error("Error fetching token data:", error);
+							if (isPolling) {
+								const existingToken = processedTokens.find((t) => t.id === tokenCall.address);
+								return existingToken || null;
+							}
 							return null;
 						}
 					})
 				);
 
-				// Filter out null values and update state
-				const validTokens = dexDataTokens.filter((token): token is NonNullable<typeof token> => token !== null) as TokenWithDexInfo[];
+				// Filter out null values
+				const validTokens = dexDataTokens.filter((token): token is NonNullable<typeof token> => token !== null);
 
-				// Update hasMore only if we haven't loaded all tokens yet
-				const totalTokens = sortedTokenCalls.length;
-				const currentlyLoadedTokens = endIndex;
-				setHasMore(currentlyLoadedTokens < totalTokens && validTokens.length > 0);
+				if (isPolling) {
+					// Merge new data with existing tokens
+					setProcessedTokens((prev) => {
+						const uniqueTokens = new Map(prev.map((token) => [token.id, token]));
 
-				setIsLoadingMore(false);
-				setIsChainLoading(false);
-				setProcessedTokens(validTokens);
-			};
+						// Update existing tokens and add new ones
+						tokenCalls.forEach((newCall) => {
+							const existingToken = uniqueTokens.get(newCall.address);
 
-			fetchTokenInfo();
+							if (existingToken) {
+								// Update caller data for existing token
+								const currentCallerCount = existingToken.callers?.length || 0;
+								const newCallerCount = newCall.chats.length;
+
+								if (currentCallerCount !== newCallerCount) {
+									setCallerChangedIds((prev) => new Set([...prev, newCall.address]));
+								}
+
+								uniqueTokens.set(newCall.address, {
+									...existingToken,
+									callers: newCall.chats.map((chat) => ({
+										id: chat.chat.id,
+										name: chat.chat.name,
+										profileImageUrl: photos[chat.chat.id]?.url || DEFAULT_PHOTO,
+										timestamp: Date.now(),
+										callCount: chat.chat.callCount,
+										winRate: 0,
+										chat: {
+											...chat.chat,
+											type: chat.chat.type as "Group" | "Channel" | "Private",
+											photoUrl: photos[chat.chat.id]?.url || DEFAULT_PHOTO,
+										},
+										messages: chat.calls.flatMap((call) =>
+											call.messages.map((msg) => ({
+												id: msg.id,
+												createdAt: msg.createdAt ?? new Date().toISOString(),
+												text: msg.text ?? "",
+												fromId: msg.fromId ?? null,
+												messageType: msg.messageType,
+												reason: msg.reason ?? null,
+												tgMessageId: msg.tgMessageId,
+											}))
+										),
+									})),
+									tokenCallsData: newCall,
+								});
+							}
+						});
+
+						// Update DEX data for tokens that have it
+						validTokens.forEach((newToken) => {
+							const existingToken = uniqueTokens.get(newToken.id);
+							if (existingToken) {
+								uniqueTokens.set(newToken.id, {
+									...existingToken,
+									...newToken,
+									callers: existingToken.callers, // Preserve existing callers
+								});
+							} else {
+								uniqueTokens.set(newToken.id, newToken);
+								setNewTokenIds((prev) => new Set([...prev, newToken.id]));
+							}
+						});
+
+						return Array.from(uniqueTokens.values());
+					});
+				} else {
+					// Initial load or pagination - only add tokens with valid DEX data
+					setProcessedTokens((prev) => {
+						const uniqueTokens = new Map(prev.map((token) => [token.id, token]));
+
+						// Add only tokens with DEX data
+						validTokens.forEach((token) => {
+							uniqueTokens.set(token.id, token);
+							setNewTokenIds((prev) => new Set([...prev, token.id]));
+						});
+
+						return Array.from(uniqueTokens.values());
+					});
+				}
+			} catch (error) {
+				console.error("Error processing tokens:", error);
+			} finally {
+				if (isPolling && isInitialLoadComplete.current) {
+					lastDexFetchTime.current = Date.now();
+					console.log("✅ Dex Refresh complete", new Date().toLocaleTimeString());
+				} else {
+					setIsLoading(false);
+				}
+			}
+		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[currentChain, page]
+	);
+
+	const setupRefreshIntervals = useCallback(() => {
+		// Token calls refresh interval
+		const refreshTokenCalls = async () => {
+			if (!isInitialLoadComplete.current) return;
+
+			try {
+				const [privateResult, publicResult] = await Promise.all([refetchCallsByToken(), refetchPublicCalls()]);
+
+				if (!privateResult.data?.getCallsByToken?.tokenCalls) return;
+
+				const tokenCalls = privateResult.data.getCallsByToken.tokenCalls.filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
+
+				setProcessedTokens((prev) => {
+					const updatedTokens = new Map(prev.map((token) => [token.id, token]));
+					const newIds = new Set<string>();
+					const callerChanges = new Set<string>();
+
+					tokenCalls.forEach((newCall) => {
+						const existingToken = updatedTokens.get(newCall.address);
+
+						if (!existingToken) {
+							if (!prev.some((t) => t.id === newCall.address)) {
+								newIds.add(newCall.address);
+							}
+						} else {
+							// Convert new calls to caller format
+							const newCallers = newCall.chats.map((chat) => ({
+								id: chat.chat.id,
+								name: chat.chat.name,
+								profileImageUrl: photos[chat.chat.id]?.url || DEFAULT_PHOTO,
+								timestamp: Date.now(),
+								callCount: chat.chat.callCount,
+								winRate: 0,
+								chat: {
+									...chat.chat,
+									type: chat.chat.type as "Group" | "Channel" | "Private",
+									photoUrl: photos[chat.chat.id]?.url || DEFAULT_PHOTO,
+								},
+								messages: chat.calls.flatMap((call) =>
+									call.messages.map((msg) => ({
+										id: msg.id,
+										createdAt: msg.createdAt ?? new Date().toISOString(),
+										text: msg.text ?? "",
+										fromId: msg.fromId ?? null,
+										messageType: msg.messageType,
+										reason: msg.reason ?? null,
+										tgMessageId: msg.tgMessageId,
+									}))
+								),
+							}));
+
+							// Get current caller IDs for comparison
+							const currentCallerIds = new Set(existingToken.callers?.map((c) => c.chat?.id) || []);
+
+							// Check for actual new callers
+							const hasNewCallers = newCallers.some((caller) => caller.chat?.id && !currentCallerIds.has(caller.chat.id));
+
+							if (hasNewCallers) {
+								callerChanges.add(newCall.address);
+							}
+
+							// Merge with existing callers
+							const mergedCallers = mergeCallers(existingToken.callers, newCallers);
+
+							updatedTokens.set(newCall.address, {
+								...existingToken,
+								callers: mergedCallers,
+								tokenCallsData: newCall,
+							});
+						}
+					});
+
+					if (newIds.size > 0) {
+						setNewTokenIds(newIds);
+						setTimeout(() => setNewTokenIds(new Set()), 2000);
+					}
+
+					if (callerChanges.size > 0) {
+						setCallerChangedIds(callerChanges);
+						setTimeout(() => setCallerChangedIds(new Set()), 1500);
+					}
+
+					return Array.from(updatedTokens.values());
+				});
+
+				// Process public calls if available
+				if (publicResult.data?.getPublicCalls?.tokenCalls) {
+					const publicTokenCalls = publicResult.data.getPublicCalls.tokenCalls.filter((token) => token.chain === currentChain.name.toUpperCase());
+
+					setProcessedTokens((prev) => {
+						return prev.map((token) => {
+							const publicToken = publicTokenCalls.find((t) => t.address === token.id);
+							if (!publicToken) return token;
+
+							const publicCallers = publicToken.chats.map((chatWithCalls) => ({
+								id: chatWithCalls.chat.id,
+								name: chatWithCalls.chat.name,
+								profileImageUrl: photos[chatWithCalls.chat.id]?.url || DEFAULT_PHOTO,
+								timestamp: Date.now(),
+								callCount: chatWithCalls.chat.callCount,
+								winRate: 0,
+								chat: {
+									...chatWithCalls.chat,
+									type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
+									photoUrl: photos[chatWithCalls.chat.id]?.url || DEFAULT_PHOTO,
+								},
+								messages: chatWithCalls.calls.flatMap((call) =>
+									call.messages.map((msg) => ({
+										id: msg.id,
+										createdAt: msg.createdAt ?? new Date().toISOString(),
+										text: msg.text ?? "",
+										fromId: msg.fromId ?? null,
+										messageType: msg.messageType,
+										reason: msg.reason ?? null,
+										tgMessageId: msg.tgMessageId,
+									}))
+								),
+							}));
+
+							return {
+								...token,
+								callers: mergeCallers(token.callers, publicCallers),
+							};
+						});
+					});
+				}
+			} catch (error) {
+				console.error("Error refreshing token calls:", error);
+			}
+		};
+
+		// DEX data refresh interval
+		const refreshDexData = async () => {
+			if (!isInitialLoadComplete.current) return;
+			if (Date.now() - lastDexFetchTime.current < DEX_REFRESH_INTERVAL) return;
+
+			try {
+				const currentProcessedTokens = processedTokensRef.current;
+
+				if (!currentProcessedTokens?.length) {
+					return;
+				}
+
+				console.log("Processing tokens for refresh, count:", currentProcessedTokens.length);
+
+				const chainTokens = currentProcessedTokens
+					.filter((token) => token.tokenCallsData?.chain === currentChain.name.toUpperCase())
+					.sort((a, b) => {
+						const callerDiff = (b.callers?.length || 0) - (a.callers?.length || 0);
+						if (callerDiff !== 0) return callerDiff;
+
+						const bLiquidity = b.dexData?.liquidity?.usd || b.liquidity || 0;
+						const aLiquidity = a.dexData?.liquidity?.usd || a.liquidity || 0;
+						return bLiquidity - aLiquidity;
+					})
+					.slice(0, 50)
+					.map((token) => token.tokenCallsData)
+					.filter((token): token is NonNullable<typeof token> => token !== null);
+
+				if (chainTokens.length === 0) {
+					console.log(`No tokens found for chain ${currentChain.name.toUpperCase()}`);
+					return;
+				}
+
+				console.log(`Refreshing DEX data for ${chainTokens.length} tokens on chain ${currentChain.name.toUpperCase()}`);
+
+				await fetchTokenInfo(chainTokens, true);
+				lastDexFetchTime.current = Date.now();
+			} catch (error) {
+				console.error("Error refreshing DEX data:", error);
+			}
+		};
+
+		if (refreshIntervalRef.current) {
+			clearInterval(refreshIntervalRef.current);
 		}
-	}, [tokenCallsData, photos, page, currentChain]);
+		if (dexRefreshIntervalRef.current) {
+			clearInterval(dexRefreshIntervalRef.current);
+		}
 
-	// Sort processed tokens
+		refreshIntervalRef.current = setInterval(refreshTokenCalls, CALLS_REFRESH_INTERVAL);
+		dexRefreshIntervalRef.current = setInterval(refreshDexData, DEX_REFRESH_INTERVAL);
+
+		// Run initial refresh
+		refreshTokenCalls();
+		refreshDexData();
+	}, [currentChain, fetchTokenInfo, refetchCallsByToken, refetchPublicCalls, setNewTokenIds, setCallerChangedIds, setProcessedTokens, mergeCallers, photos]);
+
+	// Add mobile detection
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth <= 768);
+		};
+
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+
+		return () => {
+			window.removeEventListener("resize", checkMobile);
+		};
+	}, []);
+
+	// Intersection Observer for infinite scroll
+	useEffect(() => {
+		const observer = new IntersectionObserver(
+			(entries: IntersectionObserverEntry[]) => {
+				if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingCooldown) {
+					setPage((prevPage) => prevPage + 1);
+					setIsLoadingCooldown(true);
+					setTimeout(() => {
+						setIsLoadingCooldown(false);
+					}, LOAD_MORE_COOLDOWN);
+				}
+			},
+			{ threshold: 0.1 }
+		);
+
+		const currentTarget = observerTarget.current;
+		if (currentTarget) {
+			observer.observe(currentTarget);
+		}
+
+		return () => {
+			if (currentTarget) {
+				observer.unobserve(currentTarget);
+			}
+		};
+	}, [hasMore, isLoading, isLoadingCooldown]);
+
+	// Update the useEffect for sorting tokens to track rank and caller changes
 	useEffect(() => {
 		if (processedTokens.length > 0) {
 			const sortedTokens = [...processedTokens].sort((a, b) => {
@@ -455,9 +949,7 @@ const TokenFeed: React.FC = () => {
 
 				switch (sortField) {
 					case "age":
-						const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-						const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-						comparison = dateA - dateB;
+						comparison = (a.createdAt ? new Date(a.createdAt).getTime() : 0) - (b.createdAt ? new Date(b.createdAt).getTime() : 0);
 						break;
 					case "name":
 						comparison = a.name.localeCompare(b.name);
@@ -478,20 +970,13 @@ const TokenFeed: React.FC = () => {
 						comparison = (a.volume || 0) - (b.volume || 0);
 						break;
 					case "callers":
-						const aCallers = a.callers?.length || 0;
-						const bCallers = b.callers?.length || 0;
-						comparison = aCallers - bCallers;
-						// If caller counts are equal, use liquidity as tiebreaker
+						comparison = (a.callers?.length || 0) - (b.callers?.length || 0);
 						if (comparison === 0) {
-							const aLiquidity = a.dexData?.liquidity?.usd || a.liquidity || 0;
-							const bLiquidity = b.dexData?.liquidity?.usd || b.liquidity || 0;
-							comparison = aLiquidity - bLiquidity;
+							comparison = (a.dexData?.liquidity?.usd || a.liquidity || 0) - (b.dexData?.liquidity?.usd || b.liquidity || 0);
 						}
 						break;
 					case "createdAt":
-						const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-						const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-						comparison = createdA - createdB;
+						comparison = (a.createdAt ? new Date(a.createdAt).getTime() : 0) - (b.createdAt ? new Date(b.createdAt).getTime() : 0);
 						break;
 					default:
 						return 0;
@@ -504,16 +989,11 @@ const TokenFeed: React.FC = () => {
 		}
 	}, [sortField, sortDirection, processedTokens]);
 
-	// Clean up timeout on unmount
-	useEffect(() => {
-		return () => {
-			if (timeoutRef.current) {
-				clearTimeout(timeoutRef.current);
-			}
-		};
-	}, []);
-
 	const handleSort = (field: SortField) => {
+		// Clear all change indicators when sorting
+		setNewTokenIds(new Set());
+		setCallerChangedIds(new Set());
+
 		if (field === sortField) {
 			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
 		} else {
@@ -523,24 +1003,7 @@ const TokenFeed: React.FC = () => {
 	};
 
 	const handleRowClick = (tokenId: string) => {
-		if (expandedTokenId === tokenId) {
-			setClosingTokenId(tokenId);
-			if (timeoutRef.current) {
-				clearTimeout(timeoutRef.current);
-			}
-			timeoutRef.current = setTimeout(() => {
-				setExpandedTokenId(null);
-				setClosingTokenId(null);
-			}, 200);
-		} else {
-			if (timeoutRef.current) {
-				clearTimeout(timeoutRef.current);
-			}
-			if (closingTokenId) {
-				setClosingTokenId(null);
-			}
-			setExpandedTokenId(tokenId);
-		}
+		setExpandedTokenId(expandedTokenId === tokenId ? null : tokenId);
 	};
 
 	const handleCopyAddress = async (tokenId: string, event: React.MouseEvent) => {
@@ -548,7 +1011,11 @@ const TokenFeed: React.FC = () => {
 		try {
 			await navigator.clipboard.writeText(tokenId);
 			setCopiedTokenId(tokenId);
-			setTimeout(() => setCopiedTokenId(null), 2000); // Reset after 2 seconds
+			setShowCheckmark(tokenId);
+			setTimeout(() => {
+				setCopiedTokenId(null);
+				setShowCheckmark(null);
+			}, 2000); // Reset after 2 seconds
 		} catch (err) {
 			console.error("Failed to copy address:", err);
 		}
@@ -585,13 +1052,13 @@ const TokenFeed: React.FC = () => {
 	return (
 		<div className={styles.container}>
 			<div className={styles.tableContainer}>
-				{(callsByTokenLoading || (!callsByTokenData && !processedTokens.length) || isLoadingMore || isChainLoading || (currentChain && !sortedTokens.length)) && (
+				{(isLoading || callsByTokenLoading || publicCallsLoading) && !processedTokens.length && (
 					<div className={styles.initialLoading}>
 						<div className={styles.loadingSpinner}></div>
 						<p>Loading tokens...</p>
 					</div>
 				)}
-				{!isChainLoading && sortedTokens.length > 0 && (
+				{!isLoading && !callsByTokenLoading && !publicCallsLoading && sortedTokens.length > 0 && (
 					<>
 						<table className={styles.tokenTable}>
 							<thead>
@@ -661,7 +1128,13 @@ const TokenFeed: React.FC = () => {
 							<tbody>
 								{sortedTokens.map((token, index) => (
 									<React.Fragment key={token.id}>
-										<tr className={`${styles.tokenRow} ${expandedTokenId === token.id ? styles.expanded : ""}`} onClick={() => handleRowClick(token.id)}>
+										<tr
+											className={`${styles.tokenRow} 
+												${expandedTokenId === token.id ? styles.expanded : ""} 
+												${newTokenIds.has(token.id) ? styles.newToken : ""} 
+												${callerChangedIds.has(token.id) ? styles.callerChanged : ""}`}
+											onClick={() => handleRowClick(token.id)}
+										>
 											<td className={`${styles.cell} ${styles.indexCell} ${styles.narrowColumn} ${styles.centerAligned}`}>{index + 1}</td>
 											<td className={`${styles.cell} ${styles.tokenCell} ${styles.wideColumn} ${styles.leftAligned}`}>
 												<div className={styles.tokenInfo}>
@@ -681,10 +1154,10 @@ const TokenFeed: React.FC = () => {
 													<div className={styles.nameContainer}>
 														<div className={styles.tokenNameWrapper}>
 															<div className={styles.tokenName}>{token.dexData ? token.dexData.baseToken.name : token.name}</div>
-															<div className={styles.tokenTicker}>
+															<div className={styles.tokenTicker} onClick={(e) => handleCopyAddress(token.id, e)} title="Copy token address">
 																${token.dexData ? token.dexData.baseToken.symbol : token.ticker}
-																<button className={`${styles.copyButton} ${copiedTokenId === token.id ? styles.copied : ""}`} onClick={(e) => handleCopyAddress(token.id, e)} title="Copy token address">
-																	<Copy size={16} />
+																<button className={`${styles.copyButton} ${copiedTokenId === token.id ? styles.copied : ""}`} title="Copy token address">
+																	{showCheckmark === token.id ? <Check size={16} /> : <Copy size={16} />}
 																</button>
 															</div>
 														</div>
@@ -693,7 +1166,27 @@ const TokenFeed: React.FC = () => {
 											</td>
 											{!isMobile && (
 												<>
-													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? abbreviateAge(new Date(token.dexData.pairCreatedAt).toISOString()) : abbreviateAge(token.createdAt)}</td>
+													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>
+														{(() => {
+															try {
+																if (token.dexData?.pairCreatedAt) {
+																	const date = new Date(token.dexData.pairCreatedAt);
+																	if (!isNaN(date.getTime())) {
+																		return abbreviateAge(date.toISOString());
+																	}
+																}
+																if (token.createdAt) {
+																	const date = new Date(token.createdAt);
+																	if (!isNaN(date.getTime())) {
+																		return abbreviateAge(token.createdAt);
+																	}
+																}
+																return "-";
+															} catch {
+																return "-";
+															}
+														})()}
+													</td>
 													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(parseFloat(token.dexData.priceUsd), 10, true) : formatCurrency(token.price, 10, true)}</td>
 													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{formatCurrency(token.liquidity || 0)}</td>
 													<td className={`${styles.cell} ${styles.regularColumn} ${styles.metricsGroup}`}>{token.dexData ? formatCurrency(token.dexData.volume.h24) : token.volume ? formatCurrency(token.volume) : "-"}</td>
@@ -731,27 +1224,27 @@ const TokenFeed: React.FC = () => {
 												</div>
 											</td>
 										</tr>
-										{(expandedTokenId === token.id || closingTokenId === token.id) && (
-											<tr className={`${styles.expandedRow}`}>
+										{expandedTokenId === token.id && (
+											<tr className={styles.expandedRow}>
 												<td colSpan={isMobile ? 3 : 9} className={styles.expandedCell}>
-													<div className={`${styles.expandedContent} ${closingTokenId === token.id ? styles.closing : ""}`}>
-														<div className={`${styles.expandedModules} ${closingTokenId === token.id ? styles.closing : ""}`}>
+													<div className={styles.expandedContent}>
+														<div className={styles.expandedModules}>
 															<div className={styles.moduleRow}>
-																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<div className={styles.module}>
 																	<TradingView token={token} theme={document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"} />
 																</div>
-																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<div className={styles.module}>
 																	<CallerFeed token={token} />
 																</div>
-																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<div className={styles.module}>
 																	<TradeModule />
 																</div>
 															</div>
 															<div className={styles.moduleRow}>
-																<div className={`${styles.module} ${styles.wideModule} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<div className={`${styles.module} ${styles.wideModule}`}>
 																	<TwitterSentiment contractAddress={token.id} />
 																</div>
-																<div className={`${styles.module} ${closingTokenId === token.id ? styles.closing : ""}`}>
+																<div className={styles.module}>
 																	<TelegramSentiment contractAddress={token.id} />
 																</div>
 															</div>
@@ -764,10 +1257,9 @@ const TokenFeed: React.FC = () => {
 								))}
 							</tbody>
 						</table>
-						{/* Loading indicator and intersection observer target */}
 						{hasMore && (
 							<div ref={observerTarget} className={styles.loadingTrigger}>
-								{isLoadingMore ? (
+								{isLoading ? (
 									<div className={styles.loadingMore}>
 										<div className={styles.loadingSpinner}></div>
 										<p>Loading more tokens...</p>
