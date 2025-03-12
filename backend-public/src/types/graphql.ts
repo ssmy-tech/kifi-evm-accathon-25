@@ -41,6 +41,12 @@ export type Call = {
   messages: Array<Message>;
 };
 
+/** Supported blockchain networks */
+export type Chain =
+  | 'BASE'
+  | 'MONAD'
+  | 'SOLANA';
+
 export type ChatWithCalls = {
   calls: Array<Call>;
   chat: TelegramChat;
@@ -53,6 +59,10 @@ export type ChatsResponse = {
 export type GetCallsInput = {
   address?: InputMaybe<Scalars['String']['input']>;
   chain?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type GetTradesInput = {
+  chain?: InputMaybe<Chain>;
 };
 
 export type KeyTopic = {
@@ -114,6 +124,7 @@ export type Query = {
   getTwitterContractAnalytics: TwitterAnalyticsResponse;
   getUserSavedChats: ChatsResponse;
   getUserSettings: UserSettings;
+  getUserTrades: TradesResponse;
   user: Maybe<User>;
   whoAmI: Scalars['String']['output'];
 };
@@ -141,6 +152,11 @@ export type QueryGetTelegramContractAnalyticsArgs = {
 
 export type QueryGetTwitterContractAnalyticsArgs = {
   input: TwitterContractAnalyticsInput;
+};
+
+
+export type QueryGetUserTradesArgs = {
+  input?: InputMaybe<GetTradesInput>;
 };
 
 export type SaveChatsInput = {
@@ -183,6 +199,16 @@ export type TokenCalls = {
 
 export type TokenCallsResponse = {
   tokenCalls: Array<TokenCalls>;
+};
+
+export type Trade = {
+  amount: Scalars['String']['output'];
+  entryTxHash: Maybe<Scalars['String']['output']>;
+  tokenAddress: Scalars['String']['output'];
+};
+
+export type TradesResponse = {
+  trades: Array<Trade>;
 };
 
 export type Tweet = {
@@ -314,11 +340,13 @@ export type ResolversTypes = ResolversObject<{
   AuthPayload: ResolverTypeWrapper<AuthPayload>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   Call: ResolverTypeWrapper<Call>;
+  Chain: Chain;
   ChatWithCalls: ResolverTypeWrapper<ChatWithCalls>;
   ChatsResponse: ResolverTypeWrapper<ChatsResponse>;
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   GetCallsInput: GetCallsInput;
+  GetTradesInput: GetTradesInput;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   KeyTopic: ResolverTypeWrapper<KeyTopic>;
   Message: ResolverTypeWrapper<Message>;
@@ -334,6 +362,8 @@ export type ResolversTypes = ResolversObject<{
   TelegramContractAnalyticsInput: TelegramContractAnalyticsInput;
   TokenCalls: ResolverTypeWrapper<TokenCalls>;
   TokenCallsResponse: ResolverTypeWrapper<TokenCallsResponse>;
+  Trade: ResolverTypeWrapper<Trade>;
+  TradesResponse: ResolverTypeWrapper<TradesResponse>;
   Tweet: ResolverTypeWrapper<Tweet>;
   TweetEngagement: ResolverTypeWrapper<TweetEngagement>;
   TwitterAnalyticsResponse: ResolverTypeWrapper<TwitterAnalyticsResponse>;
@@ -355,6 +385,7 @@ export type ResolversParentTypes = ResolversObject<{
   DateTime: Scalars['DateTime']['output'];
   Float: Scalars['Float']['output'];
   GetCallsInput: GetCallsInput;
+  GetTradesInput: GetTradesInput;
   Int: Scalars['Int']['output'];
   KeyTopic: KeyTopic;
   Message: Message;
@@ -369,6 +400,8 @@ export type ResolversParentTypes = ResolversObject<{
   TelegramContractAnalyticsInput: TelegramContractAnalyticsInput;
   TokenCalls: TokenCalls;
   TokenCallsResponse: TokenCallsResponse;
+  Trade: Trade;
+  TradesResponse: TradesResponse;
   Tweet: Tweet;
   TweetEngagement: TweetEngagement;
   TwitterAnalyticsResponse: TwitterAnalyticsResponse;
@@ -461,6 +494,7 @@ export type QueryResolvers<ContextType = Context, ParentType extends ResolversPa
   getTwitterContractAnalytics?: Resolver<ResolversTypes['TwitterAnalyticsResponse'], ParentType, ContextType, RequireFields<QueryGetTwitterContractAnalyticsArgs, 'input'>>;
   getUserSavedChats?: Resolver<ResolversTypes['ChatsResponse'], ParentType, ContextType>;
   getUserSettings?: Resolver<ResolversTypes['UserSettings'], ParentType, ContextType>;
+  getUserTrades?: Resolver<ResolversTypes['TradesResponse'], ParentType, ContextType, Partial<QueryGetUserTradesArgs>>;
   user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
   whoAmI?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 }>;
@@ -501,6 +535,18 @@ export type TokenCallsResolvers<ContextType = Context, ParentType extends Resolv
 
 export type TokenCallsResponseResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TokenCallsResponse'] = ResolversParentTypes['TokenCallsResponse']> = ResolversObject<{
   tokenCalls?: Resolver<Array<ResolversTypes['TokenCalls']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type TradeResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Trade'] = ResolversParentTypes['Trade']> = ResolversObject<{
+  amount?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  entryTxHash?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  tokenAddress?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type TradesResponseResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TradesResponse'] = ResolversParentTypes['TradesResponse']> = ResolversObject<{
+  trades?: Resolver<Array<ResolversTypes['Trade']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -567,6 +613,8 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   TelegramChat?: TelegramChatResolvers<ContextType>;
   TokenCalls?: TokenCallsResolvers<ContextType>;
   TokenCallsResponse?: TokenCallsResponseResolvers<ContextType>;
+  Trade?: TradeResolvers<ContextType>;
+  TradesResponse?: TradesResponseResolvers<ContextType>;
   Tweet?: TweetResolvers<ContextType>;
   TweetEngagement?: TweetEngagementResolvers<ContextType>;
   TwitterAnalyticsResponse?: TwitterAnalyticsResponseResolvers<ContextType>;

@@ -1,4 +1,4 @@
-import { Field, ObjectType, registerEnumType, Float } from '@nestjs/graphql';
+import { Field, ObjectType, registerEnumType, Float, InputType } from '@nestjs/graphql';
 import { Chain } from '@prisma/client';
 
 // Register the enums with GraphQL
@@ -47,4 +47,10 @@ export class Trade {
 export class TradesResponse {
   @Field(() => [Trade])
   trades: Trade[];
+}
+
+@InputType()
+export class GetTradesInput {
+  @Field(() => Chain, { nullable: true })
+  chain?: Chain;
 } 

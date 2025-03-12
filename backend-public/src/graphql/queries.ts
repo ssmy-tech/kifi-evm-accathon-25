@@ -205,8 +205,8 @@ export const GET_PUBLIC_CALLS = gql`
 `;
 
 export const GET_USER_TRADES = gql`
-  query GetUserTrades($chain: Chain) {
-    getUserTrades(chain: $chain) {
+  query GetUserTrades($input: GetTradesInput) {
+    getUserTrades(input: $input) {
       trades {
         tokenAddress
         entryTxHash

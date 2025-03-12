@@ -1,9 +1,8 @@
 import { Resolver, Query, Args, Context } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { TradesService } from './trades.service';
-import { TradesResponse } from './dto/trades.types';
+import { TradesResponse, GetTradesInput } from './dto/trades.types';
 import { PrivyAuthGuard } from '../auth/privy-auth/privy-auth.guard';
-import { Chain } from '@prisma/client';
 
 @Resolver()
 export class TradesResolver {
@@ -13,10 +12,10 @@ export class TradesResolver {
   @UseGuards(PrivyAuthGuard)
   async getUserTrades(
     @Context() context: any,
-    @Args('chain', { nullable: true }) chain?: Chain,
+    @Args('input', { nullable: true }) input?: GetTradesInput,
   ): Promise<TradesResponse> {
     const privyId = context.req?.user?.claims?.userId;
     console.log('privyUserId (get trades):', privyId);
-    return this.tradesService.getUserTrades(privyId, chain);
+    return this.tradesService.getUserTrades(privyId, input?.chain);
   }
 } 
