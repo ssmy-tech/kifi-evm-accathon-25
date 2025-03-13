@@ -10,7 +10,7 @@ interface FeedFilterContextType {
 const FeedFilterContext = createContext<FeedFilterContextType | undefined>(undefined);
 
 export function FeedFilterProvider({ children }: { children: ReactNode }) {
-	const [filterType, setFilterType] = useState<FeedFilterType>("saved");
+	const [filterType, setFilterType] = useState<FeedFilterType>("public");
 
 	return <FeedFilterContext.Provider value={{ filterType, setFilterType }}>{children}</FeedFilterContext.Provider>;
 }

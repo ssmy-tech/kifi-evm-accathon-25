@@ -525,8 +525,7 @@ td.messageCell {
 
 @media (min-width: 2000px) {
 	.title {
-		font-size: 1.75rem;
-		margin: 1.5rem;
+		font-size: 1.5rem;
 	}
 
 	.table {

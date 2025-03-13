@@ -141,7 +141,7 @@ export const TelegramSetup: React.FC<TelegramSetupProps> = ({ onSetupComplete, i
 							apiSecret?.getTelegramApiSecret?.apiSecret && (
 								<div className={styles.apiSecretSection}>
 									<p className={styles.apiSecretLabel}>Required Environment Variable:</p>
-									<code className={styles.apiSecret}>TELEGRAM_API_SECRET={apiSecret.getTelegramApiSecret.apiSecret}</code>
+									<code className={styles.apiSecret}>JWT_SECRET={apiSecret.getTelegramApiSecret.apiSecret}</code>
 								</div>
 							)
 						)}

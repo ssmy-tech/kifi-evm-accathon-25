@@ -212,9 +212,11 @@ export function TransactionLogs() {
 
 		const interval = setInterval(() => {
 			refetch()
-				.then((result) => {
+				.then(async (result) => {
 					const newTrades = result.data?.getUserTrades?.trades;
 					if (!newTrades) return;
+
+					console.log("fetched trades", newTrades.length);
 
 					// Compare with master list instead of processed transactions
 					const existingHashes = new Set(masterTradeList.map((tx) => tx.entryTxHash));
@@ -225,22 +227,98 @@ export function TransactionLogs() {
 					if (uniqueNewTrades.length > 0) {
 						console.log("Found new trades:", uniqueNewTrades.length);
 
-						// Add new transaction hashes to animation set
-						setNewTransactionHashes((prev) => new Set([...prev, ...uniqueNewTrades.map((t) => t.entryTxHash || "").filter(Boolean)]));
-
 						// Update master list first
 						setMasterTradeList((prev) => [...uniqueNewTrades, ...prev]);
 
-						// Then process new trades for display
+						// Fetch token data for new trades before processing them
+						const uniqueTokens = [...new Set(uniqueNewTrades.map((t) => t.tokenAddress))];
+						const tokensToFetch = uniqueTokens.filter((token) => !tokenDataCache[token]);
+
+						// Wait for all token data to be fetched before processing trades
+						if (tokensToFetch.length > 0) {
+							setIsLoadingTokens(true);
+							const newTokenData: Record<string, TokenData> = {};
+
+							await Promise.all(
+								tokensToFetch.map(async (token) => {
+									try {
+										console.log("Fetching token data for:", token);
+										const response = await fetch(`https://api.kuru.io/api/v2/markets/search?limit=100&q=${token}`);
+										const data = await response.json();
+										console.log("API response for token", token, ":", data);
+
+										if (data?.success && data?.data?.data?.[0]) {
+											const tokenInfo = data.data.data[0].basetoken;
+											console.log("Token info found:", tokenInfo);
+
+											if (tokenInfo.ticker && tokenInfo.name) {
+												newTokenData[token] = {
+													name: tokenInfo.name,
+													ticker: "$" + tokenInfo.ticker,
+													imageUrl: tokenInfo.imageurl || "/assets/coin.png",
+													decimals: tokenInfo.decimal || 18,
+												};
+											}
+										} else {
+											// Fallback: Create basic token data if API fails
+											console.log("No data from API for token", token, "- using fallback");
+											newTokenData[token] = {
+												name: `Token ${token.slice(0, 6)}`,
+												ticker: `$${token.slice(0, 6)}`,
+												imageUrl: "/assets/coin.png",
+												decimals: 18,
+											};
+										}
+									} catch (error) {
+										console.error("Error fetching token data for", token, ":", error);
+										// Fallback: Create basic token data on error
+										newTokenData[token] = {
+											name: `Token ${token.slice(0, 6)}`,
+											ticker: `$${token.slice(0, 6)}`,
+											imageUrl: "/assets/coin.png",
+											decimals: 18,
+										};
+									}
+								})
+							);
+
+							console.log("Final newTokenData:", newTokenData);
+
+							// Update token cache with all new data at once
+							if (Object.keys(newTokenData).length > 0) {
+								setTokenDataCache((prev) => ({
+									...prev,
+									...newTokenData,
+								}));
+
+								// Wait for state update to complete
+								await new Promise((resolve) => setTimeout(resolve, 0));
+							}
+							setIsLoadingTokens(false);
+						}
+
+						// Now process trades with updated token data
 						const processedNewTrades = processTradesData(uniqueNewTrades);
 
+						// Add debug logging for processed trades
+						console.log("Processed new trades:", {
+							uniqueTradesCount: uniqueNewTrades.length,
+							processedTradesCount: processedNewTrades.length,
+							tokenDataCacheSize: Object.keys(tokenDataCache).length,
+							tradeTokens: uniqueNewTrades.map((t) => t.tokenAddress),
+							availableTokens: Object.keys(tokenDataCache),
+						});
+
 						if (processedNewTrades.length > 0) {
+							// Only add to animation set if trades will be displayed
+							setNewTransactionHashes((prev) => new Set([...prev, ...processedNewTrades.map((t) => t.txHash).filter(Boolean)]));
+
 							// Add new trades to the display state
 							setTransactions((prev) => [...processedNewTrades, ...prev]);
 
 							// Fetch timestamps for new trades
 							setIsLoadingTimestamps(true);
-							fetchTimestampsInQueue(
+							await fetchTimestampsInQueue(
 								processedNewTrades,
 								(txHash, timestamp) => {
 									setTransactions((prev) => prev.map((t) => (t.txHash === txHash ? { ...t, timestamp } : t)));
@@ -261,6 +339,7 @@ export function TransactionLogs() {
 
 		// Clean up interval on component unmount
 		return () => clearInterval(interval);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [refetch, masterTradeList, processTradesData]);
 
 	const formatTokenAmount = (amount: string, decimals: number = 18): string => {

@@ -168,7 +168,7 @@ const NavBar: React.FC = () => {
 						(authenticated ? (
 							<>
 								{showWalletInNav && delegatedWallets?.[0] && <WalletDisplay address={delegatedWallets[0].address} />}
-								{showBalanceInNav && walletBalance && <WalletBalance balance={walletBalance} />}
+								{showBalanceInNav && walletBalance !== null && <WalletBalance balance={walletBalance} />}
 								<Avatar walletAddress={delegatedWallets?.[0]?.address} balance={!showWalletInNav ? walletBalance ?? undefined : undefined} />
 							</>
 						) : (

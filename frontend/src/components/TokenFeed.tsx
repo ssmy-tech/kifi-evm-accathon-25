@@ -69,160 +69,8 @@ const TokenFeed: React.FC = () => {
 	// Add this before the useEffects
 	const initializationRef = useRef(false);
 
-	// Setup refresh intervals
-	const setupRefreshIntervals = useCallback(() => {
-		const refreshTokenCalls = async () => {
-			if (!isInitialLoadComplete.current) return;
-
-			try {
-				let data: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"] | undefined;
-				if (filterType === "saved") {
-					const result = await refetchCallsByToken();
-					data = result.data?.getCallsByToken?.tokenCalls;
-				} else {
-					const result = await refetchPublicCalls();
-					data = result.data?.getPublicCalls?.tokenCalls;
-				}
-
-				if (!data) return;
-
-				const filteredCalls = data.filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
-
-				await fetchTokenInfo(filteredCalls, true);
-			} catch (error) {
-				console.error("Error refreshing token calls:", error);
-			}
-		};
-
-		// Clear existing intervals
-		if (refreshIntervalRef.current) {
-			clearInterval(refreshIntervalRef.current);
-			refreshIntervalRef.current = null;
-		}
-
-		// Set up new interval if not already set
-		if (!refreshIntervalRef.current) {
-			refreshIntervalRef.current = setInterval(refreshTokenCalls, CALLS_REFRESH_INTERVAL);
-			// Only do initial refresh if we don't have any processed tokens
-			if (processedTokens.length === 0) {
-				refreshTokenCalls();
-			}
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [filterType, currentChain.name, refetchCallsByToken, refetchPublicCalls, processedTokens.length]);
-
-	// Replace the initial data loading effect
-	useEffect(() => {
-		const loadInitialData = async () => {
-			// Guard against multiple initializations
-			if (initializationRef.current || isInitialLoadComplete.current) return;
-			initializationRef.current = true;
-
-			setIsLoading(true);
-			console.log("🚀 Starting initial data load...");
-
-			let data: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"] | undefined;
-			if (filterType === "saved") {
-				data = callsByTokenData?.getCallsByToken?.tokenCalls;
-			} else {
-				data = publicCallsData?.getPublicCalls?.tokenCalls;
-			}
-
-			if (data) {
-				const tokenCalls = [...data].filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
-
-				await fetchTokenInfo(tokenCalls, false);
-				isInitialLoadComplete.current = true;
-				setIsLoading(false);
-				setupRefreshIntervals();
-				console.log("✅ Initial data load complete");
-			}
-		};
-
-		if (ready && authenticated && !callsByTokenLoading && !publicCallsLoading) {
-			loadInitialData();
-		}
-
-		return () => {
-			initializationRef.current = false;
-		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ready, authenticated, filterType, currentChain.name, callsByTokenData, publicCallsData, callsByTokenLoading, publicCallsLoading, setupRefreshIntervals]);
-
-	// Update processedTokensRef when processedTokens changes
-	useEffect(() => {
-		processedTokensRef.current = processedTokens;
-	}, [processedTokens]);
-
-	// Add this effect for photo fetching with improved handling
-	useEffect(() => {
-		if (!processedTokens.length) return;
-
-		// Get all unique chat IDs from processed tokens
-		const chatIds = new Set<string>();
-		processedTokens.forEach((token: TokenWithDexInfo) => {
-			token.callers?.forEach((caller) => {
-				if (caller.chat?.id && !photos[caller.chat.id]) {
-					// Only process if we don't have the photo
-					chatIds.add(caller.chat.id);
-				}
-			});
-		});
-
-		// Process each chat ID
-		chatIds.forEach((chatId) => {
-			// First try to get from localStorage
-			const cachedPhoto = getPhoto(chatId);
-
-			if (cachedPhoto && cachedPhoto !== "no-photo") {
-				// If found in cache, use it
-				setPhotos((prev) => ({
-					...prev,
-					[chatId]: cachedPhoto,
-				}));
-			} else if (!photos[chatId]) {
-				// Only fetch if we don't have the photo
-				// If not in cache, fetch from API
-				getChatPhoto({
-					variables: { chatId },
-					onCompleted: (data) => {
-						if (data.getChatPhoto) {
-							const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? DEFAULT_PHOTO : data.getChatPhoto;
-
-							// Update local state only if we don't have a photo for this chat
-							setPhotos((prev) => {
-								if (!prev[chatId]) {
-									// Only update if we don't have a photo
-									return {
-										...prev,
-										[chatId]: photoUrl,
-									};
-								}
-								return prev;
-							});
-
-							// Save to localStorage if it's not the default image
-							if (photoUrl !== DEFAULT_PHOTO) {
-								savePhoto(chatId, photoUrl);
-							}
-						}
-					},
-					onError: () => {
-						// Only set default photo if we don't have one
-						setPhotos((prev) => {
-							if (!prev[chatId]) {
-								return {
-									...prev,
-									[chatId]: DEFAULT_PHOTO,
-								};
-							}
-							return prev;
-						});
-					},
-				});
-			}
-		});
-	}, [processedTokens, getChatPhoto, photos]);
+	// Add this with the other state declarations at the top
+	const [, setPreviousRanks] = useState<Map<string, number>>(new Map());
 
 	// Function to merge callers without duplicates
 	const mergeCallers = useCallback((existingCallers: TokenWithDexInfo["callers"] = [], newCallers: TokenWithDexInfo["callers"] = []) => {
@@ -244,105 +92,6 @@ const TokenFeed: React.FC = () => {
 
 		return Array.from(uniqueCallers.values());
 	}, []);
-
-	// Effect to handle public calls data
-	useEffect(() => {
-		if (!publicCallsData?.getPublicCalls?.tokenCalls || !processedTokens.length || filterType === "saved") return;
-
-		const publicTokenCalls = publicCallsData.getPublicCalls.tokenCalls.filter((token) => token.chain === currentChain.name.toUpperCase());
-
-		setProcessedTokens((prevTokens) => {
-			const updatedTokens = prevTokens.map((token) => {
-				const publicToken = publicTokenCalls.find((t) => t.address === token.id);
-				if (!publicToken) return token;
-
-				// Convert public calls to the same format as private calls
-				const publicCallers = publicToken.chats.map((chatWithCalls) => ({
-					id: chatWithCalls.chat.id,
-					name: chatWithCalls.chat.name,
-					profileImageUrl: photos[chatWithCalls.chat.id] || DEFAULT_PHOTO,
-					timestamp: Date.now(),
-					callCount: chatWithCalls.chat.callCount,
-					winRate: 0,
-					chat: {
-						...chatWithCalls.chat,
-						type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
-						photoUrl: photos[chatWithCalls.chat.id] || DEFAULT_PHOTO,
-					},
-					messages: chatWithCalls.calls.flatMap((call) =>
-						call.messages.map((msg) => ({
-							id: msg.id,
-							createdAt: msg.createdAt ?? new Date().toISOString(),
-							text: msg.text ?? "",
-							fromId: msg.fromId ?? null,
-							messageType: msg.messageType,
-							reason: msg.reason ?? null,
-							tgMessageId: msg.tgMessageId,
-						}))
-					),
-				}));
-
-				// Get current caller IDs for comparison
-				const currentCallerIds = new Set(token.callers?.map((c) => c.chat?.id) || []);
-
-				// Merge existing and public callers
-				const mergedCallers = mergeCallers(token.callers, publicCallers);
-
-				// Only trigger animation if we have actual new callers
-				const hasNewCallers = publicCallers.some((caller) => caller.chat?.id && !currentCallerIds.has(caller.chat.id));
-
-				if (hasNewCallers) {
-					setCallerChangedIds((prev) => new Set([...prev, token.id]));
-					// Clear the animation after a delay
-					setTimeout(() => {
-						setCallerChangedIds((prev) => {
-							const next = new Set(prev);
-							next.delete(token.id);
-							return next;
-						});
-					}, 1500);
-				}
-
-				return {
-					...token,
-					callers: mergedCallers,
-				};
-			});
-
-			return updatedTokens;
-		});
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [publicCallsData, currentChain.name, photos, mergeCallers, filterType]);
-
-	// Chain change handler - modify to respect initialization
-	useEffect(() => {
-		if (!ready || !authenticated) return;
-
-		setIsLoading(true);
-		isInitialLoadComplete.current = false;
-		initializationRef.current = false;
-
-		// Store ref values in variables inside the effect
-		const refreshInterval = refreshIntervalRef.current;
-		const dexRefreshInterval = dexRefreshIntervalRef.current;
-
-		// Clear existing intervals
-		if (refreshInterval) clearInterval(refreshInterval);
-		if (dexRefreshInterval) clearInterval(dexRefreshInterval);
-
-		// Reset states
-		setProcessedTokens([]);
-		setSortedTokens([]);
-		setPage(1);
-		setHasMore(true);
-		setNewTokenIds(new Set());
-		setCallerChangedIds(new Set());
-
-		return () => {
-			if (refreshInterval) clearInterval(refreshInterval);
-			if (dexRefreshInterval) clearInterval(dexRefreshInterval);
-		};
-	}, [currentChain, ready, authenticated]);
 
 	// Function to fetch and process token data
 	const fetchTokenInfo = useCallback(
@@ -624,14 +373,7 @@ const TokenFeed: React.FC = () => {
 							const existingToken = uniqueTokens.get(newCall.address);
 
 							if (existingToken) {
-								// Update caller data for existing token
-								const currentCallerCount = existingToken.callers?.length || 0;
-								const newCallerCount = newCall.chats.length;
-
-								if (currentCallerCount !== newCallerCount) {
-									setCallerChangedIds((prev) => new Set([...prev, newCall.address]));
-								}
-
+								// Remove the caller change animation since we're using it for rank improvements now
 								uniqueTokens.set(newCall.address, {
 									...existingToken,
 									callers: newCall.chats.map((chat) => ({
@@ -709,6 +451,276 @@ const TokenFeed: React.FC = () => {
 		[currentChain, page]
 	);
 
+	// Setup refresh intervals
+	const setupRefreshIntervals = useCallback(() => {
+		const refreshTokenCalls = async () => {
+			if (!isInitialLoadComplete.current) return;
+
+			try {
+				console.log("🔄 Refreshing token calls...");
+				let data: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"] | undefined;
+
+				if (filterType === "saved") {
+					const result = await refetchCallsByToken();
+					data = result.data?.getCallsByToken?.tokenCalls;
+				} else {
+					const result = await refetchPublicCalls();
+					data = result.data?.getPublicCalls?.tokenCalls;
+				}
+
+				if (!data) {
+					console.log("❌ No data received from refresh");
+					return;
+				}
+
+				const filteredCalls = data.filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
+
+				console.log(`📊 Refreshing ${filteredCalls.length} tokens`);
+				await fetchTokenInfo(filteredCalls, true);
+				console.log("✅ Token refresh complete");
+			} catch (error) {
+				console.error("Error refreshing token calls:", error);
+			}
+		};
+
+		// Clear existing intervals
+		if (refreshIntervalRef.current) {
+			clearInterval(refreshIntervalRef.current);
+			refreshIntervalRef.current = null;
+		}
+		if (dexRefreshIntervalRef.current) {
+			clearInterval(dexRefreshIntervalRef.current);
+			dexRefreshIntervalRef.current = null;
+		}
+
+		// Set up new interval
+		refreshIntervalRef.current = setInterval(refreshTokenCalls, CALLS_REFRESH_INTERVAL);
+
+		// Perform initial refresh
+		refreshTokenCalls();
+
+		return () => {
+			if (refreshIntervalRef.current) {
+				clearInterval(refreshIntervalRef.current);
+				refreshIntervalRef.current = null;
+			}
+			if (dexRefreshIntervalRef.current) {
+				clearInterval(dexRefreshIntervalRef.current);
+				dexRefreshIntervalRef.current = null;
+			}
+		};
+	}, [filterType, currentChain.name, refetchCallsByToken, refetchPublicCalls, fetchTokenInfo]);
+
+	// Replace the initial data loading effect
+	useEffect(() => {
+		const loadInitialData = async () => {
+			// Reset initialization flags when filter type changes
+			if (isInitialLoadComplete.current) {
+				initializationRef.current = false;
+				isInitialLoadComplete.current = false;
+			}
+
+			// Guard against multiple initializations in the same filter type
+			if (initializationRef.current) return;
+			initializationRef.current = true;
+
+			setIsLoading(true);
+			console.log("🚀 Starting initial data load...");
+
+			let data: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"] | undefined;
+			if (filterType === "saved") {
+				data = callsByTokenData?.getCallsByToken?.tokenCalls;
+			} else {
+				data = publicCallsData?.getPublicCalls?.tokenCalls;
+			}
+
+			if (data) {
+				const tokenCalls = [...data].filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
+
+				// Reset processed tokens when filter type changes
+				setProcessedTokens([]);
+				setSortedTokens([]);
+
+				await fetchTokenInfo(tokenCalls, false);
+				isInitialLoadComplete.current = true;
+				setIsLoading(false);
+				setupRefreshIntervals();
+				console.log("✅ Initial data load complete");
+			}
+		};
+
+		if (ready && authenticated && !callsByTokenLoading && !publicCallsLoading) {
+			loadInitialData();
+		}
+
+		return () => {
+			initializationRef.current = false;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ready, authenticated, filterType, currentChain.name, callsByTokenData, publicCallsData, callsByTokenLoading, publicCallsLoading, setupRefreshIntervals]);
+
+	// Update processedTokensRef when processedTokens changes
+	useEffect(() => {
+		processedTokensRef.current = processedTokens;
+	}, [processedTokens]);
+
+	// Add this effect for photo fetching with improved handling
+	useEffect(() => {
+		if (!processedTokens.length) return;
+
+		// Get all unique chat IDs from processed tokens
+		const chatIds = new Set<string>();
+		processedTokens.forEach((token: TokenWithDexInfo) => {
+			token.callers?.forEach((caller) => {
+				if (caller.chat?.id && !photos[caller.chat.id]) {
+					// Only process if we don't have the photo
+					chatIds.add(caller.chat.id);
+				}
+			});
+		});
+
+		// Process each chat ID
+		chatIds.forEach((chatId) => {
+			// First try to get from localStorage
+			const cachedPhoto = getPhoto(chatId);
+
+			if (cachedPhoto && cachedPhoto !== "no-photo") {
+				// If found in cache, use it
+				setPhotos((prev) => ({
+					...prev,
+					[chatId]: cachedPhoto,
+				}));
+			} else if (!photos[chatId]) {
+				// Only fetch if we don't have the photo
+				// If not in cache, fetch from API
+				getChatPhoto({
+					variables: { chatId },
+					onCompleted: (data) => {
+						if (data.getChatPhoto) {
+							const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? DEFAULT_PHOTO : data.getChatPhoto;
+
+							// Update local state only if we don't have a photo for this chat
+							setPhotos((prev) => {
+								if (!prev[chatId]) {
+									// Only update if we don't have a photo
+									return {
+										...prev,
+										[chatId]: photoUrl,
+									};
+								}
+								return prev;
+							});
+
+							// Save to localStorage if it's not the default image
+							if (photoUrl !== DEFAULT_PHOTO) {
+								savePhoto(chatId, photoUrl);
+							}
+						}
+					},
+					onError: () => {
+						// Only set default photo if we don't have one
+						setPhotos((prev) => {
+							if (!prev[chatId]) {
+								return {
+									...prev,
+									[chatId]: DEFAULT_PHOTO,
+								};
+							}
+							return prev;
+						});
+					},
+				});
+			}
+		});
+	}, [processedTokens, getChatPhoto, photos]);
+
+	// Effect to handle public calls data
+	useEffect(() => {
+		if (!publicCallsData?.getPublicCalls?.tokenCalls || !processedTokens.length || filterType === "saved") return;
+
+		const publicTokenCalls = publicCallsData.getPublicCalls.tokenCalls.filter((token) => token.chain === currentChain.name.toUpperCase());
+
+		setProcessedTokens((prevTokens) => {
+			const updatedTokens = prevTokens.map((token) => {
+				const publicToken = publicTokenCalls.find((t) => t.address === token.id);
+				if (!publicToken) return token;
+
+				// Convert public calls to the same format as private calls
+				const publicCallers = publicToken.chats.map((chatWithCalls) => ({
+					id: chatWithCalls.chat.id,
+					name: chatWithCalls.chat.name,
+					profileImageUrl: photos[chatWithCalls.chat.id] || DEFAULT_PHOTO,
+					timestamp: Date.now(),
+					callCount: chatWithCalls.chat.callCount,
+					winRate: 0,
+					chat: {
+						...chatWithCalls.chat,
+						type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
+						photoUrl: photos[chatWithCalls.chat.id] || DEFAULT_PHOTO,
+					},
+					messages: chatWithCalls.calls.flatMap((call) =>
+						call.messages.map((msg) => ({
+							id: msg.id,
+							createdAt: msg.createdAt ?? new Date().toISOString(),
+							text: msg.text ?? "",
+							fromId: msg.fromId ?? null,
+							messageType: msg.messageType,
+							reason: msg.reason ?? null,
+							tgMessageId: msg.tgMessageId,
+						}))
+					),
+				}));
+
+				// Merge existing and public callers
+				const mergedCallers = mergeCallers(token.callers, publicCallers);
+
+				return {
+					...token,
+					callers: mergedCallers,
+				};
+			});
+
+			return updatedTokens;
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [publicCallsData, currentChain.name, photos, mergeCallers, filterType]);
+
+	// Chain change handler - modify to respect initialization
+	useEffect(() => {
+		if (!ready || !authenticated) return;
+
+		const resetAndReload = () => {
+			setIsLoading(true);
+			isInitialLoadComplete.current = false;
+			initializationRef.current = false;
+
+			// Store ref values in variables inside the effect
+			const refreshInterval = refreshIntervalRef.current;
+			const dexRefreshInterval = dexRefreshIntervalRef.current;
+
+			// Clear existing intervals
+			if (refreshInterval) clearInterval(refreshInterval);
+			if (dexRefreshInterval) clearInterval(dexRefreshInterval);
+
+			// Reset states
+			setProcessedTokens([]);
+			setSortedTokens([]);
+			setPage(1);
+			setHasMore(true);
+			setNewTokenIds(new Set());
+			setCallerChangedIds(new Set());
+		};
+
+		resetAndReload();
+
+		return () => {
+			const refreshInterval = refreshIntervalRef.current;
+			const dexRefreshInterval = dexRefreshIntervalRef.current;
+			if (refreshInterval) clearInterval(refreshInterval);
+			if (dexRefreshInterval) clearInterval(dexRefreshInterval);
+		};
+	}, [currentChain, filterType, ready, authenticated]);
+
 	// Effect to handle expanded token state changes
 	useEffect(() => {
 		// No need to clear or restart intervals when expanding/collapsing tokens
@@ -757,10 +769,14 @@ const TokenFeed: React.FC = () => {
 		};
 	}, [hasMore, isLoading, isLoadingCooldown]);
 
-	// Update the useEffect for sorting tokens to track rank and caller changes
+	// Update the useEffect for sorting tokens to track rank changes
 	useEffect(() => {
 		if (processedTokens.length > 0) {
-			const sortedTokens = [...processedTokens].sort((a, b) => {
+			// Store current ranks before sorting
+			const currentRanks = new Map(sortedTokens.map((token, index) => [token.id, index + 1]));
+			const currentCallerCounts = new Map(sortedTokens.map((token) => [token.id, token.callers?.length || 0]));
+
+			const newSortedTokens = [...processedTokens].sort((a, b) => {
 				let comparison = 0;
 
 				switch (sortField) {
@@ -801,9 +817,58 @@ const TokenFeed: React.FC = () => {
 				return sortDirection === "asc" ? comparison : -comparison;
 			});
 
-			setSortedTokens(sortedTokens);
+			// Compare new ranks with previous ranks and trigger animations
+			const newRanks = new Map(newSortedTokens.map((token, index) => [token.id, index + 1]));
+
+			// Clear existing animations
+			setCallerChangedIds(new Set());
+
+			// Only trigger animations for tokens that moved up in rank AND had an increase in caller count
+			newSortedTokens.forEach((token) => {
+				const previousRank = currentRanks.get(token.id) || Number.MAX_SAFE_INTEGER;
+				const newRank = newRanks.get(token.id) || 0;
+				const previousCallerCount = currentCallerCounts.get(token.id) || 0;
+				const newCallerCount = token.callers?.length || 0;
+
+				// Only animate if:
+				// 1. The token moved up in rank
+				// 2. The token's caller count increased
+				// 3. We're sorting by callers
+				if (newRank < previousRank && newCallerCount > previousCallerCount && sortField === "callers") {
+					setCallerChangedIds((prev) => new Set([...prev, token.id]));
+					// Clear the animation after a delay
+					setTimeout(() => {
+						setCallerChangedIds((prev) => {
+							const next = new Set(prev);
+							next.delete(token.id);
+							return next;
+						});
+					}, 1500);
+				}
+			});
+
+			setPreviousRanks(currentRanks);
+			setSortedTokens(newSortedTokens);
 		}
 	}, [sortField, sortDirection, processedTokens]);
+
+	// Cleanup effect for intervals when component unmounts
+	useEffect(() => {
+		return () => {
+			// Clear all intervals on unmount
+			if (refreshIntervalRef.current) {
+				clearInterval(refreshIntervalRef.current);
+				refreshIntervalRef.current = null;
+			}
+			if (dexRefreshIntervalRef.current) {
+				clearInterval(dexRefreshIntervalRef.current);
+				dexRefreshIntervalRef.current = null;
+			}
+			// Clear any pending animation timeouts
+			setCallerChangedIds(new Set());
+			setNewTokenIds(new Set());
+		};
+	}, []);
 
 	const handleSort = (field: SortField) => {
 		// Clear all change indicators when sorting
@@ -868,6 +933,17 @@ const TokenFeed: React.FC = () => {
 	return (
 		<div className={styles.container}>
 			<div className={styles.tableContainer}>
+				{filterType === "saved" && !isLoading && !callsByTokenLoading && !publicCallsLoading && sortedTokens.length === 0 && (
+					<>
+						<BlurredPreviewTable />
+						<div className={styles.authOverlay}>
+							<div className={styles.authContent}>
+								<h2 className={styles.authTitle}>No Saved Token Calls</h2>
+								<p className={styles.authDescription}>Add your favorite Telegram channels and groups to start tracking token calls! Click top right to access Telegram Setup to get started.</p>
+							</div>
+						</div>
+					</>
+				)}
 				{(isLoading || callsByTokenLoading || publicCallsLoading) && !processedTokens.length && (
 					<div className={styles.initialLoading}>
 						<div className={styles.loadingSpinner}></div>

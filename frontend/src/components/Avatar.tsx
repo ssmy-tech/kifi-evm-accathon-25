@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import styles from "./Avatar.module.css";
 import Image from "next/image";
-import { Settings, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { FaTelegramPlane, FaSun, FaMoon } from "react-icons/fa";
 import { TelegramSetup } from "./telegram/TelegramSetup";
 import { useGetUserSavedChatsQuery } from "../generated/graphql";
@@ -140,10 +140,6 @@ const Avatar: React.FC<AvatarProps> = ({ walletAddress, balance }) => {
 							<button className={styles.actionButton} onClick={openTelegramModal}>
 								<FaTelegramPlane className={styles.actionIcon} />
 								<span>Setup Telegram</span>
-							</button>
-							<button className={styles.actionButton}>
-								<Settings className={styles.actionIcon} />
-								<span>Settings</span>
 							</button>
 							<button className={styles.actionButton} onClick={logout}>
 								<LogOut className={styles.actionIcon} />
