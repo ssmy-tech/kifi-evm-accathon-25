@@ -1,0 +1,47 @@
+.switcherContainer {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.3rem 0.4rem;
+	background-color: rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	border: 2px solid var(--cream);
+	margin: 0 1rem;
+}
+
+.switcherButton {
+	padding: 0.5rem 1rem;
+	border: none;
+	background: none;
+	color: var(--cream);
+	font-weight: 500;
+	cursor: pointer;
+	border-radius: 6px;
+	transition: all 0.2s ease;
+	font-size: 0.9rem;
+}
+
+.switcherButton:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.switcherButton.active {
+	background-color: var(--tint);
+	color: var(--forest);
+}
+
+@media (max-width: 768px) {
+	.switcherContainer {
+		margin: 0 0.5rem;
+	}
+
+	.switcherButton {
+		font-size: 0.85rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.switcherContainer {
+		padding: 0.3rem 0.5rem;
+	}
+}

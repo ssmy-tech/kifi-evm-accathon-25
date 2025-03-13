@@ -23,14 +23,14 @@ interface SortConfig {
 const timestampCache = new Map<string, Date>();
 const failedTimestampFetches = new Set<string>();
 
-const ALCHEMY_URL = "https://monad-testnet.g.alchemy.com/v2/PrY4uuc2p07xAobPjrxREtjUkFYCQjMw";
+const ALCHEMY_URL = "https://monad-testnet.g.alchemy.com/v2/" + process.env.NEXT_PUBLIC_ALCHEMY_KEY;
 const DELAY_BETWEEN_CALLS = 200;
 const MAX_RETRIES = 3;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Add new function to fetch transaction timestamp with queue
-async function fetchTimestampsInQueue(trades: Transaction[], chainName: string, onUpdate: (txHash: string, timestamp: Date) => void, onStatusUpdate: (txHash: string, status: TransactionStatus) => void) {
+async function fetchTimestampsInQueue(trades: Transaction[], onUpdate: (txHash: string, timestamp: Date) => void, onStatusUpdate: (txHash: string, status: TransactionStatus) => void) {
 	// First, try to fetch timestamps for transactions that failed before
 	const retryTrades = trades.filter((trade) => failedTimestampFetches.has(trade.txHash));
 	for (const trade of retryTrades) {
@@ -144,31 +144,11 @@ export function TransactionLogs() {
 	const [transactionsWithTimestamp, setTransactions] = useState<Transaction[]>([]);
 	const [isInitialLoad, setIsInitialLoad] = useState(true);
 	const [isLoadingTimestamps, setIsLoadingTimestamps] = useState(false);
+	const [hasInitialFetch, setHasInitialFetch] = useState(false);
+	const [masterTradeList, setMasterTradeList] = useState<Trade[]>([]);
+	const [newTransactionHashes, setNewTransactionHashes] = useState<Set<string>>(new Set());
 
-	const { data, loading, error } = useGetUserTradesQuery();
-
-	const formatTokenAmount = (amount: string, decimals: number = 18): string => {
-		try {
-			const value = BigInt(amount);
-			const divisor = BigInt(10) ** BigInt(decimals);
-			const integerPart = value / divisor;
-			const fractionalPart = value % divisor;
-
-			// Convert fractional part to string and pad with leading zeros
-			let formattedFractional = fractionalPart.toString().padStart(decimals, "0");
-
-			// Always show 8 decimal places
-			formattedFractional = formattedFractional.slice(0, 8);
-
-			// If fractional part is shorter than 8 digits, pad with zeros
-			formattedFractional = formattedFractional.padEnd(8, "0");
-
-			return `${integerPart}.${formattedFractional}`;
-		} catch (error) {
-			console.error("Error formatting amount:", error);
-			return amount;
-		}
-	};
+	const { refetch, data, loading, error } = useGetUserTradesQuery();
 
 	const processTradesData = useCallback(
 		(trades: Trade[]) => {
@@ -194,83 +174,271 @@ export function TransactionLogs() {
 				})
 				.filter((trade): trade is Transaction => trade !== null);
 
-			setTransactions((prev) => {
-				// Merge new trades with existing timestamps
-				return processedTrades.map((newTrade) => {
-					const existingTrade = prev.find((t) => t.txHash === newTrade.txHash);
-					if (existingTrade?.timestamp) {
-						return { ...newTrade, timestamp: existingTrade.timestamp };
-					}
-					return newTrade;
-				});
-			});
-
 			return processedTrades;
 		},
 		[tokenDataCache]
 	);
+
+	// Add this effect to handle new transaction animations
+	useEffect(() => {
+		const timeouts = Array.from(newTransactionHashes).map((hash) =>
+			setTimeout(() => {
+				setNewTransactionHashes((prev) => {
+					const next = new Set(prev);
+					next.delete(hash);
+					return next;
+				});
+			}, 1500)
+		);
+
+		return () => {
+			timeouts.forEach((timeout) => clearTimeout(timeout));
+		};
+	}, [newTransactionHashes]);
+
+	// Modify the refetch effect to track new transactions
+	useEffect(() => {
+		// Only do initial fetch if we haven't done it yet
+		if (!hasInitialFetch) {
+			refetch().then((result) => {
+				const initialTrades = result.data?.getUserTrades?.trades;
+				if (initialTrades) {
+					console.log("Initial fetch result count:", initialTrades.length);
+					setMasterTradeList(initialTrades);
+				}
+				setHasInitialFetch(true);
+			});
+		}
+
+		const interval = setInterval(() => {
+			refetch()
+				.then(async (result) => {
+					const newTrades = result.data?.getUserTrades?.trades;
+					if (!newTrades) return;
+
+					console.log("fetched trades", newTrades.length);
+
+					// Compare with master list instead of processed transactions
+					const existingHashes = new Set(masterTradeList.map((tx) => tx.entryTxHash));
+
+					// Filter out trades that are already in master list
+					const uniqueNewTrades = newTrades.filter((trade) => trade.entryTxHash && !existingHashes.has(trade.entryTxHash));
+
+					if (uniqueNewTrades.length > 0) {
+						console.log("Found new trades:", uniqueNewTrades.length);
+
+						// Update master list first
+						setMasterTradeList((prev) => [...uniqueNewTrades, ...prev]);
+
+						// Fetch token data for new trades before processing them
+						const uniqueTokens = [...new Set(uniqueNewTrades.map((t) => t.tokenAddress))];
+						const tokensToFetch = uniqueTokens.filter((token) => !tokenDataCache[token]);
+
+						// Wait for all token data to be fetched before processing trades
+						if (tokensToFetch.length > 0) {
+							setIsLoadingTokens(true);
+							const newTokenData: Record<string, TokenData> = {};
+
+							await Promise.all(
+								tokensToFetch.map(async (token) => {
+									try {
+										console.log("Fetching token data for:", token);
+										const response = await fetch(`https://api.kuru.io/api/v2/markets/search?limit=100&q=${token}`);
+										const data = await response.json();
+										console.log("API response for token", token, ":", data);
+
+										if (data?.success && data?.data?.data?.[0]) {
+											const tokenInfo = data.data.data[0].basetoken;
+											console.log("Token info found:", tokenInfo);
+
+											if (tokenInfo.ticker && tokenInfo.name) {
+												newTokenData[token] = {
+													name: tokenInfo.name,
+													ticker: "$" + tokenInfo.ticker,
+													imageUrl: tokenInfo.imageurl || "/assets/coin.png",
+													decimals: tokenInfo.decimal || 18,
+												};
+											}
+										} else {
+											// Fallback: Create basic token data if API fails
+											console.log("No data from API for token", token, "- using fallback");
+											newTokenData[token] = {
+												name: `Token ${token.slice(0, 6)}`,
+												ticker: `$${token.slice(0, 6)}`,
+												imageUrl: "/assets/coin.png",
+												decimals: 18,
+											};
+										}
+									} catch (error) {
+										console.error("Error fetching token data for", token, ":", error);
+										// Fallback: Create basic token data on error
+										newTokenData[token] = {
+											name: `Token ${token.slice(0, 6)}`,
+											ticker: `$${token.slice(0, 6)}`,
+											imageUrl: "/assets/coin.png",
+											decimals: 18,
+										};
+									}
+								})
+							);
+
+							console.log("Final newTokenData:", newTokenData);
+
+							// Update token cache with all new data at once
+							if (Object.keys(newTokenData).length > 0) {
+								setTokenDataCache((prev) => ({
+									...prev,
+									...newTokenData,
+								}));
+
+								// Wait for state update to complete
+								await new Promise((resolve) => setTimeout(resolve, 0));
+							}
+							setIsLoadingTokens(false);
+						}
+
+						// Now process trades with updated token data
+						const processedNewTrades = processTradesData(uniqueNewTrades);
+
+						// Add debug logging for processed trades
+						console.log("Processed new trades:", {
+							uniqueTradesCount: uniqueNewTrades.length,
+							processedTradesCount: processedNewTrades.length,
+							tokenDataCacheSize: Object.keys(tokenDataCache).length,
+							tradeTokens: uniqueNewTrades.map((t) => t.tokenAddress),
+							availableTokens: Object.keys(tokenDataCache),
+						});
+
+						if (processedNewTrades.length > 0) {
+							// Only add to animation set if trades will be displayed
+							setNewTransactionHashes((prev) => new Set([...prev, ...processedNewTrades.map((t) => t.txHash).filter(Boolean)]));
+
+							// Add new trades to the display state
+							setTransactions((prev) => [...processedNewTrades, ...prev]);
+
+							// Fetch timestamps for new trades
+							setIsLoadingTimestamps(true);
+							await fetchTimestampsInQueue(
+								processedNewTrades,
+								(txHash, timestamp) => {
+									setTransactions((prev) => prev.map((t) => (t.txHash === txHash ? { ...t, timestamp } : t)));
+								},
+								(txHash, status) => {
+									setTransactions((prev) => prev.map((t) => (t.txHash === txHash ? { ...t, status } : t)));
+								}
+							).finally(() => {
+								setIsLoadingTimestamps(false);
+							});
+						}
+					}
+				})
+				.catch((error) => {
+					console.error("Refetch error:", error);
+				});
+		}, 5000);
+
+		// Clean up interval on component unmount
+		return () => clearInterval(interval);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [refetch, masterTradeList, processTradesData]);
+
+	const formatTokenAmount = (amount: string, decimals: number = 18): string => {
+		try {
+			const value = BigInt(amount);
+			const divisor = BigInt(10) ** BigInt(decimals);
+			const integerPart = value / divisor;
+			const fractionalPart = value % divisor;
+
+			// Convert fractional part to string and pad with leading zeros
+			let formattedFractional = fractionalPart.toString().padStart(decimals, "0");
+
+			// Always show 8 decimal places
+			formattedFractional = formattedFractional.slice(0, 8);
+
+			// If fractional part is shorter than 8 digits, pad with zeros
+			formattedFractional = formattedFractional.padEnd(8, "0");
+
+			return `${integerPart}.${formattedFractional}`;
+		} catch (error) {
+			console.error("Error formatting amount:", error);
+			return amount;
+		}
+	};
 
 	// Handle initial data processing and token fetching
 	useEffect(() => {
 		const trades = data?.getUserTrades?.trades;
 		if (!trades || !isInitialLoad) return;
 
+		// Update master list on initial load
+		setMasterTradeList(trades);
+
 		const processedTrades = processTradesData(trades);
+
+		// Set initial transactions but mark them as loading
+		setTransactions(processedTrades);
+		setIsLoadingTimestamps(true);
 
 		// Start fetching token data for trades that don't have it
 		const uniqueTokens = [...new Set(trades.map((t) => t.tokenAddress))];
 		const tokensToFetch = uniqueTokens.filter((token) => !tokenDataCache[token]);
 
-		if (tokensToFetch.length > 0) {
-			setIsLoadingTokens(true);
+		// Create a promise that resolves when token data is loaded
+		const tokenDataPromise =
+			tokensToFetch.length > 0
+				? Promise.all(
+						tokensToFetch.map(async (token) => {
+							try {
+								const response = await fetch(`https://api.kuru.io/api/v2/markets/search?limit=100&q=${token}`);
+								const data = await response.json();
 
-			Promise.all(
-				tokensToFetch.map(async (token) => {
-					try {
-						const response = await fetch(`https://api.kuru.io/api/v2/markets/search?limit=100&q=${token}`);
-						const data = await response.json();
-
-						if (data?.success && data?.data?.data?.[0]) {
-							const tokenInfo = data.data.data[0].basetoken;
-							if (tokenInfo.ticker && tokenInfo.name) {
-								const tokenData = {
-									name: tokenInfo.name,
-									ticker: "$" + tokenInfo.ticker,
-									imageUrl: tokenInfo.imageurl || "/assets/coin.png",
-									decimals: tokenInfo.decimal || 18,
-								};
-								setTokenDataCache((prev) => ({ ...prev, [token]: tokenData }));
+								if (data?.success && data?.data?.data?.[0]) {
+									const tokenInfo = data.data.data[0].basetoken;
+									if (tokenInfo.ticker && tokenInfo.name) {
+										const tokenData = {
+											name: tokenInfo.name,
+											ticker: "$" + tokenInfo.ticker,
+											imageUrl: tokenInfo.imageurl || "/assets/coin.png",
+											decimals: tokenInfo.decimal || 18,
+										};
+										setTokenDataCache((prev) => ({ ...prev, [token]: tokenData }));
+									}
+								}
+							} catch (error) {
+								console.error("Error fetching token data:", error);
 							}
-						}
-					} catch (error) {
-						console.error("Error fetching token data:", error);
-					}
-				})
-			).finally(() => {
-				setIsLoadingTokens(false);
-				setIsInitialLoad(false);
-			});
-		} else {
-			setIsInitialLoad(false);
-		}
+						})
+				  )
+				: Promise.resolve();
 
-		// Start fetching timestamps with queue
-		if (processedTrades.length > 0) {
-			setIsLoadingTimestamps(true);
-			fetchTimestampsInQueue(
-				processedTrades,
-				currentChain.name,
-				(txHash, timestamp) => {
-					setTransactions((prev) => prev.map((t) => (t.txHash === txHash ? { ...t, timestamp } : t)));
-				},
-				(txHash, status) => {
-					setTransactions((prev) => prev.map((t) => (t.txHash === txHash ? { ...t, status } : t)));
-				}
-			).finally(() => {
+		// After token data is loaded, fetch all timestamps
+		tokenDataPromise.then(() => {
+			// Re-process trades with updated token data
+			const updatedProcessedTrades = processTradesData(trades);
+			setTransactions(updatedProcessedTrades);
+
+			// Now fetch timestamps for all transactions
+			if (updatedProcessedTrades.length > 0) {
+				fetchTimestampsInQueue(
+					updatedProcessedTrades,
+					(txHash, timestamp) => {
+						setTransactions((prev) => prev.map((t) => (t.txHash === txHash ? { ...t, timestamp } : t)));
+					},
+					(txHash, status) => {
+						setTransactions((prev) => prev.map((t) => (t.txHash === txHash ? { ...t, status } : t)));
+					}
+				).finally(() => {
+					setIsLoadingTimestamps(false);
+					setIsInitialLoad(false);
+					setIsLoadingTokens(false);
+				});
+			} else {
 				setIsLoadingTimestamps(false);
-			});
-		}
-	}, [data, tokenDataCache, currentChain.name, processTradesData, isInitialLoad]);
+				setIsInitialLoad(false);
+				setIsLoadingTokens(false);
+			}
+		});
+	}, [data, tokenDataCache, processTradesData, isInitialLoad]);
 
 	// Add effect to retry failed timestamp fetches periodically
 	useEffect(() => {
@@ -282,7 +450,6 @@ export function TransactionLogs() {
 					setIsLoadingTimestamps(true);
 					fetchTimestampsInQueue(
 						tradesWithFailedTimestamps,
-						currentChain.name,
 						(txHash, timestamp) => {
 							setTransactions((prev) => prev.map((t) => (t.txHash === txHash ? { ...t, timestamp } : t)));
 						},
@@ -299,7 +466,7 @@ export function TransactionLogs() {
 
 			return () => clearInterval(retryInterval);
 		}
-	}, [isLoadingTimestamps, transactionsWithTimestamp, currentChain.name]);
+	}, [isLoadingTimestamps, transactionsWithTimestamp]);
 
 	// Only monad supported currently for CAA
 	if (currentChain.name.toUpperCase() !== "MONAD") {
@@ -321,7 +488,7 @@ export function TransactionLogs() {
 						<tbody>
 							<tr>
 								<td colSpan={7} className={styles.emptyRow}>
-									No transactions to display
+									No transactions found. Auto Alpha is currently on supported on Monad.
 								</td>
 							</tr>
 						</tbody>
@@ -345,6 +512,15 @@ export function TransactionLogs() {
 			<div className={styles.loadingContainer}>
 				<div className={styles.loadingSpinner} />
 				<div className={styles.loadingText}>Loading token data...</div>
+			</div>
+		);
+	}
+
+	if (isLoadingTimestamps && isInitialLoad) {
+		return (
+			<div className={styles.loadingContainer}>
+				<div className={styles.loadingSpinner} />
+				<div className={styles.loadingText}>Fetching transaction timestamps...</div>
 			</div>
 		);
 	}
@@ -433,7 +609,7 @@ export function TransactionLogs() {
 					</thead>
 					<tbody>
 						{sortedTransactions.map((tx) => (
-							<tr key={tx.txHash}>
+							<tr key={tx.txHash} className={newTransactionHashes.has(tx.txHash) ? styles.newTransaction : ""}>
 								<td className={styles.timeCell}>
 									<span className={`${styles.timestamp} ${showAbsoluteTime === tx.txHash ? styles.showAbsolute : ""}`} onClick={() => setShowAbsoluteTime(showAbsoluteTime === tx.txHash ? null : tx.txHash)}>
 										<span className={styles.relativeTime}>{formatTimeAgo(tx.timestamp)}</span>

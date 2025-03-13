@@ -234,11 +234,6 @@ export function GroupManager() {
 								</div>
 							</th>
 							<th>
-								<div onClick={() => handleSort("winRate")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
-									Win Rate {getSortIcon("winRate")}
-								</div>
-							</th>
-							<th>
 								<div onClick={() => handleSort("timestamp")} className={`${styles.sortableHeader} ${styles.centerHeader}`}>
 									Last Active {getSortIcon("timestamp")}
 								</div>
@@ -260,7 +255,6 @@ export function GroupManager() {
 									</div>
 								</td>
 								<td className={styles.centerCell}>{caller.callCount}</td>
-								<td className={styles.centerCell}>{caller.winRate}%</td>
 								<td className={styles.centerCell}>{new Date(caller.timestamp).toLocaleDateString()}</td>
 								<td className={styles.centerCell}>
 									<button className={`${styles.actionButton} ${pendingRemovals.includes(caller.id) ? styles.removeButton : ""}`} onClick={() => handleRemoveCaller(caller.id)}>

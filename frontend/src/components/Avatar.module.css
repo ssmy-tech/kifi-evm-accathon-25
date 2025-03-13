@@ -31,8 +31,8 @@
 }
 
 .modal {
-	position: absolute;
-	top: calc(100% + 10px);
+	position: fixed;
+	top: 60px;
 	right: 0;
 	width: 380px;
 	background-color: var(--forest);
@@ -45,6 +45,15 @@
 	transform-origin: top right;
 	max-height: calc(100vh - 100px);
 	overflow-y: auto;
+}
+
+.actionSection {
+	width: 100%;
+	gap: 1rem;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	justify-content: space-between;
 }
 
 @keyframes expandModal {
@@ -75,8 +84,9 @@
 
 .userTextInfo {
 	display: flex;
+	width: 100%;
 	flex-direction: column;
-	align-items: flex-start;
+	align-items: flex-end;
 }
 
 .modalAvatar {
@@ -286,6 +296,10 @@
 
 .walletSection {
 	width: 100%;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
 	margin-top: 1rem;
 }
 

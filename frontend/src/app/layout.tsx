@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
 import Providers from "./providers";
-import { ChainProvider } from "@/contexts/ChainContext";
 import { GoogleAnalytics } from "@next/third-parties/google";
 // import DebugTools from "@/components/DebugTools";
 
@@ -30,13 +29,11 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<body className={`${geistSans.variable} ${geistMono.variable}`}>
-				<ChainProvider>
-					<Providers>
-						<NavBar />
-						{children}
-						{/* <DebugTools /> */}
-					</Providers>
-				</ChainProvider>
+				<Providers>
+					<NavBar />
+					{children}
+					{/* <DebugTools /> */}
+				</Providers>
 			</body>
 			<GoogleAnalytics gaId="G-4N2MG32FXL" />
 		</html>

@@ -12,9 +12,9 @@
 }
 
 .title {
-	font-size: 1.25rem;
+	font-size: 1rem;
 	font-weight: 600;
-	margin: 1rem;
+	margin: 1rem 1rem 0rem 1rem;
 	color: var(--text-primary);
 	flex-shrink: 0;
 	display: flex;
@@ -123,6 +123,7 @@
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	min-width: 0;
+	font-size: inherit;
 }
 
 /* Left align name column header and cell */
@@ -168,7 +169,7 @@ td.nameColumn {
 }
 
 .timestampColumn {
-	width: 25%;
+	width: 20%;
 }
 
 .callColumn {
@@ -177,7 +178,6 @@ td.nameColumn {
 
 .mcapColumn {
 	width: 20%;
-	font-size: 0.875rem;
 	font-weight: 500;
 }
 
@@ -368,11 +368,10 @@ td.messageCell {
 
 	.title {
 		font-size: 1.15rem;
-		margin: 0.75rem;
 	}
 
 	.table {
-		font-size: 0.875rem;
+		font-size: 0.75rem;
 	}
 
 	.table th,
@@ -396,11 +395,11 @@ td.messageCell {
 	}
 
 	.nameColumn {
-		width: 25%;
+		width: 30%;
 	}
 
 	.timestampColumn {
-		width: 20%;
+		width: 15%;
 	}
 
 	.callColumn {
@@ -417,19 +416,18 @@ td.messageCell {
 	}
 
 	.table td,
-	td.mcapColumn,
-	.mcapColumn {
-		font-size: 0.875rem;
+	td.mcapColumn {
+		font-size: 0.75rem;
 	}
 }
 
 @media (max-width: 1900px) {
 	.nameColumn {
-		width: 30%;
+		width: 25%;
 	}
 
 	.timestampColumn {
-		width: 20%;
+		width: 25%;
 	}
 
 	.callColumn {
@@ -437,7 +435,7 @@ td.messageCell {
 	}
 
 	.mcapColumn {
-		width: 25%;
+		width: 20%;
 	}
 
 	.messageCell,
@@ -446,19 +444,25 @@ td.messageCell {
 	}
 }
 
-@media (min-width: 1200px) {
-	.title {
-		font-size: 1.5rem;
-	}
-
+@media (min-width: 769px) and (max-width: 1199px) {
 	.table {
-		font-size: 1rem;
+		font-size: 0.875rem;
 	}
 
 	.table td,
-	td.mcapColumn,
-	.mcapColumn {
-		font-size: 1rem;
+	td.mcapColumn {
+		font-size: 0.875rem;
+	}
+}
+
+@media (min-width: 1200px) and (max-width: 1599px) {
+	.table {
+		font-size: 0.925rem;
+	}
+
+	.table td,
+	td.mcapColumn {
+		font-size: 0.925rem;
 	}
 
 	.viewButton {
@@ -475,20 +479,18 @@ td.messageCell {
 	}
 }
 
-@media (min-width: 1600px) {
+@media (min-width: 1600px) and (max-width: 1999px) {
 	.title {
 		font-size: 1.5rem;
-		margin: 1.25rem;
 	}
 
 	.table {
-		font-size: 1.15rem;
+		font-size: 1rem;
 	}
 
 	.table td,
-	td.mcapColumn,
-	.mcapColumn {
-		font-size: 1.15rem;
+	td.mcapColumn {
+		font-size: 1rem;
 	}
 
 	.viewButton {
@@ -515,22 +517,24 @@ td.messageCell {
 	.timestamp {
 		font-size: 1.15rem;
 	}
+
+	.timestampColumn {
+		width: 18%;
+	}
 }
 
-@media (min-width: 1800px) {
+@media (min-width: 2000px) {
 	.title {
-		font-size: 1.75rem;
-		margin: 1.5rem;
+		font-size: 1.5rem;
 	}
 
 	.table {
-		font-size: 1.25rem;
+		font-size: 1.125rem;
 	}
 
 	.table td,
-	td.mcapColumn,
-	.mcapColumn {
-		font-size: 1.25rem;
+	td.mcapColumn {
+		font-size: 1.125rem;
 	}
 
 	.viewButton {
@@ -560,6 +564,10 @@ td.messageCell {
 
 	.callerRow {
 		height: 80px;
+	}
+
+	.timestampColumn {
+		width: 18%;
 	}
 }
 
@@ -649,4 +657,13 @@ td.messageCell {
 		opacity: 1;
 		transform: translateY(0);
 	}
+}
+
+/* Remove all individual font-size overrides */
+.timestamp,
+.mcapColumn,
+td.mcapColumn,
+.table td,
+.viewButton {
+	font-size: inherit;
 }

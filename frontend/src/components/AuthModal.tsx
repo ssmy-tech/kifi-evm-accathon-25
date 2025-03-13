@@ -17,7 +17,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 	const { ready, authenticated, login, user } = usePrivy();
 	const { delegateWallet } = useDelegatedActions();
 	const [updateUserSettings] = useUpdateUserSettingsMutation();
-	const { data: userSettings, loading: userSettingsLoading } = useGetUserSettingsQuery();
+	const { data: userSettings } = useGetUserSettingsQuery();
 	const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
 	const [showOnboarding, setShowOnboarding] = useState(false);
 	const [animatingStep, setAnimatingStep] = useState(false);
@@ -114,28 +114,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
 	// USER SETUP & TOKEN CHECK
 	useEffect(() => {
-		if (authenticated && user && isOpen && !userSettingsLoading) {
-			// Only show onboarding if groupCallThreshold is missing or invalid
-			const hasValidGroupThreshold = userSettings?.getUserSettings?.groupCallThreshold && userSettings.getUserSettings.groupCallThreshold >= 1;
+		if (authenticated && user && isOpen) {
+			const isDelegated = isWalletDelegated();
 
-			if (!hasValidGroupThreshold) {
-				console.log("User needs onboarding - missing group threshold setting");
+			if (!isDelegated) {
+				console.log("User needs onboarding - no delegated wallet");
 				setShowOnboarding(true);
-
-				// Determine starting step based on existing settings
-				const hasBuyAmount = userSettings?.getUserSettings?.buyAmount && userSettings.getUserSettings.buyAmount > 0;
-
-				// If user has some settings but missing group threshold, skip to preferences
-				if (hasBuyAmount || isWalletDelegated()) {
-					setOnboardingStep("preferences");
-				} else {
-					setOnboardingStep("welcome");
-				}
+				setOnboardingStep("welcome");
 			} else {
 				setShowOnboarding(false);
 			}
 		}
-	}, [authenticated, user, isOpen, userSettings, userSettingsLoading, isWalletDelegated]);
+	}, [authenticated, user, isOpen, isWalletDelegated]);
 
 	// Function to handle step transition with animation
 	const changeStep = (newStep: OnboardingStep) => {
@@ -249,8 +239,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 				);
 
 			case "delegate":
-				const walletToDelegate = user?.linkedAccounts.find((account) => account.type === "wallet" && account.walletClientType === "privy");
 				const isDelegated = isWalletDelegated();
+				const walletToDelegate = ready ? user?.linkedAccounts.find((account) => account.type === "wallet" && account.walletClientType === "privy") : undefined;
 
 				return (
 					<div className={styles.step}>
@@ -265,7 +255,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 						</div>
 						<div className={styles.delegateSection}>
 							<button className={styles.delegateButton} onClick={handleDelegation} disabled={!ready || !walletToDelegate || isDelegated || animatingStep}>
-								{isDelegated ? "Delegated Access Enabled ✓" : "Delegate Access"}
+								{isDelegated ? "Delegated Access Enabled ✓" : !ready ? "Loading..." : !walletToDelegate ? "No Wallet Available" : animatingStep ? "Please wait..." : "Delegate Access"}
 							</button>
 
 							<button className={styles.nextButton} onClick={() => changeStep("preferences")}>

@@ -4,17 +4,20 @@ import { useState, useRef, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import styles from "./Avatar.module.css";
 import Image from "next/image";
-import { Settings, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { FaTelegramPlane, FaSun, FaMoon } from "react-icons/fa";
 import { TelegramSetup } from "./telegram/TelegramSetup";
 import { useGetUserSavedChatsQuery } from "../generated/graphql";
 import { WalletDisplay } from "./WalletDisplay";
+import { WalletBalance } from "./WalletBalance";
+import FeedSwitcher from "./FeedSwitcher";
 
 interface AvatarProps {
 	walletAddress?: string;
+	balance?: number;
 }
 
-const Avatar: React.FC<AvatarProps> = ({ walletAddress }) => {
+const Avatar: React.FC<AvatarProps> = ({ walletAddress, balance }) => {
 	const { user, logout } = usePrivy();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
@@ -118,8 +121,12 @@ const Avatar: React.FC<AvatarProps> = ({ walletAddress }) => {
 								<div className={styles.userName}>{displayName}</div>
 								{user?.email && <div className={styles.userEmail}>{user.email.address}</div>}
 								{walletAddress && (
-									<div className={styles.walletSection}>
-										<WalletDisplay address={walletAddress} />
+									<div className={styles.actionSection}>
+										<div className={styles.walletSection}>
+											<WalletDisplay address={walletAddress} />
+											<WalletBalance balance={balance} />
+										</div>
+										{balance && <FeedSwitcher />}
 									</div>
 								)}
 							</div>
@@ -133,10 +140,6 @@ const Avatar: React.FC<AvatarProps> = ({ walletAddress }) => {
 							<button className={styles.actionButton} onClick={openTelegramModal}>
 								<FaTelegramPlane className={styles.actionIcon} />
 								<span>Setup Telegram</span>
-							</button>
-							<button className={styles.actionButton}>
-								<Settings className={styles.actionIcon} />
-								<span>Settings</span>
 							</button>
 							<button className={styles.actionButton} onClick={logout}>
 								<LogOut className={styles.actionIcon} />

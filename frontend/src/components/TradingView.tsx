@@ -5,7 +5,7 @@ import styles from "./TradingView.module.css";
 import { useChain } from "@/contexts/ChainContext";
 import { TokenWithDexInfo } from "@/types/token.types";
 
-type SupportedInterval = "1m" | "5m" | "15m" | "1h" | "1d";
+type SupportedInterval = "1m" | "5m" | "30m" | "1h" | "1d";
 
 // Utility function to convert UTC timestamp to PST
 function convertToPST(timestamp: number): number {
@@ -243,7 +243,7 @@ export function TradingView({ token, interval: initialInterval = "5m", theme = "
 	};
 
 	// Supported intervals
-	const supportedIntervals: SupportedInterval[] = ["1m", "5m", "15m", "1h", "1d"];
+	const supportedIntervals: SupportedInterval[] = ["1m", "5m", "30m", "1h", "1d"];
 
 	return (
 		<div className={styles.tradingViewWrapper}>

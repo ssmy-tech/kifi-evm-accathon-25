@@ -2,8 +2,8 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	height: 5rem;
-	padding: 0 2rem;
+	height: 4.5rem;
+	padding: 0 1.5rem;
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -55,7 +55,7 @@
 	text-decoration: none;
 	color: var(--cream);
 	font-weight: 600;
-	font-size: clamp(1rem, 1.5vw, 1.5rem);
+	font-size: clamp(1rem, 1vw, 1.1rem);
 	transition: color 0.3s ease;
 	position: relative;
 	padding: 0.5rem 0;
@@ -83,6 +83,7 @@
 .authContainer {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	gap: 1.2rem;
 	position: relative;
 	z-index: 1002;

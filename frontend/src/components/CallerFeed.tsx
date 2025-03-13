@@ -126,19 +126,54 @@ const CallerFeed = memo(
 					}
 
 					if (historicalData && Array.isArray(historicalData)) {
+						if (historicalData.length === 0) {
+							console.warn("No historical data points available");
+							return;
+						}
+
+						console.log("Historical data:", historicalData.slice(0, 3), "...", historicalData.length, "total points");
+
 						const callerData = callers.map((caller) => {
 							const callTimestamp = new Date(caller.messages[0]?.createdAt || Date.now()).getTime();
+							console.log("Processing caller:", caller.id, "timestamp:", new Date(callTimestamp).toISOString());
+
 							const closestDataPoint = historicalData.reduce((prev: MarketData, curr: MarketData) => {
-								return Math.abs(curr.time - callTimestamp) < Math.abs(prev.time - callTimestamp) ? curr : prev;
+								const prevDiff = Math.abs(prev.time - callTimestamp);
+								const currDiff = Math.abs(curr.time - callTimestamp);
+								return currDiff < prevDiff ? curr : prev;
+							}, historicalData[0]);
+
+							console.log("Found closest data point:", {
+								time: new Date(closestDataPoint.time).toISOString(),
+								close: closestDataPoint.close,
+								currentPrice: token.price,
 							});
 
+							// Ensure we're not dividing by zero
+							if (!token.price || token.price === 0) {
+								console.warn("Token price is zero or undefined");
+								return {
+									callerId: caller.id,
+									marketCap: 0,
+								};
+							}
+
 							const priceRatio = closestDataPoint.close / token.price;
+							const calculatedMarketCap = priceRatio * token.marketCap;
+
+							console.log("Calculated values:", {
+								priceRatio,
+								calculatedMarketCap,
+								tokenMarketCap: token.marketCap,
+							});
+
 							return {
 								callerId: caller.id,
-								marketCap: priceRatio * token.marketCap,
+								marketCap: calculatedMarketCap,
 							};
 						});
 
+						console.log("Final caller data:", callerData);
 						setCallerMarketData(callerData);
 					}
 				} catch (error) {

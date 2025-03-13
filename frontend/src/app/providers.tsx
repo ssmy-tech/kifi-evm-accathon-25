@@ -2,6 +2,8 @@
 
 import { PrivyProvider } from "@privy-io/react-auth";
 import ApolloProviderWrapper from "../backend/ApolloProvider";
+import { ChainProvider } from "@/contexts/ChainContext";
+import { FeedFilterProvider } from "@/contexts/FeedFilterContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
 	if (!process.env.NEXT_PUBLIC_PRIVY_ID) {
@@ -23,9 +25,27 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 						createOnLogin: "users-without-wallets",
 					},
 				},
+				supportedChains: [
+					{
+						id: 10143,
+						name: "Monad",
+						nativeCurrency: {
+							name: "MON",
+							symbol: "MON",
+							decimals: 18,
+						},
+						rpcUrls: {
+							default: { http: ["https://testnet-rpc.monad.xyz"] },
+						},
+					},
+				],
 			}}
 		>
-			<ApolloProviderWrapper>{children}</ApolloProviderWrapper>
+			<ApolloProviderWrapper>
+				<ChainProvider>
+					<FeedFilterProvider>{children}</FeedFilterProvider>
+				</ChainProvider>
+			</ApolloProviderWrapper>
 		</PrivyProvider>
 	);
 }

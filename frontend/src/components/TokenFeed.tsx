@@ -14,10 +14,11 @@ import TradeModule from "./TradeModule";
 import { usePrivy } from "@privy-io/react-auth";
 import { useChain } from "../contexts/ChainContext";
 import BlurredPreviewTable from "./BlurredPreviewTable";
+import { useFeedFilter } from "../contexts/FeedFilterContext";
 
 import { useGetCallsByTokenQuery, useGetChatPhotoLazyQuery, useGetPublicCallsQuery } from "@/generated/graphql";
 import { GetCallsByTokenQuery } from "@/generated/graphql";
-import { savePhoto, getAllPhotos } from "../utils/localStorage";
+import { savePhoto, getPhoto } from "../utils/localStorage";
 
 const TOKENS_PER_PAGE = 50;
 const LOAD_MORE_COOLDOWN = 5000;
@@ -25,44 +26,10 @@ const CALLS_REFRESH_INTERVAL = 5000;
 const DEX_REFRESH_INTERVAL = 30000;
 const DEFAULT_PHOTO = "/assets/KiFi_LOGO.jpg";
 
-// Photo management types
-interface PhotoState {
-	url: string;
-	isLoading: boolean;
-	error?: string;
-}
-
-type PhotoCache = Record<string, PhotoState>;
-
-// Helper to manage photo cache in localStorage
-const photoCache = {
-	get: (): PhotoCache => {
-		try {
-			const photos: PhotoCache = {};
-			const cached = getAllPhotos();
-
-			Object.entries(cached).forEach(([id, data]) => {
-				if (data && typeof data.url === "string" && data.url !== "" && data.url !== "no-photo") {
-					photos[id] = { url: data.url, isLoading: false };
-				}
-			});
-			return photos;
-		} catch {
-			return {};
-		}
-	},
-	set: (id: string, url: string) => {
-		try {
-			savePhoto(id, url);
-		} catch (error) {
-			console.error("Error saving to photo cache:", error);
-		}
-	},
-};
-
 const TokenFeed: React.FC = () => {
 	const { ready, authenticated } = usePrivy();
 	const { currentChain } = useChain();
+	const { filterType } = useFeedFilter();
 
 	// Core states
 	const [processedTokens, setProcessedTokens] = useState<TokenWithDexInfo[]>([]);
@@ -76,7 +43,6 @@ const TokenFeed: React.FC = () => {
 	const [expandedTokenId, setExpandedTokenId] = useState<string | null>(null);
 	const [sortField, setSortField] = useState<SortField>("callers");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-	const [photos, setPhotos] = useState<PhotoCache>(photoCache.get());
 	const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
 	const [showCheckmark, setShowCheckmark] = useState<string | null>(null);
 	const [isLoadingCooldown, setIsLoadingCooldown] = useState(false);
@@ -91,29 +57,34 @@ const TokenFeed: React.FC = () => {
 	const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const dexRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const observerTarget = useRef<HTMLDivElement>(null);
-	const photoBatchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-	const pendingPhotoFetchesRef = useRef<Set<string>>(new Set());
+	const processedTokensRef = useRef<TokenWithDexInfo[]>([]);
 
 	const { refetch: refetchCallsByToken, data: callsByTokenData, loading: callsByTokenLoading } = useGetCallsByTokenQuery({});
 	const { refetch: refetchPublicCalls, data: publicCallsData, loading: publicCallsLoading } = useGetPublicCallsQuery({});
+
+	// Photo management
+	const [photos, setPhotos] = useState<Record<string, string>>({});
 	const [getChatPhoto] = useGetChatPhotoLazyQuery();
 
-	// Add a ref to track latest processedTokens
-	const processedTokensRef = useRef<TokenWithDexInfo[]>([]);
+	// Add this before the useEffects
+	const initializationRef = useRef(false);
+
+	// Add this with the other state declarations at the top
+	const [, setPreviousRanks] = useState<Map<string, number>>(new Map());
 
 	// Function to merge callers without duplicates
 	const mergeCallers = useCallback((existingCallers: TokenWithDexInfo["callers"] = [], newCallers: TokenWithDexInfo["callers"] = []) => {
-		const uniqueCallers = new Map();
+		const uniqueCallers = new Map<string, NonNullable<TokenWithDexInfo["callers"]>[number]>();
 
 		// Add existing callers first
-		existingCallers.forEach((caller) => {
+		existingCallers?.forEach((caller) => {
 			if (caller.chat?.id) {
 				uniqueCallers.set(caller.chat.id, caller);
 			}
 		});
 
 		// Add new callers, only if they don't exist
-		newCallers.forEach((caller) => {
+		newCallers?.forEach((caller) => {
 			if (caller.chat?.id && !uniqueCallers.has(caller.chat.id)) {
 				uniqueCallers.set(caller.chat.id, caller);
 			}
@@ -122,238 +93,15 @@ const TokenFeed: React.FC = () => {
 		return Array.from(uniqueCallers.values());
 	}, []);
 
-	// Effect to handle public calls data
-	useEffect(() => {
-		if (!publicCallsData?.getPublicCalls?.tokenCalls || !processedTokens.length) return;
-
-		const publicTokenCalls = publicCallsData.getPublicCalls.tokenCalls.filter((token) => token.chain === currentChain.name.toUpperCase());
-
-		setProcessedTokens((prevTokens) => {
-			const updatedTokens = prevTokens.map((token) => {
-				const publicToken = publicTokenCalls.find((t) => t.address === token.id);
-				if (!publicToken) return token;
-
-				// Convert public calls to the same format as private calls
-				const publicCallers = publicToken.chats.map((chatWithCalls) => ({
-					id: chatWithCalls.chat.id,
-					name: chatWithCalls.chat.name,
-					profileImageUrl: photos[chatWithCalls.chat.id]?.url || DEFAULT_PHOTO,
-					timestamp: Date.now(),
-					callCount: chatWithCalls.chat.callCount,
-					winRate: 0,
-					chat: {
-						...chatWithCalls.chat,
-						type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
-						photoUrl: photos[chatWithCalls.chat.id]?.url || DEFAULT_PHOTO,
-					},
-					messages: chatWithCalls.calls.flatMap((call) =>
-						call.messages.map((msg) => ({
-							id: msg.id,
-							createdAt: msg.createdAt ?? new Date().toISOString(),
-							text: msg.text ?? "",
-							fromId: msg.fromId ?? null,
-							messageType: msg.messageType,
-							reason: msg.reason ?? null,
-							tgMessageId: msg.tgMessageId,
-						}))
-					),
-				}));
-
-				// Get current caller IDs for comparison
-				const currentCallerIds = new Set(token.callers?.map((c) => c.chat?.id) || []);
-
-				// Merge existing and public callers
-				const mergedCallers = mergeCallers(token.callers, publicCallers);
-
-				// Only trigger animation if we have actual new callers
-				const hasNewCallers = publicCallers.some((caller) => caller.chat?.id && !currentCallerIds.has(caller.chat.id));
-
-				if (hasNewCallers) {
-					setCallerChangedIds((prev) => new Set([...prev, token.id]));
-					// Clear the animation after a delay
-					setTimeout(() => {
-						setCallerChangedIds((prev) => {
-							const next = new Set(prev);
-							next.delete(token.id);
-							return next;
-						});
-					}, 1500);
-				}
-
-				return {
-					...token,
-					callers: mergedCallers,
-				};
-			});
-
-			return updatedTokens;
-		});
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [publicCallsData, currentChain.name, photos, mergeCallers]);
-
-	// Batched photo fetching logic
-	const fetchPhotoBatch = useCallback(async () => {
-		const pendingFetches = Array.from(pendingPhotoFetchesRef.current);
-		if (pendingFetches.length === 0) return;
-
-		// Clear the pending set
-		pendingPhotoFetchesRef.current.clear();
-
-		// Process in smaller batches to avoid overwhelming the server
-		const BATCH_SIZE = 5;
-		for (let i = 0; i < pendingFetches.length; i += BATCH_SIZE) {
-			const batch = pendingFetches.slice(i, i + BATCH_SIZE);
-			await Promise.all(
-				batch.map(async (chatId) => {
-					try {
-						// Skip if already loading or loaded successfully
-						if (photos[chatId]?.isLoading || (photos[chatId]?.url && !photos[chatId]?.error)) return;
-
-						const result = await getChatPhoto({ variables: { chatId } });
-						const url = result.data?.getChatPhoto;
-						const finalUrl = !url || url === "no-photo" ? DEFAULT_PHOTO : url;
-
-						setPhotos((prev) => ({
-							...prev,
-							[chatId]: { url: finalUrl, isLoading: false },
-						}));
-
-						if (finalUrl !== DEFAULT_PHOTO) {
-							photoCache.set(chatId, finalUrl);
-						}
-					} catch (error) {
-						console.error("Error fetching photo for chat", chatId, ":", error);
-						setPhotos((prev) => ({
-							...prev,
-							[chatId]: { url: DEFAULT_PHOTO, isLoading: false, error: "Failed to load" },
-						}));
-					}
-				})
-			);
-
-			// Add a small delay between batches to prevent rate limiting
-			if (i + BATCH_SIZE < pendingFetches.length) {
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
-		}
-	}, [getChatPhoto, photos]);
-
-	// Queue photo fetch with debouncing
-	const queuePhotoFetch = useCallback(
-		(chatId: string, photoUrl?: string | null) => {
-			// Skip if no need to fetch
-			if (!photoUrl?.startsWith("/api/telegram/photo/")) return;
-			if (photos[chatId]?.isLoading || (photos[chatId]?.url && !photos[chatId]?.error)) return;
-
-			// Set initial loading state
-			setPhotos((prev) => ({
-				...prev,
-				[chatId]: { url: DEFAULT_PHOTO, isLoading: true },
-			}));
-
-			// Add to pending fetches
-			pendingPhotoFetchesRef.current.add(chatId);
-
-			// Clear existing timeout
-			if (photoBatchTimeoutRef.current) {
-				clearTimeout(photoBatchTimeoutRef.current);
-			}
-
-			// Set new timeout for batch processing
-			photoBatchTimeoutRef.current = setTimeout(() => {
-				fetchPhotoBatch();
-			}, 100); // Adjust this delay as needed
-		},
-		[photos, fetchPhotoBatch]
-	);
-
-	// Effect to fetch photos for visible callers
-	useEffect(() => {
-		const visibleTokens = sortedTokens.slice(0, page * TOKENS_PER_PAGE);
-		const chatIds = new Set<string>();
-
-		visibleTokens.forEach((token) => {
-			token.callers?.forEach((caller) => {
-				if (caller.chat?.id) {
-					chatIds.add(caller.chat.id);
-				}
-			});
-		});
-
-		chatIds.forEach((chatId) => {
-			const caller = visibleTokens.find((token) => token.callers?.some((c) => c.chat?.id === chatId))?.callers?.find((c) => c.chat?.id === chatId);
-			if (caller) {
-				queuePhotoFetch(chatId, caller.chat.photoUrl);
-			}
-		});
-
-		// Cleanup function
-		return () => {
-			if (photoBatchTimeoutRef.current) {
-				clearTimeout(photoBatchTimeoutRef.current);
-			}
-		};
-	}, [sortedTokens, page, queuePhotoFetch]);
-
-	// Chain change handler
-	useEffect(() => {
-		setIsLoading(true);
-		isInitialLoadComplete.current = false;
-
-		// Clear existing intervals
-		if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
-		if (dexRefreshIntervalRef.current) clearInterval(dexRefreshIntervalRef.current);
-
-		// Reset states
-		setProcessedTokens([]);
-		setSortedTokens([]);
-		setPage(1);
-		setHasMore(true);
-		setNewTokenIds(new Set());
-		setCallerChangedIds(new Set());
-
-		// Initial load for new chain
-		if (callsByTokenData?.getCallsByToken?.tokenCalls) {
-			const tokenCalls = [...callsByTokenData.getCallsByToken.tokenCalls].filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
-
-			// Process initial data
-			fetchTokenInfo(tokenCalls, false).then(() => {
-				isInitialLoadComplete.current = true;
-				setIsLoading(false);
-				setupRefreshIntervals();
-			});
-		} else if (!callsByTokenLoading) {
-			setIsLoading(false);
-		}
-
-		return () => {
-			if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
-			if (dexRefreshIntervalRef.current) clearInterval(dexRefreshIntervalRef.current);
-		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentChain, callsByTokenData]);
-
-	// Add a separate effect to handle initial data load
-	useEffect(() => {
-		if (!callsByTokenLoading && callsByTokenData?.getCallsByToken?.tokenCalls && !isInitialLoadComplete.current) {
-			const tokenCalls = [...callsByTokenData.getCallsByToken.tokenCalls].filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
-
-			fetchTokenInfo(tokenCalls, false).then(() => {
-				isInitialLoadComplete.current = true;
-				setIsLoading(false);
-				setupRefreshIntervals();
-			});
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [callsByTokenLoading, callsByTokenData]);
-
 	// Function to fetch and process token data
 	const fetchTokenInfo = useCallback(
 		async (tokenCalls: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"], isPolling = false) => {
 			// Only check refresh interval if this is a polling operation and we've already processed initial data
-			if (isPolling && isInitialLoadComplete.current && Date.now() - lastDexFetchTime.current < CALLS_REFRESH_INTERVAL) {
-				return; // Prevent too frequent refreshes
+			if (isPolling && isInitialLoadComplete.current && Date.now() - lastDexFetchTime.current < DEX_REFRESH_INTERVAL) {
+				return;
 			}
+
+			const operation = isPolling ? "dex data refresh" : "initial load";
 
 			try {
 				// Filter tokens by current chain
@@ -367,16 +115,14 @@ const TokenFeed: React.FC = () => {
 
 				// Sort by call count first - using direct comparison for better performance
 				filteredTokenCalls.sort((a, b) => b.chats.length - a.chats.length);
+				console.log(`Starting ${operation} for ${tokenCalls.length} tokens`);
 
 				// Calculate range for processing
 				const startIndex = 0;
-				const endIndex = isPolling ? filteredTokenCalls.length : page * TOKENS_PER_PAGE;
+				const endIndex = isPolling ? 50 : page * TOKENS_PER_PAGE;
 				const currentPageTokenCalls = filteredTokenCalls.slice(startIndex, endIndex);
 
-				console.log(`Processing ${currentPageTokenCalls.length} tokens during ${isPolling ? "dex data refresh" : "initial load"}`);
-
 				// For refreshes, only fetch DEX data for top 50 tokens
-				// For load more or initial load, fetch DEX data for all new tokens in the current page
 				const tokensNeedingDexData = isPolling
 					? currentPageTokenCalls.slice(0, 50) // During refresh, only top 50
 					: currentPageTokenCalls; // During load more or initial load, all tokens
@@ -440,8 +186,8 @@ const TokenFeed: React.FC = () => {
 										imageUrl: baseToken.imageurl || "/assets/coin.png",
 										createdAt: monadData.triggertime || "",
 										callers: tokenCall.chats.map((chatWithCalls) => {
-											const photo = photos[chatWithCalls.chat.id];
-											const profileImageUrl = photo?.url || DEFAULT_PHOTO;
+											const photo = photos[chatWithCalls.chat.id] || DEFAULT_PHOTO;
+											const profileImageUrl = photo || DEFAULT_PHOTO;
 											return {
 												id: chatWithCalls.chat.id,
 												name: chatWithCalls.chat.name,
@@ -568,8 +314,8 @@ const TokenFeed: React.FC = () => {
 									imageUrl: dexData.info?.imageUrl || "/assets/coin.png",
 									createdAt: validCreatedAt || "",
 									callers: tokenCall.chats.map((chatWithCalls) => {
-										const photo = photos[chatWithCalls.chat.id];
-										const profileImageUrl = photo?.url || DEFAULT_PHOTO;
+										const photo = photos[chatWithCalls.chat.id] || DEFAULT_PHOTO;
+										const profileImageUrl = photo || DEFAULT_PHOTO;
 										return {
 											id: chatWithCalls.chat.id,
 											name: chatWithCalls.chat.name,
@@ -627,27 +373,20 @@ const TokenFeed: React.FC = () => {
 							const existingToken = uniqueTokens.get(newCall.address);
 
 							if (existingToken) {
-								// Update caller data for existing token
-								const currentCallerCount = existingToken.callers?.length || 0;
-								const newCallerCount = newCall.chats.length;
-
-								if (currentCallerCount !== newCallerCount) {
-									setCallerChangedIds((prev) => new Set([...prev, newCall.address]));
-								}
-
+								// Remove the caller change animation since we're using it for rank improvements now
 								uniqueTokens.set(newCall.address, {
 									...existingToken,
 									callers: newCall.chats.map((chat) => ({
 										id: chat.chat.id,
 										name: chat.chat.name,
-										profileImageUrl: photos[chat.chat.id]?.url || DEFAULT_PHOTO,
+										profileImageUrl: photos[chat.chat.id] || DEFAULT_PHOTO,
 										timestamp: Date.now(),
 										callCount: chat.chat.callCount,
 										winRate: 0,
 										chat: {
 											...chat.chat,
 											type: chat.chat.type as "Group" | "Channel" | "Private",
-											photoUrl: photos[chat.chat.id]?.url || DEFAULT_PHOTO,
+											photoUrl: photos[chat.chat.id] || DEFAULT_PHOTO,
 										},
 										messages: chat.calls.flatMap((call) =>
 											call.messages.map((msg) => ({
@@ -712,193 +451,282 @@ const TokenFeed: React.FC = () => {
 		[currentChain, page]
 	);
 
+	// Setup refresh intervals
 	const setupRefreshIntervals = useCallback(() => {
-		// Token calls refresh interval
 		const refreshTokenCalls = async () => {
 			if (!isInitialLoadComplete.current) return;
 
 			try {
-				const [privateResult, publicResult] = await Promise.all([refetchCallsByToken(), refetchPublicCalls()]);
+				console.log("🔄 Refreshing token calls...");
+				let data: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"] | undefined;
 
-				if (!privateResult.data?.getCallsByToken?.tokenCalls) return;
-
-				const tokenCalls = privateResult.data.getCallsByToken.tokenCalls.filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
-
-				setProcessedTokens((prev) => {
-					const updatedTokens = new Map(prev.map((token) => [token.id, token]));
-					const newIds = new Set<string>();
-					const callerChanges = new Set<string>();
-
-					tokenCalls.forEach((newCall) => {
-						const existingToken = updatedTokens.get(newCall.address);
-
-						if (!existingToken) {
-							if (!prev.some((t) => t.id === newCall.address)) {
-								newIds.add(newCall.address);
-							}
-						} else {
-							// Convert new calls to caller format
-							const newCallers = newCall.chats.map((chat) => ({
-								id: chat.chat.id,
-								name: chat.chat.name,
-								profileImageUrl: photos[chat.chat.id]?.url || DEFAULT_PHOTO,
-								timestamp: Date.now(),
-								callCount: chat.chat.callCount,
-								winRate: 0,
-								chat: {
-									...chat.chat,
-									type: chat.chat.type as "Group" | "Channel" | "Private",
-									photoUrl: photos[chat.chat.id]?.url || DEFAULT_PHOTO,
-								},
-								messages: chat.calls.flatMap((call) =>
-									call.messages.map((msg) => ({
-										id: msg.id,
-										createdAt: msg.createdAt ?? new Date().toISOString(),
-										text: msg.text ?? "",
-										fromId: msg.fromId ?? null,
-										messageType: msg.messageType,
-										reason: msg.reason ?? null,
-										tgMessageId: msg.tgMessageId,
-									}))
-								),
-							}));
-
-							// Get current caller IDs for comparison
-							const currentCallerIds = new Set(existingToken.callers?.map((c) => c.chat?.id) || []);
-
-							// Check for actual new callers
-							const hasNewCallers = newCallers.some((caller) => caller.chat?.id && !currentCallerIds.has(caller.chat.id));
-
-							if (hasNewCallers) {
-								callerChanges.add(newCall.address);
-							}
-
-							// Merge with existing callers
-							const mergedCallers = mergeCallers(existingToken.callers, newCallers);
-
-							updatedTokens.set(newCall.address, {
-								...existingToken,
-								callers: mergedCallers,
-								tokenCallsData: newCall,
-							});
-						}
-					});
-
-					if (newIds.size > 0) {
-						setNewTokenIds(newIds);
-						setTimeout(() => setNewTokenIds(new Set()), 2000);
-					}
-
-					if (callerChanges.size > 0) {
-						setCallerChangedIds(callerChanges);
-						setTimeout(() => setCallerChangedIds(new Set()), 1500);
-					}
-
-					return Array.from(updatedTokens.values());
-				});
-
-				// Process public calls if available
-				if (publicResult.data?.getPublicCalls?.tokenCalls) {
-					const publicTokenCalls = publicResult.data.getPublicCalls.tokenCalls.filter((token) => token.chain === currentChain.name.toUpperCase());
-
-					setProcessedTokens((prev) => {
-						return prev.map((token) => {
-							const publicToken = publicTokenCalls.find((t) => t.address === token.id);
-							if (!publicToken) return token;
-
-							const publicCallers = publicToken.chats.map((chatWithCalls) => ({
-								id: chatWithCalls.chat.id,
-								name: chatWithCalls.chat.name,
-								profileImageUrl: photos[chatWithCalls.chat.id]?.url || DEFAULT_PHOTO,
-								timestamp: Date.now(),
-								callCount: chatWithCalls.chat.callCount,
-								winRate: 0,
-								chat: {
-									...chatWithCalls.chat,
-									type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
-									photoUrl: photos[chatWithCalls.chat.id]?.url || DEFAULT_PHOTO,
-								},
-								messages: chatWithCalls.calls.flatMap((call) =>
-									call.messages.map((msg) => ({
-										id: msg.id,
-										createdAt: msg.createdAt ?? new Date().toISOString(),
-										text: msg.text ?? "",
-										fromId: msg.fromId ?? null,
-										messageType: msg.messageType,
-										reason: msg.reason ?? null,
-										tgMessageId: msg.tgMessageId,
-									}))
-								),
-							}));
-
-							return {
-								...token,
-								callers: mergeCallers(token.callers, publicCallers),
-							};
-						});
-					});
+				if (filterType === "saved") {
+					const result = await refetchCallsByToken();
+					data = result.data?.getCallsByToken?.tokenCalls;
+				} else {
+					const result = await refetchPublicCalls();
+					data = result.data?.getPublicCalls?.tokenCalls;
 				}
+
+				if (!data) {
+					console.log("❌ No data received from refresh");
+					return;
+				}
+
+				const filteredCalls = data.filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
+
+				console.log(`📊 Refreshing ${filteredCalls.length} tokens`);
+				await fetchTokenInfo(filteredCalls, true);
+				console.log("✅ Token refresh complete");
 			} catch (error) {
 				console.error("Error refreshing token calls:", error);
 			}
 		};
 
-		// DEX data refresh interval
-		const refreshDexData = async () => {
-			if (!isInitialLoadComplete.current) return;
-			if (Date.now() - lastDexFetchTime.current < DEX_REFRESH_INTERVAL) return;
-
-			try {
-				const currentProcessedTokens = processedTokensRef.current;
-
-				if (!currentProcessedTokens?.length) {
-					return;
-				}
-
-				console.log("Processing tokens for refresh, count:", currentProcessedTokens.length);
-
-				const chainTokens = currentProcessedTokens
-					.filter((token) => token.tokenCallsData?.chain === currentChain.name.toUpperCase())
-					.sort((a, b) => {
-						const callerDiff = (b.callers?.length || 0) - (a.callers?.length || 0);
-						if (callerDiff !== 0) return callerDiff;
-
-						const bLiquidity = b.dexData?.liquidity?.usd || b.liquidity || 0;
-						const aLiquidity = a.dexData?.liquidity?.usd || a.liquidity || 0;
-						return bLiquidity - aLiquidity;
-					})
-					.slice(0, 50)
-					.map((token) => token.tokenCallsData)
-					.filter((token): token is NonNullable<typeof token> => token !== null);
-
-				if (chainTokens.length === 0) {
-					console.log(`No tokens found for chain ${currentChain.name.toUpperCase()}`);
-					return;
-				}
-
-				console.log(`Refreshing DEX data for ${chainTokens.length} tokens on chain ${currentChain.name.toUpperCase()}`);
-
-				await fetchTokenInfo(chainTokens, true);
-				lastDexFetchTime.current = Date.now();
-			} catch (error) {
-				console.error("Error refreshing DEX data:", error);
-			}
-		};
-
+		// Clear existing intervals
 		if (refreshIntervalRef.current) {
 			clearInterval(refreshIntervalRef.current);
+			refreshIntervalRef.current = null;
 		}
 		if (dexRefreshIntervalRef.current) {
 			clearInterval(dexRefreshIntervalRef.current);
+			dexRefreshIntervalRef.current = null;
 		}
 
+		// Set up new interval
 		refreshIntervalRef.current = setInterval(refreshTokenCalls, CALLS_REFRESH_INTERVAL);
-		dexRefreshIntervalRef.current = setInterval(refreshDexData, DEX_REFRESH_INTERVAL);
 
-		// Run initial refresh
+		// Perform initial refresh
 		refreshTokenCalls();
-		refreshDexData();
-	}, [currentChain, fetchTokenInfo, refetchCallsByToken, refetchPublicCalls, setNewTokenIds, setCallerChangedIds, setProcessedTokens, mergeCallers, photos]);
+
+		return () => {
+			if (refreshIntervalRef.current) {
+				clearInterval(refreshIntervalRef.current);
+				refreshIntervalRef.current = null;
+			}
+			if (dexRefreshIntervalRef.current) {
+				clearInterval(dexRefreshIntervalRef.current);
+				dexRefreshIntervalRef.current = null;
+			}
+		};
+	}, [filterType, currentChain.name, refetchCallsByToken, refetchPublicCalls, fetchTokenInfo]);
+
+	// Replace the initial data loading effect
+	useEffect(() => {
+		const loadInitialData = async () => {
+			// Reset initialization flags when filter type changes
+			if (isInitialLoadComplete.current) {
+				initializationRef.current = false;
+				isInitialLoadComplete.current = false;
+			}
+
+			// Guard against multiple initializations in the same filter type
+			if (initializationRef.current) return;
+			initializationRef.current = true;
+
+			setIsLoading(true);
+			console.log("🚀 Starting initial data load...");
+
+			let data: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"] | undefined;
+			if (filterType === "saved") {
+				data = callsByTokenData?.getCallsByToken?.tokenCalls;
+			} else {
+				data = publicCallsData?.getPublicCalls?.tokenCalls;
+			}
+
+			if (data) {
+				const tokenCalls = [...data].filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
+
+				// Reset processed tokens when filter type changes
+				setProcessedTokens([]);
+				setSortedTokens([]);
+
+				await fetchTokenInfo(tokenCalls, false);
+				isInitialLoadComplete.current = true;
+				setIsLoading(false);
+				setupRefreshIntervals();
+				console.log("✅ Initial data load complete");
+			}
+		};
+
+		if (ready && authenticated && !callsByTokenLoading && !publicCallsLoading) {
+			loadInitialData();
+		}
+
+		return () => {
+			initializationRef.current = false;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ready, authenticated, filterType, currentChain.name, callsByTokenData, publicCallsData, callsByTokenLoading, publicCallsLoading, setupRefreshIntervals]);
+
+	// Update processedTokensRef when processedTokens changes
+	useEffect(() => {
+		processedTokensRef.current = processedTokens;
+	}, [processedTokens]);
+
+	// Add this effect for photo fetching with improved handling
+	useEffect(() => {
+		if (!processedTokens.length) return;
+
+		// Get all unique chat IDs from processed tokens
+		const chatIds = new Set<string>();
+		processedTokens.forEach((token: TokenWithDexInfo) => {
+			token.callers?.forEach((caller) => {
+				if (caller.chat?.id && !photos[caller.chat.id]) {
+					// Only process if we don't have the photo
+					chatIds.add(caller.chat.id);
+				}
+			});
+		});
+
+		// Process each chat ID
+		chatIds.forEach((chatId) => {
+			// First try to get from localStorage
+			const cachedPhoto = getPhoto(chatId);
+
+			if (cachedPhoto && cachedPhoto !== "no-photo") {
+				// If found in cache, use it
+				setPhotos((prev) => ({
+					...prev,
+					[chatId]: cachedPhoto,
+				}));
+			} else if (!photos[chatId]) {
+				// Only fetch if we don't have the photo
+				// If not in cache, fetch from API
+				getChatPhoto({
+					variables: { chatId },
+					onCompleted: (data) => {
+						if (data.getChatPhoto) {
+							const photoUrl = data.getChatPhoto === "no-photo" || !data.getChatPhoto ? DEFAULT_PHOTO : data.getChatPhoto;
+
+							// Update local state only if we don't have a photo for this chat
+							setPhotos((prev) => {
+								if (!prev[chatId]) {
+									// Only update if we don't have a photo
+									return {
+										...prev,
+										[chatId]: photoUrl,
+									};
+								}
+								return prev;
+							});
+
+							// Save to localStorage if it's not the default image
+							if (photoUrl !== DEFAULT_PHOTO) {
+								savePhoto(chatId, photoUrl);
+							}
+						}
+					},
+					onError: () => {
+						// Only set default photo if we don't have one
+						setPhotos((prev) => {
+							if (!prev[chatId]) {
+								return {
+									...prev,
+									[chatId]: DEFAULT_PHOTO,
+								};
+							}
+							return prev;
+						});
+					},
+				});
+			}
+		});
+	}, [processedTokens, getChatPhoto, photos]);
+
+	// Effect to handle public calls data
+	useEffect(() => {
+		if (!publicCallsData?.getPublicCalls?.tokenCalls || !processedTokens.length || filterType === "saved") return;
+
+		const publicTokenCalls = publicCallsData.getPublicCalls.tokenCalls.filter((token) => token.chain === currentChain.name.toUpperCase());
+
+		setProcessedTokens((prevTokens) => {
+			const updatedTokens = prevTokens.map((token) => {
+				const publicToken = publicTokenCalls.find((t) => t.address === token.id);
+				if (!publicToken) return token;
+
+				// Convert public calls to the same format as private calls
+				const publicCallers = publicToken.chats.map((chatWithCalls) => ({
+					id: chatWithCalls.chat.id,
+					name: chatWithCalls.chat.name,
+					profileImageUrl: photos[chatWithCalls.chat.id] || DEFAULT_PHOTO,
+					timestamp: Date.now(),
+					callCount: chatWithCalls.chat.callCount,
+					winRate: 0,
+					chat: {
+						...chatWithCalls.chat,
+						type: chatWithCalls.chat.type as "Group" | "Channel" | "Private",
+						photoUrl: photos[chatWithCalls.chat.id] || DEFAULT_PHOTO,
+					},
+					messages: chatWithCalls.calls.flatMap((call) =>
+						call.messages.map((msg) => ({
+							id: msg.id,
+							createdAt: msg.createdAt ?? new Date().toISOString(),
+							text: msg.text ?? "",
+							fromId: msg.fromId ?? null,
+							messageType: msg.messageType,
+							reason: msg.reason ?? null,
+							tgMessageId: msg.tgMessageId,
+						}))
+					),
+				}));
+
+				// Merge existing and public callers
+				const mergedCallers = mergeCallers(token.callers, publicCallers);
+
+				return {
+					...token,
+					callers: mergedCallers,
+				};
+			});
+
+			return updatedTokens;
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [publicCallsData, currentChain.name, photos, mergeCallers, filterType]);
+
+	// Chain change handler - modify to respect initialization
+	useEffect(() => {
+		if (!ready || !authenticated) return;
+
+		const resetAndReload = () => {
+			setIsLoading(true);
+			isInitialLoadComplete.current = false;
+			initializationRef.current = false;
+
+			// Store ref values in variables inside the effect
+			const refreshInterval = refreshIntervalRef.current;
+			const dexRefreshInterval = dexRefreshIntervalRef.current;
+
+			// Clear existing intervals
+			if (refreshInterval) clearInterval(refreshInterval);
+			if (dexRefreshInterval) clearInterval(dexRefreshInterval);
+
+			// Reset states
+			setProcessedTokens([]);
+			setSortedTokens([]);
+			setPage(1);
+			setHasMore(true);
+			setNewTokenIds(new Set());
+			setCallerChangedIds(new Set());
+		};
+
+		resetAndReload();
+
+		return () => {
+			const refreshInterval = refreshIntervalRef.current;
+			const dexRefreshInterval = dexRefreshIntervalRef.current;
+			if (refreshInterval) clearInterval(refreshInterval);
+			if (dexRefreshInterval) clearInterval(dexRefreshInterval);
+		};
+	}, [currentChain, filterType, ready, authenticated]);
+
+	// Effect to handle expanded token state changes
+	useEffect(() => {
+		// No need to clear or restart intervals when expanding/collapsing tokens
+		// Just let the regular refresh continue in the background
+		return;
+	}, [expandedTokenId]);
 
 	// Add mobile detection
 	useEffect(() => {
@@ -941,10 +769,14 @@ const TokenFeed: React.FC = () => {
 		};
 	}, [hasMore, isLoading, isLoadingCooldown]);
 
-	// Update the useEffect for sorting tokens to track rank and caller changes
+	// Update the useEffect for sorting tokens to track rank changes
 	useEffect(() => {
 		if (processedTokens.length > 0) {
-			const sortedTokens = [...processedTokens].sort((a, b) => {
+			// Store current ranks before sorting
+			const currentRanks = new Map(sortedTokens.map((token, index) => [token.id, index + 1]));
+			const currentCallerCounts = new Map(sortedTokens.map((token) => [token.id, token.callers?.length || 0]));
+
+			const newSortedTokens = [...processedTokens].sort((a, b) => {
 				let comparison = 0;
 
 				switch (sortField) {
@@ -985,9 +817,58 @@ const TokenFeed: React.FC = () => {
 				return sortDirection === "asc" ? comparison : -comparison;
 			});
 
-			setSortedTokens(sortedTokens);
+			// Compare new ranks with previous ranks and trigger animations
+			const newRanks = new Map(newSortedTokens.map((token, index) => [token.id, index + 1]));
+
+			// Clear existing animations
+			setCallerChangedIds(new Set());
+
+			// Only trigger animations for tokens that moved up in rank AND had an increase in caller count
+			newSortedTokens.forEach((token) => {
+				const previousRank = currentRanks.get(token.id) || Number.MAX_SAFE_INTEGER;
+				const newRank = newRanks.get(token.id) || 0;
+				const previousCallerCount = currentCallerCounts.get(token.id) || 0;
+				const newCallerCount = token.callers?.length || 0;
+
+				// Only animate if:
+				// 1. The token moved up in rank
+				// 2. The token's caller count increased
+				// 3. We're sorting by callers
+				if (newRank < previousRank && newCallerCount > previousCallerCount && sortField === "callers") {
+					setCallerChangedIds((prev) => new Set([...prev, token.id]));
+					// Clear the animation after a delay
+					setTimeout(() => {
+						setCallerChangedIds((prev) => {
+							const next = new Set(prev);
+							next.delete(token.id);
+							return next;
+						});
+					}, 1500);
+				}
+			});
+
+			setPreviousRanks(currentRanks);
+			setSortedTokens(newSortedTokens);
 		}
 	}, [sortField, sortDirection, processedTokens]);
+
+	// Cleanup effect for intervals when component unmounts
+	useEffect(() => {
+		return () => {
+			// Clear all intervals on unmount
+			if (refreshIntervalRef.current) {
+				clearInterval(refreshIntervalRef.current);
+				refreshIntervalRef.current = null;
+			}
+			if (dexRefreshIntervalRef.current) {
+				clearInterval(dexRefreshIntervalRef.current);
+				dexRefreshIntervalRef.current = null;
+			}
+			// Clear any pending animation timeouts
+			setCallerChangedIds(new Set());
+			setNewTokenIds(new Set());
+		};
+	}, []);
 
 	const handleSort = (field: SortField) => {
 		// Clear all change indicators when sorting
@@ -1052,6 +933,17 @@ const TokenFeed: React.FC = () => {
 	return (
 		<div className={styles.container}>
 			<div className={styles.tableContainer}>
+				{filterType === "saved" && !isLoading && !callsByTokenLoading && !publicCallsLoading && sortedTokens.length === 0 && (
+					<>
+						<BlurredPreviewTable />
+						<div className={styles.authOverlay}>
+							<div className={styles.authContent}>
+								<h2 className={styles.authTitle}>No Saved Token Calls</h2>
+								<p className={styles.authDescription}>Add your favorite Telegram channels and groups to start tracking token calls! Click top right to access Telegram Setup to get started.</p>
+							</div>
+						</div>
+					</>
+				)}
 				{(isLoading || callsByTokenLoading || publicCallsLoading) && !processedTokens.length && (
 					<div className={styles.initialLoading}>
 						<div className={styles.loadingSpinner}></div>
@@ -1204,14 +1096,14 @@ const TokenFeed: React.FC = () => {
 															{token.callers.slice(0, isMobile ? 3 : 5).map((caller, i) => (
 																<div key={caller.id} className={styles.callerImageWrapper} style={{ zIndex: (isMobile ? 3 : 5) - i }}>
 																	<Image
-																		src={caller.profileImageUrl}
+																		src={caller.chat?.id ? photos[caller.chat.id] || DEFAULT_PHOTO : DEFAULT_PHOTO}
 																		alt={caller.name || "Caller"}
 																		width={42}
 																		height={42}
 																		className={styles.callerImage}
 																		onError={(e) => {
 																			const target = e.target as HTMLImageElement;
-																			target.src = "/assets/KiFi_LOGO.jpg";
+																			target.src = DEFAULT_PHOTO;
 																		}}
 																	/>
 																</div>
@@ -1237,7 +1129,7 @@ const TokenFeed: React.FC = () => {
 																	<CallerFeed token={token} />
 																</div>
 																<div className={styles.module}>
-																	<TradeModule />
+																	<TradeModule token={token} />
 																</div>
 															</div>
 															<div className={styles.moduleRow}>
