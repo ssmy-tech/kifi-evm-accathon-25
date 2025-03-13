@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { usePrivy, useDelegatedActions, type WalletWithMetadata } from "@privy-io/react-auth";
+import { usePrivy, useDelegatedActions, type WalletWithMetadata, useCreateWallet } from "@privy-io/react-auth";
 import styles from "./AuthModal.module.css";
 import { TelegramSetup } from "./telegram/TelegramSetup";
 import { useGetUserSettingsQuery, useUpdateUserSettingsMutation } from "../generated/graphql";
@@ -14,8 +14,9 @@ interface AuthModalProps {
 type OnboardingStep = "welcome" | "delegate" | "preferences" | "telegram" | "complete";
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-	const { ready, authenticated, login, user } = usePrivy();
+	const { ready, authenticated, user } = usePrivy();
 	const { delegateWallet } = useDelegatedActions();
+	const { createWallet } = useCreateWallet();
 	const [updateUserSettings] = useUpdateUserSettingsMutation();
 	const { data: userSettings } = useGetUserSettingsQuery();
 	const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
@@ -25,6 +26,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 	const modalRef = useRef<HTMLDivElement>(null);
 	const [submitAttempted, setSubmitAttempted] = useState(false);
 	const [telegramStage, setTelegramStage] = useState<"setup" | "manage" | "none">("none");
+	const initialSetupComplete = useRef(false);
+	const [isCreatingWallet, setIsCreatingWallet] = useState(false);
 
 	const [formValues, setFormValues] = useState({
 		quickBuyAmount: "",
@@ -101,20 +104,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		};
 	}, [isOpen]);
 
-	useEffect(() => {
-		if (!authenticated && ready && isOpen) {
-			try {
-				login();
-			} catch (error) {
-				console.error("Login error:", error);
-			}
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [authenticated, ready, isOpen]);
-
 	// USER SETUP & TOKEN CHECK
 	useEffect(() => {
-		if (authenticated && user && isOpen) {
+		if (authenticated && user && isOpen && !initialSetupComplete.current) {
 			const isDelegated = isWalletDelegated();
 
 			if (!isDelegated) {
@@ -124,6 +116,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 			} else {
 				setShowOnboarding(false);
 			}
+			initialSetupComplete.current = true;
 		}
 	}, [authenticated, user, isOpen, isWalletDelegated]);
 
@@ -194,6 +187,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 		}
 	};
 
+	const handleCreateWallet = async () => {
+		try {
+			setIsCreatingWallet(true);
+			await createWallet();
+			setIsCreatingWallet(false);
+		} catch (error) {
+			console.error("Failed to create wallet:", error);
+			setIsCreatingWallet(false);
+		}
+	};
+
 	const handleDelegation = async () => {
 		try {
 			const walletToDelegate = user?.linkedAccounts.find((account): account is WalletWithMetadata => account.type === "wallet" && account.walletClientType === "privy");
@@ -232,7 +236,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 					<div className={styles.step}>
 						<h2>Welcome to KiSignals! 👋</h2>
 						<p>Let&apos;s complete your account setup and get to trading.</p>
-						<button className={styles.nextButton} onClick={() => changeStep("delegate")} disabled={animatingStep}>
+						<button className={styles.nextButton} onClick={() => changeStep("delegate")}>
 							Get Started
 						</button>
 					</div>
@@ -254,8 +258,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 							</ul>
 						</div>
 						<div className={styles.delegateSection}>
-							<button className={styles.delegateButton} onClick={handleDelegation} disabled={!ready || !walletToDelegate || isDelegated || animatingStep}>
-								{isDelegated ? "Delegated Access Enabled ✓" : !ready ? "Loading..." : !walletToDelegate ? "No Wallet Available" : animatingStep ? "Please wait..." : "Delegate Access"}
+							<button className={styles.delegateButton} onClick={!walletToDelegate ? handleCreateWallet : handleDelegation} disabled={!ready || isDelegated || animatingStep}>
+								{isDelegated ? "Delegated Access Enabled ✓" : !ready ? "Loading..." : isCreatingWallet ? "Creating Wallet..." : !walletToDelegate ? "Create Embedded Wallet" : animatingStep ? "Please wait..." : "Delegate Access"}
 							</button>
 
 							<button className={styles.nextButton} onClick={() => changeStep("preferences")}>

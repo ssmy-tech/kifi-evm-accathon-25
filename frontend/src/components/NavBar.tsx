@@ -24,7 +24,7 @@ const NavBar: React.FC = () => {
 	const [showWalletInNav, setShowWalletInNav] = useState(true);
 	const [showBalanceInNav, setShowBalanceInNav] = useState(true);
 	const [walletBalance, setWalletBalance] = useState<number | null>(null);
-	const { ready, authenticated, logout, user } = usePrivy();
+	const { ready, authenticated, login, user } = usePrivy();
 	const [privyLoginMutation] = usePrivyLoginMutation({});
 
 	// Close mobile menu when route changes
@@ -33,6 +33,7 @@ const NavBar: React.FC = () => {
 	}, [pathname]);
 
 	const getWalletBalance = React.useCallback(async (address: string) => {
+		if (!address) return null;
 		try {
 			const response = await fetch(ALCHEMY_URL, {
 				method: "POST",
@@ -48,12 +49,14 @@ const NavBar: React.FC = () => {
 			});
 
 			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+				console.log(`HTTP error! status: ${response.status}`);
+				return null;
 			}
 
 			const data = await response.json();
 			if (data.error) {
-				throw new Error(`RPC error: ${data.error.message}`);
+				console.log(`RPC error: ${data.error.message}`);
+				return null;
 			}
 
 			// Convert from wei (18 decimals)
@@ -61,8 +64,8 @@ const NavBar: React.FC = () => {
 			const balance = Number(balanceInWei) / Math.pow(10, 18);
 			return balance;
 		} catch (error) {
-			console.error("Error fetching wallet balance:", error);
-			return 0;
+			console.log("Error fetching wallet balance:", error);
+			return null;
 		}
 	}, []);
 
@@ -96,20 +99,27 @@ const NavBar: React.FC = () => {
 	// Fetch wallet balance when wallet is connected
 	useEffect(() => {
 		const fetchBalance = async () => {
+			console.log("fetching balance");
 			const delegatedWallet = user?.linkedAccounts.filter((account): account is WalletWithMetadata => account.type === "wallet" && account.walletClientType === "privy").filter((wallet) => wallet.delegated)[0];
-			if (delegatedWallet?.address) {
-				const balance = await getWalletBalance(delegatedWallet.address);
-				setWalletBalance(balance);
-			} else {
+
+			if (!delegatedWallet?.address) {
 				setWalletBalance(null);
+				return;
+			}
+
+			const balance = await getWalletBalance(delegatedWallet.address);
+			if (balance !== null) {
+				setWalletBalance(balance);
 			}
 		};
 
-		if (authenticated && ready) {
+		if (authenticated && ready && user) {
 			fetchBalance();
 			// Set up an interval to update the balance every 30 seconds
 			const interval = setInterval(fetchBalance, 30000);
 			return () => clearInterval(interval);
+		} else {
+			setWalletBalance(null);
 		}
 	}, [authenticated, ready, user, getWalletBalance]);
 
@@ -120,12 +130,9 @@ const NavBar: React.FC = () => {
 	};
 
 	const handleAuthButtonClick = () => {
-		if (authenticated) {
-			logout();
-		} else {
-			localStorage.setItem(AUTH_STATUS_KEY, "pending");
-			setIsAuthModalOpen(true);
-		}
+		localStorage.setItem(AUTH_STATUS_KEY, "pending");
+		setIsAuthModalOpen(true);
+		login();
 	};
 
 	const closeAuthModal = () => {
@@ -135,7 +142,6 @@ const NavBar: React.FC = () => {
 	};
 
 	const embeddedWallets = user?.linkedAccounts.filter((account): account is WalletWithMetadata => account.type === "wallet" && account.walletClientType === "privy");
-	const delegatedWallets = embeddedWallets?.filter((wallet) => wallet.delegated);
 
 	return (
 		<>
@@ -167,9 +173,9 @@ const NavBar: React.FC = () => {
 					{ready &&
 						(authenticated ? (
 							<>
-								{showWalletInNav && delegatedWallets?.[0] && <WalletDisplay address={delegatedWallets[0].address} />}
-								{showBalanceInNav && walletBalance !== null && <WalletBalance balance={walletBalance} />}
-								<Avatar walletAddress={delegatedWallets?.[0]?.address} balance={!showWalletInNav ? walletBalance ?? undefined : undefined} />
+								{showWalletInNav && <WalletDisplay address={embeddedWallets?.[0] ? embeddedWallets[0].address : null} />}
+								{showBalanceInNav && embeddedWallets?.[0] && <WalletBalance balance={walletBalance ?? 0} />}
+								<Avatar walletAddress={embeddedWallets?.[0]?.address} balance={walletBalance ?? 0} />
 							</>
 						) : (
 							<button onClick={handleAuthButtonClick} className={styles.authButton}>

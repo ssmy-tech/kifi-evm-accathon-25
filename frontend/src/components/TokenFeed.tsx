@@ -96,12 +96,9 @@ const TokenFeed: React.FC = () => {
 	// Function to fetch and process token data
 	const fetchTokenInfo = useCallback(
 		async (tokenCalls: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"], isPolling = false) => {
-			// Only check refresh interval if this is a polling operation and we've already processed initial data
 			if (isPolling && isInitialLoadComplete.current && Date.now() - lastDexFetchTime.current < DEX_REFRESH_INTERVAL) {
 				return;
 			}
-
-			const operation = isPolling ? "dex data refresh" : "initial load";
 
 			try {
 				// Filter tokens by current chain
@@ -109,13 +106,11 @@ const TokenFeed: React.FC = () => {
 				const filteredTokenCalls = tokenCalls.filter((token) => token.chain === chainName);
 
 				if (filteredTokenCalls.length === 0) {
-					console.log("No tokens found for chain:", currentChain.name);
 					return;
 				}
 
 				// Sort by call count first - using direct comparison for better performance
 				filteredTokenCalls.sort((a, b) => b.chats.length - a.chats.length);
-				console.log(`Starting ${operation} for ${tokenCalls.length} tokens`);
 
 				// Calculate range for processing
 				const startIndex = 0;
@@ -441,7 +436,6 @@ const TokenFeed: React.FC = () => {
 			} finally {
 				if (isPolling && isInitialLoadComplete.current) {
 					lastDexFetchTime.current = Date.now();
-					console.log("✅ Dex Refresh complete", new Date().toLocaleTimeString());
 				} else {
 					setIsLoading(false);
 				}
@@ -457,7 +451,6 @@ const TokenFeed: React.FC = () => {
 			if (!isInitialLoadComplete.current) return;
 
 			try {
-				console.log("🔄 Refreshing token calls...");
 				let data: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"] | undefined;
 
 				if (filterType === "saved") {
@@ -469,15 +462,12 @@ const TokenFeed: React.FC = () => {
 				}
 
 				if (!data) {
-					console.log("❌ No data received from refresh");
 					return;
 				}
 
 				const filteredCalls = data.filter((token) => token.chain === currentChain.name.toUpperCase()).sort((a, b) => b.chats.length - a.chats.length);
 
-				console.log(`📊 Refreshing ${filteredCalls.length} tokens`);
 				await fetchTokenInfo(filteredCalls, true);
-				console.log("✅ Token refresh complete");
 			} catch (error) {
 				console.error("Error refreshing token calls:", error);
 			}
@@ -525,7 +515,6 @@ const TokenFeed: React.FC = () => {
 			initializationRef.current = true;
 
 			setIsLoading(true);
-			console.log("🚀 Starting initial data load...");
 
 			let data: NonNullable<GetCallsByTokenQuery["getCallsByToken"]>["tokenCalls"] | undefined;
 			if (filterType === "saved") {
@@ -545,7 +534,6 @@ const TokenFeed: React.FC = () => {
 				isInitialLoadComplete.current = true;
 				setIsLoading(false);
 				setupRefreshIntervals();
-				console.log("✅ Initial data load complete");
 			}
 		};
 
@@ -850,6 +838,7 @@ const TokenFeed: React.FC = () => {
 			setPreviousRanks(currentRanks);
 			setSortedTokens(newSortedTokens);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [sortField, sortDirection, processedTokens]);
 
 	// Cleanup effect for intervals when component unmounts

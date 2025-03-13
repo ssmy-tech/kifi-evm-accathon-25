@@ -131,23 +131,14 @@ const CallerFeed = memo(
 							return;
 						}
 
-						console.log("Historical data:", historicalData.slice(0, 3), "...", historicalData.length, "total points");
-
 						const callerData = callers.map((caller) => {
 							const callTimestamp = new Date(caller.messages[0]?.createdAt || Date.now()).getTime();
-							console.log("Processing caller:", caller.id, "timestamp:", new Date(callTimestamp).toISOString());
 
 							const closestDataPoint = historicalData.reduce((prev: MarketData, curr: MarketData) => {
 								const prevDiff = Math.abs(prev.time - callTimestamp);
 								const currDiff = Math.abs(curr.time - callTimestamp);
 								return currDiff < prevDiff ? curr : prev;
 							}, historicalData[0]);
-
-							console.log("Found closest data point:", {
-								time: new Date(closestDataPoint.time).toISOString(),
-								close: closestDataPoint.close,
-								currentPrice: token.price,
-							});
 
 							// Ensure we're not dividing by zero
 							if (!token.price || token.price === 0) {
@@ -161,19 +152,12 @@ const CallerFeed = memo(
 							const priceRatio = closestDataPoint.close / token.price;
 							const calculatedMarketCap = priceRatio * token.marketCap;
 
-							console.log("Calculated values:", {
-								priceRatio,
-								calculatedMarketCap,
-								tokenMarketCap: token.marketCap,
-							});
-
 							return {
 								callerId: caller.id,
 								marketCap: calculatedMarketCap,
 							};
 						});
 
-						console.log("Final caller data:", callerData);
 						setCallerMarketData(callerData);
 					}
 				} catch (error) {
