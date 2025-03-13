@@ -126,11 +126,16 @@ const CallerFeed = memo(
 					}
 
 					if (historicalData && Array.isArray(historicalData)) {
+						if (historicalData.length === 0) {
+							console.warn("No historical data points available");
+							return;
+						}
+
 						const callerData = callers.map((caller) => {
 							const callTimestamp = new Date(caller.messages[0]?.createdAt || Date.now()).getTime();
 							const closestDataPoint = historicalData.reduce((prev: MarketData, curr: MarketData) => {
 								return Math.abs(curr.time - callTimestamp) < Math.abs(prev.time - callTimestamp) ? curr : prev;
-							});
+							}, historicalData[0]);
 
 							const priceRatio = closestDataPoint.close / token.price;
 							return {

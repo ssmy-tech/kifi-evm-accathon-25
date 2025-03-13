@@ -147,7 +147,7 @@ const NavBar: React.FC = () => {
 						</span>
 						<div className={styles.logoText}>KiSignals</div>
 					</Link>
-					<FeedSwitcher />
+					{showWalletInNav && <FeedSwitcher />}
 				</div>
 
 				<div className={`${styles.navLinks} ${isMobileMenuOpen ? styles.navLinksOpen : ""}`}>

@@ -55,7 +55,7 @@
 	text-decoration: none;
 	color: var(--cream);
 	font-weight: 600;
-	font-size: clamp(1rem, 1.5vw, 1.5rem);
+	font-size: clamp(1rem, 1vw, 1.1rem);
 	transition: color 0.3s ease;
 	position: relative;
 	padding: 0.5rem 0;

@@ -10,6 +10,7 @@ import { TelegramSetup } from "./telegram/TelegramSetup";
 import { useGetUserSavedChatsQuery } from "../generated/graphql";
 import { WalletDisplay } from "./WalletDisplay";
 import { WalletBalance } from "./WalletBalance";
+import FeedSwitcher from "./FeedSwitcher";
 
 interface AvatarProps {
 	walletAddress?: string;
@@ -120,9 +121,12 @@ const Avatar: React.FC<AvatarProps> = ({ walletAddress, balance }) => {
 								<div className={styles.userName}>{displayName}</div>
 								{user?.email && <div className={styles.userEmail}>{user.email.address}</div>}
 								{walletAddress && (
-									<div className={styles.walletSection}>
-										<WalletDisplay address={walletAddress} />
-										<WalletBalance balance={balance} />
+									<div className={styles.actionSection}>
+										<div className={styles.walletSection}>
+											<WalletDisplay address={walletAddress} />
+											<WalletBalance balance={balance} />
+										</div>
+										{balance && <FeedSwitcher />}
 									</div>
 								)}
 							</div>
