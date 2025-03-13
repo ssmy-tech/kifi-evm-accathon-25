@@ -1,12 +1,11 @@
-# kifi-evm-accathon-25
-
-## KiSignals
+# KiSignals
+![Slide 16_9 - 22](https://github.com/user-attachments/assets/3d1042a5-9ec8-425f-bf8d-3f65dc959d51)
 
 This repository contains the code for Team Kifi's submission to Monad's evm/accathon 2025.
 
-Live Demo: accathon.kifi.app
+Live Demo: https://accathon.kifi.app
 
-Project Documentation (PLEASEE READ): https://nova-screen-c53.notion.site/KiFi-Accathon-KiSignals-1b495657b8b18079b498dc6c490898f4
+Project Documentation (PLEASE READ): https://nova-screen-c53.notion.site/KiFi-Accathon-KiSignals-1b495657b8b18079b498dc6c490898f4
 
 Telegram Setup Documentation: https://nova-screen-c53.notion.site/Telegram-Middleware-Setup-1b495657b8b1801cb3c7f21f3f446851
 
