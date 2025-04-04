@@ -1,3 +1,7 @@
+# Description
+
+The token_finder program scans Ethereum (or similar EVM) logs in chunks of 10,000 blocks, detecting newly created liquidity pools from multiple DEX factories (Uniswap V2, SushiSwap, Uniswap V3, PancakeSwap). It retrieves the corresponding token addresses, calls symbol() and name() on each token, fetches the block timestamp, and stores all of these details in a PostgreSQL database. The result is a continuously updated record of newly created DEX liquidity pools, including their tokens' metadata and the time they were created.
+
 # Install PostgreSQL
 
 * sudo apt install postgresql
